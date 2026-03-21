@@ -1,0 +1,138 @@
+from flask import Flask, render_template_string, request, redirect, session
+from werkzeug.security import generate_password_hash, check_password_hash
+
+app = Flask(__name__)
+app.secret_key = "segredo123"
+
+# Usuários (login)
+usuarios = {
+    "admin": generate_password_hash("1234")
+}
+
+# Estoque (em memória)
+estoque = {}
+
+# LOGIN (HTML BONITO)
+html_login = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login - KBSistemas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-dark d-flex justify-content-center align-items-center" style="height:100vh;">
+
+<div class="card p-4 shadow" style="width: 350px;">
+    <h3 class="text-center mb-3">🔐 KBSistemas</h3>
+
+    <form method="POST">
+        <div class="mb-3">
+            <label class="form-label">Usuário</label>
+            <input name="user" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Senha</label>
+            <input name="senha" type="password" class="form-control" required>
+        </div>
+
+        <button class="btn btn-primary w-100">Entrar</button>
+    </form>
+
+    <p class="text-danger text-center mt-2">{{erro}}</p>
+</div>
+
+</body>
+</html>
+"""
+
+# LOGIN
+@app.route("/", methods=["GET","POST"])
+def login():
+    erro = ""
+
+    if request.method == "POST":
+        user = request.form["user"]
+        senha = request.form["senha"]
+
+        if user in usuarios and check_password_hash(usuarios[user], senha):
+            session["user"] = user
+            return redirect("/sistema")
+        else:
+            erro = "Usuário ou senha inválidos"
+
+    return render_template_string(html_login, erro=erro)
+
+# SISTEMA (ESTOQUE)
+@app.route("/sistema", methods=["GET","POST"])
+def sistema():
+    if "user" not in session:
+        return redirect("/")
+
+    if request.method == "POST":
+        nome = request.form["produto"]
+        qtd = int(request.form["qtd"])
+        estoque[nome] = estoque.get(nome, 0) + qtd
+
+    itens_html = ""
+    for p, q in estoque.items():
+        itens_html += f"<li class='list-group-item'>{p}: {q}</li>"
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Estoque</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+
+    <body class="bg-light">
+
+    <div class="container mt-5">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>📦 KBSistemas - Estoque</h2>
+            <a href="/logout" class="btn btn-danger">Sair</a>
+        </div>
+
+        <div class="card p-4 mb-4 shadow">
+            <form method="POST" class="row g-3">
+
+                <div class="col-md-6">
+                    <input name="produto" class="form-control" placeholder="Produto" required>
+                </div>
+
+                <div class="col-md-4">
+                    <input name="qtd" type="number" class="form-control" placeholder="Quantidade" required>
+                </div>
+
+                <div class="col-md-2">
+                    <button class="btn btn-success w-100">Adicionar</button>
+                </div>
+
+            </form>
+        </div>
+
+        <div class="card p-3 shadow">
+            <h4>📊 Estoque Atual</h4>
+            <ul class="list-group">
+                {itens_html}
+            </ul>
+        </div>
+
+    </div>
+
+    </body>
+    </html>
+    """
+
+# LOGOUT
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
+# RODAR SERVIDOR (IMPORTANTE)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
