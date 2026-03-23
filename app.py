@@ -6,11 +6,11 @@ import os
 app = Flask(__name__)
 app.secret_key = "segredo123"
 
-# CONEXÃO COM BANCO
+# CONEXÃO
 def conectar():
     return sqlite3.connect("banco.db")
 
-# CRIAR TABELAS
+# CRIAR BANCO
 def criar_banco():
     conn = conectar()
     cursor = conn.cursor()
@@ -36,7 +36,7 @@ def criar_banco():
 
 criar_banco()
 
-# CRIAR ADMIN SE NÃO EXISTIR
+# CRIAR ADMIN
 def criar_admin():
     conn = conectar()
     cursor = conn.cursor()
@@ -56,17 +56,20 @@ html_login = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Login</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<title>Login</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
+
 <body class="bg-dark d-flex justify-content-center align-items-center" style="height:100vh;">
 <div class="card p-4" style="width:350px;">
 <h3 class="text-center">🔐 KBSistemas</h3>
+
 <form method="POST">
 <input name="user" class="form-control mb-2" placeholder="Usuário">
 <input name="senha" type="password" class="form-control mb-3" placeholder="Senha">
 <button class="btn btn-primary w-100">Entrar</button>
 </form>
+
 <p class="text-danger">{{erro}}</p>
 </div>
 </body>
@@ -119,7 +122,19 @@ def sistema():
     total = 0
 
     for p, q in dados:
-        tabela += f"<tr><td>{p}</td><td>{q}</td></tr>"
+        tabela += f"""
+        <tr>
+            <td>{p}</td>
+            <td>{q}</td>
+            <td>
+                <form action="/editar/{p}" method="POST" style="display:inline;">
+                    <input name="qtd" type="number" value="{q}" style="width:80px;">
+                    <button class="btn btn-primary btn-sm">Atualizar</button>
+                </form>
+                <a href="/deletar/{p}" class="btn btn-danger btn-sm">Excluir</a>
+            </td>
+        </tr>
+        """
         total += q
 
     return f"""
@@ -133,7 +148,7 @@ def sistema():
     <body>
 
     <nav class="navbar navbar-dark bg-dark px-4">
-        <span class="navbar-brand">KBSistemas</span>
+        <span class="navbar-brand">📦 KBSistemas</span>
         <a href="/logout" class="btn btn-danger">Sair</a>
     </nav>
 
@@ -142,14 +157,14 @@ def sistema():
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card p-3 text-center shadow">
-                <h5>Produtos</h5>
+                <h5>Total de Produtos</h5>
                 <h2>{len(dados)}</h2>
             </div>
         </div>
 
         <div class="col-md-6">
             <div class="card p-3 text-center shadow">
-                <h5>Total</h5>
+                <h5>Total em Estoque</h5>
                 <h2>{total}</h2>
             </div>
         </div>
@@ -172,9 +187,15 @@ def sistema():
     <div class="card p-4 shadow">
     <table class="table table-striped">
         <thead class="table-dark">
-            <tr><th>Produto</th><th>Quantidade</th></tr>
+            <tr>
+                <th>Produto</th>
+                <th>Quantidade</th>
+                <th>Ações</th>
+            </tr>
         </thead>
-        <tbody>{tabela}</tbody>
+        <tbody>
+            {tabela}
+        </tbody>
     </table>
     </div>
 
@@ -183,11 +204,39 @@ def sistema():
     </html>
     """
 
+# EDITAR
+@app.route("/editar/<produto>", methods=["POST"])
+def editar(produto):
+    nova_qtd = request.form["qtd"]
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("UPDATE estoque SET quantidade=? WHERE produto=?", (nova_qtd, produto))
+    conn.commit()
+    conn.close()
+
+    return redirect("/sistema")
+
+# DELETAR
+@app.route("/deletar/<produto>")
+def deletar(produto):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM estoque WHERE produto=?", (produto,))
+    conn.commit()
+    conn.close()
+
+    return redirect("/sistema")
+
+# LOGOUT
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
 
+# RODAR
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
