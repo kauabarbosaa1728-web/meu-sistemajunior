@@ -159,34 +159,36 @@ def dashboard():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) FROM estoque")
-    total_prod = cursor.fetchone()[0]
+    cursor.execute("SELECT categoria, SUM(quantidade) FROM estoque GROUP BY categoria")
+    dados = cursor.fetchall()
 
-    cursor.execute("SELECT SUM(quantidade) FROM estoque")
-    total_qtd = cursor.fetchone()[0] or 0
+    categorias = [d[0] for d in dados]
+    quantidades = [d[1] for d in dados]
 
     conn.close()
 
     return f"""
     {layout_topo()}
     <div class="content">
+
     <h3>Dashboard</h3>
 
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card p-3">
-                <h6>Produtos</h6>
-                <h2>{total_prod}</h2>
-            </div>
-        </div>
+    <canvas id="grafico"></canvas>
 
-        <div class="col-md-4">
-            <div class="card p-3">
-                <h6>Total Estoque</h6>
-                <h2>{total_qtd}</h2>
-            </div>
-        </div>
-    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    new Chart(document.getElementById('grafico'), {{
+        type: 'bar',
+        data: {{
+            labels: {categorias},
+            datasets: [{{
+                label: 'Estoque por Categoria',
+                data: {quantidades}
+            }}]
+        }}
+    }});
+    </script>
+
     </div>
     """
 
@@ -198,6 +200,8 @@ def estoque():
 
     conn = conectar()
     cursor = conn.cursor()
+
+    busca = request.args.get("busca", "")
 
     if request.method == "POST":
         produto = request.form["produto"]
@@ -214,19 +218,36 @@ def estoque():
 
         conn.commit()
 
-    cursor.execute("SELECT * FROM estoque")
+    if busca:
+        cursor.execute("SELECT * FROM estoque WHERE produto LIKE ?", (f"%{busca}%",))
+    else:
+        cursor.execute("SELECT * FROM estoque")
+
     dados = cursor.fetchall()
     conn.close()
 
     tabela = ""
     for p, q, c in dados:
-        tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td></tr>"
+        tabela += f"""
+        <tr>
+        <td>{p}</td>
+        <td>{q}</td>
+        <td>{c}</td>
+        <td>
+        <a href="/saida/{p}" class="btn btn-warning btn-sm">Saída</a>
+        </td>
+        </tr>
+        """
 
     return f"""
     {layout_topo()}
     <div class="content">
 
     <h3>Estoque</h3>
+
+    <form method="GET" class="mb-3">
+    <input name="busca" class="form-control" placeholder="Buscar produto">
+    </form>
 
     <div class="card p-3 mb-3">
         <form method="POST" class="row">
@@ -250,13 +271,31 @@ def estoque():
 
     <div class="card p-3">
         <table class="table">
-        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
+        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Ações</th></tr>
         {tabela}
         </table>
     </div>
 
     </div>
     """
+
+# ================= SAÍDA =================
+@app.route("/saida/<produto>")
+def saida(produto):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("UPDATE estoque SET quantidade = quantidade - 1 WHERE produto=?", (produto,))
+
+    cursor.execute("""
+    INSERT INTO movimentacoes (produto, quantidade, tipo, usuario)
+    VALUES (?, ?, ?, ?)
+    """, (produto, 1, "saida", session["user"]))
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/estoque")
 
 # ================= HISTÓRICO =================
 @app.route("/historico")
@@ -313,7 +352,18 @@ def admin():
 
     tabela = ""
     for u, c in dados:
-        tabela += f"<tr><td>{u}</td><td>{c}</td></tr>"
+        tabela += f"""
+        <tr>
+        <td>{u}</td>
+        <td>{c}</td>
+        <td>
+        <form action="/alterar/{u}" method="POST">
+        <input name="senha" placeholder="Nova senha">
+        <button class="btn btn-warning btn-sm">Alterar</button>
+        </form>
+        </td>
+        </tr>
+        """
 
     return f"""
     {layout_topo()}
@@ -335,13 +385,27 @@ def admin():
 
     <div class="card p-3">
     <table class="table">
-    <tr><th>Usuário</th><th>Cargo</th></tr>
+    <tr><th>Usuário</th><th>Cargo</th><th>Ação</th></tr>
     {tabela}
     </table>
     </div>
 
     </div>
     """
+
+# ================= ALTERAR SENHA =================
+@app.route("/alterar/<user>", methods=["POST"])
+def alterar(user):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("UPDATE usuarios SET senha=? WHERE user=?",
+                   (generate_password_hash(request.form["senha"]), user))
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/admin")
 
 # ================= LOGOUT =================
 @app.route("/logout")
