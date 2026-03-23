@@ -27,7 +27,8 @@ def criar_banco():
     CREATE TABLE IF NOT EXISTS estoque (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         produto TEXT,
-        quantidade INTEGER
+        quantidade INTEGER,
+        categoria TEXT
     )
     """)
 
@@ -38,6 +39,7 @@ def criar_banco():
         quantidade INTEGER,
         tipo TEXT,
         usuario TEXT,
+        categoria TEXT,
         data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -118,31 +120,51 @@ def sistema():
     conn = conectar()
     cursor = conn.cursor()
 
+    # FILTRO
+    busca = request.args.get("busca", "")
+    filtro = request.args.get("filtro", "")
+
+    # ADICIONAR
     if request.method == "POST":
         produto = request.form["produto"]
         qtd = int(request.form["qtd"])
+        categoria = request.form["categoria"]
 
-        cursor.execute("INSERT INTO estoque (produto, quantidade) VALUES (?,?)", (produto, qtd))
+        cursor.execute("INSERT INTO estoque (produto, quantidade, categoria) VALUES (?,?,?)",
+                       (produto, qtd, categoria))
 
         cursor.execute("""
-        INSERT INTO movimentacoes (produto, quantidade, tipo, usuario)
-        VALUES (?, ?, ?, ?)
-        """, (produto, qtd, "entrada", session["user"]))
+        INSERT INTO movimentacoes (produto, quantidade, tipo, usuario, categoria)
+        VALUES (?, ?, ?, ?, ?)
+        """, (produto, qtd, "entrada", session["user"], categoria))
 
         conn.commit()
 
-    cursor.execute("SELECT produto, quantidade FROM estoque")
+    # BUSCA + FILTRO
+    query = "SELECT produto, quantidade, categoria FROM estoque WHERE 1=1"
+    params = []
+
+    if busca:
+        query += " AND produto LIKE ?"
+        params.append(f"%{busca}%")
+
+    if filtro:
+        query += " AND categoria=?"
+        params.append(filtro)
+
+    cursor.execute(query, params)
     dados = cursor.fetchall()
     conn.close()
 
     tabela = ""
     total = 0
 
-    for p, q in dados:
+    for p, q, c in dados:
         tabela += f"""
         <tr>
             <td>{p}</td>
             <td>{q}</td>
+            <td>{c}</td>
             <td>
                 <form action="/editar/{p}" method="POST" style="display:inline;">
                     <input name="qtd" type="number" value="{q}" style="width:80px;">
@@ -164,7 +186,7 @@ def sistema():
 
     <body>
 
-    <!-- MENU ERP -->
+    <!-- MENU -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <div class="container-fluid">
         <a class="navbar-brand">📦 KBSistemas</a>
@@ -180,13 +202,6 @@ def sistema():
               </ul>
             </li>
 
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Relatórios</a>
-              <ul class="dropdown-menu">
-                <li><a class="dropdown-item">Em breve</a></li>
-              </ul>
-            </li>
-
           </ul>
 
           <a href="/logout" class="btn btn-danger">Sair</a>
@@ -196,6 +211,27 @@ def sistema():
 
     <div class="container mt-4">
 
+    <!-- BUSCA -->
+    <form method="GET" class="row mb-3">
+        <div class="col-md-4">
+            <input name="busca" class="form-control" placeholder="Buscar produto">
+        </div>
+
+        <div class="col-md-4">
+            <select name="filtro" class="form-control">
+                <option value="">Todas categorias</option>
+                <option>Eletrônicos</option>
+                <option>Ferramentas</option>
+                <option>Escritório</option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100">Filtrar</button>
+        </div>
+    </form>
+
+    <!-- CARDS -->
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card p-3 text-center shadow">
@@ -212,13 +248,21 @@ def sistema():
         </div>
     </div>
 
+    <!-- FORM -->
     <div class="card p-4 mb-4 shadow">
     <form method="POST" class="row g-3">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <input name="produto" class="form-control" placeholder="Produto">
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <input name="qtd" type="number" class="form-control" placeholder="Quantidade">
+        </div>
+        <div class="col-md-3">
+            <select name="categoria" class="form-control">
+                <option>Eletrônicos</option>
+                <option>Ferramentas</option>
+                <option>Escritório</option>
+            </select>
         </div>
         <div class="col-md-2">
             <button class="btn btn-success w-100">Adicionar</button>
@@ -226,12 +270,14 @@ def sistema():
     </form>
     </div>
 
+    <!-- TABELA -->
     <div class="card p-4 shadow">
     <table class="table table-striped">
         <thead class="table-dark">
             <tr>
                 <th>Produto</th>
                 <th>Quantidade</th>
+                <th>Categoria</th>
                 <th>Ações</th>
             </tr>
         </thead>
