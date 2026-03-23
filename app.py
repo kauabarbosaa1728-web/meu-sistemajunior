@@ -52,16 +52,14 @@ def criar_admin():
     cursor.execute("SELECT * FROM usuarios WHERE user=?", ("kaua.barbosa1728@gmail.com",))
     if not cursor.fetchone():
         cursor.execute("INSERT INTO usuarios VALUES (?,?,?)",
-                       ("kaua.barbosa1728@gmail.com",
-                        generate_password_hash("997401054"),
-                        "admin"))
-        conn.commit()
+                       ("kaua.barbosa1728@gmail.com", generate_password_hash("997401054"), "admin"))
 
+    conn.commit()
     conn.close()
 
 criar_admin()
 
-# ================= LOGIN (ATUALIZADO) =================
+# ================= LOGIN =================
 @app.route("/", methods=["GET","POST"])
 def login():
     erro = ""
@@ -86,131 +84,39 @@ def login():
         conn.close()
 
     return f"""
-<!DOCTYPE html>
-<html>
-<head>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-<style>
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    </head>
+    <body style="background:#2f3e4e;height:100vh;">
 
-body {{
-    background: linear-gradient(135deg, #0b1120, #1e293b);
-    height:100vh;
-    margin:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-family: 'Segoe UI', sans-serif;
-}}
+    <div class="container-fluid h-100">
+        <div class="row h-100">
 
-.login-box {{
-    width: 400px;
-    padding: 40px;
-    background:#020617;
-    border:1px solid #1e293b;
-    border-radius:15px;
-    box-shadow: 0 0 30px rgba(0,0,0,0.5);
-}}
+            <div class="col-md-6 d-flex align-items-center justify-content-center text-white">
+                <h1 style="font-size:70px;">KBSistemas</h1>
+            </div>
 
-.title {{
-    font-size: 42px;
-    font-weight: bold;
-    color:#38bdf8;
-    text-align:center;
-    margin-bottom: 25px;
-}}
+            <div class="col-md-6 d-flex align-items-center justify-content-center">
+                <form method="POST" style="width:300px;">
+                    <input name="user" class="form-control mb-3" placeholder="Usuário">
+                    <input name="senha" type="password" class="form-control mb-3" placeholder="Senha">
+                    <button class="btn btn-primary w-100">Acessar</button>
+                    <p class="text-danger mt-2">{erro}</p>
+                </form>
+            </div>
 
-.subtitle {{
-    text-align:center;
-    color:#94a3b8;
-    margin-bottom: 30px;
-}}
+        </div>
+    </div>
 
-input {{
-    background:#0b1120 !important;
-    border:1px solid #334155 !important;
-    color:white !important;
-    padding:12px !important;
-}}
-
-button {{
-    background:#38bdf8 !important;
-    border:none !important;
-    padding:12px !important;
-    font-weight:bold;
-}}
-
-button:hover {{
-    background:#0ea5e9 !important;
-}}
-
-</style>
-</head>
-
-<body>
-
-<div class="login-box">
-    <div class="title">KBSistemas</div>
-    <div class="subtitle">Acesse com seu usuário</div>
-
-    <form method="POST">
-        <input name="user" class="form-control mb-3" placeholder="Usuário">
-        <input name="senha" type="password" class="form-control mb-3" placeholder="Senha">
-        <button class="btn w-100">Entrar</button>
-        <p class="text-danger mt-3 text-center">{erro}</p>
-    </form>
-</div>
-
-</body>
-</html>
-"""
+    </body>
+    </html>
+    """
 
 # ================= LAYOUT =================
 def layout_topo():
     return f"""
-    <html>
-    <head>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <style>
-
-    body {{
-        background:#0b1120;
-        color:#e5e7eb;
-        font-family: 'Segoe UI', sans-serif;
-    }}
-
-    .sidebar {{
-        width:240px;
-        height:100vh;
-        background:#020617;
-        position:fixed;
-        padding:20px;
-        border-right:1px solid #1e293b;
-    }}
-
-    .sidebar a {{
-        display:block;
-        color:#94a3b8;
-        padding:12px;
-        margin-bottom:5px;
-        border-radius:8px;
-        text-decoration:none;
-    }}
-
-    .sidebar a:hover {{
-        background:#1e293b;
-        color:#38bdf8;
-    }}
-
-    .content {{
-        margin-left:260px;
-        padding:30px;
-    }}
-
-    </style>
-    </head>
-
-    <body>
-
     <div class="sidebar">
         <h4>KBSistemas</h4>
         <a href="/dashboard">Dashboard</a>
@@ -228,12 +134,41 @@ def dashboard():
     if "user" not in session:
         return redirect("/")
 
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT categoria, SUM(quantidade) FROM estoque GROUP BY categoria")
+    dados = cursor.fetchall()
+
+    categorias = [d[0] for d in dados]
+    quantidades = [d[1] for d in dados]
+
+    conn.close()
+
     return f"""
+    <html>
+    <head>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+    <body>
     {layout_topo()}
+
     <div class="content">
-    <h2>Dashboard</h2>
-    <p>Bem-vindo, {session["user"]}</p>
+        <canvas id="grafico"></canvas>
     </div>
+
+    <script>
+    new Chart(document.getElementById('grafico'), {{
+        type: 'bar',
+        data: {{
+            labels: {categorias},
+            datasets: [{{ data: {quantidades} }}]
+        }}
+    }});
+    </script>
+
+    </body>
+    </html>
     """
 
 # ================= ESTOQUE =================
@@ -251,35 +186,65 @@ def estoque():
         categoria = request.form["categoria"]
 
         cursor.execute("INSERT INTO estoque VALUES (?,?,?)", (produto, qtd, categoria))
+
+        cursor.execute("""
+        INSERT INTO movimentacoes (produto, quantidade, tipo, usuario)
+        VALUES (?, ?, ?, ?)
+        """, (produto, qtd, "entrada", session["user"]))
+
         conn.commit()
 
     cursor.execute("SELECT * FROM estoque")
     dados = cursor.fetchall()
+
     conn.close()
 
     tabela = ""
     for p, q, c in dados:
-        tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td></tr>"
+        tabela += f"""
+        <tr>
+            <td>{p}</td>
+            <td>{q}</td>
+            <td>{c}</td>
+            <td><a href="/saida/{p}" class="btn btn-warning btn-sm">Saída</a></td>
+        </tr>
+        """
 
     return f"""
     {layout_topo()}
+
     <div class="content">
-    <h2>Estoque</h2>
+        <form method="POST">
+            <input name="produto" placeholder="Produto">
+            <input name="qtd" type="number" placeholder="Qtd">
+            <input name="categoria" placeholder="Categoria">
+            <button>Add</button>
+        </form>
 
-    <form method="POST">
-    <input name="produto" placeholder="Produto">
-    <input name="qtd" type="number" placeholder="Quantidade">
-    <input name="categoria" placeholder="Categoria">
-    <button>Adicionar</button>
-    </form>
-
-    <table class="table text-white">
-    <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
-    {tabela}
-    </table>
-
+        <table border="1">
+        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
+        {tabela}
+        </table>
     </div>
     """
+
+# ================= SAÍDA =================
+@app.route("/saida/<produto>")
+def saida(produto):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("UPDATE estoque SET quantidade = quantidade - 1 WHERE produto=?", (produto,))
+
+    cursor.execute("""
+    INSERT INTO movimentacoes (produto, quantidade, tipo, usuario)
+    VALUES (?, ?, ?, ?)
+    """, (produto, 1, "saida", session["user"]))
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/estoque")
 
 # ================= HISTÓRICO =================
 @app.route("/historico")
@@ -287,10 +252,25 @@ def historico():
     if "user" not in session:
         return redirect("/")
 
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM movimentacoes ORDER BY data DESC")
+    dados = cursor.fetchall()
+
+    conn.close()
+
+    tabela = ""
+    for d in dados:
+        tabela += f"<tr><td>{d[0]}</td><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td><td>{d[4]}</td></tr>"
+
     return f"""
     {layout_topo()}
     <div class="content">
-    <h2>Histórico</h2>
+        <table border="1">
+        <tr><th>Produto</th><th>Qtd</th><th>Tipo</th><th>Usuário</th><th>Data</th></tr>
+        {tabela}
+        </table>
     </div>
     """
 
@@ -300,10 +280,34 @@ def admin():
     if "user" not in session or session["cargo"] != "admin":
         return redirect("/")
 
+    conn = conectar()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        user = request.form["user"]
+        senha = request.form["senha"]
+        cargo = request.form["cargo"]
+
+        cursor.execute("INSERT INTO usuarios VALUES (?,?,?)",
+                       (user, generate_password_hash(senha), cargo))
+        conn.commit()
+
+    cursor.execute("SELECT user, cargo FROM usuarios")
+    dados = cursor.fetchall()
+
+    conn.close()
+
+    tabela = ""
+    for u, c in dados:
+        tabela += f"<tr><td>{u}</td><td>{c}</td></tr>"
+
     return f"""
     {layout_topo()}
     <div class="content">
-    <h2>Admin</h2>
+        <table border="1">
+        <tr><th>Usuário</th><th>Cargo</th></tr>
+        {tabela}
+        </table>
     </div>
     """
 
