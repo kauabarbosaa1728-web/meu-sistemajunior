@@ -5,15 +5,15 @@ import os
 app = Flask(__name__)
 app.secret_key = "segredo123"
 
-# 👤 USUÁRIO PRINCIPAL (SEU LOGIN)
+# 👤 USUÁRIO PRINCIPAL
 usuarios = {
     "kaua.barbosa1728@gmail.com": generate_password_hash("997401054")
 }
 
-# 🔐 ADMIN (SÓ VOCÊ)
+# 🔐 ADMIN
 admins = ["kaua.barbosa1728@gmail.com"]
 
-# 📦 Estoque
+# 📦 ESTOQUE
 estoque = {}
 
 # 🔐 LOGIN
@@ -59,7 +59,7 @@ def login():
 
     return render_template_string(html_login, erro=erro)
 
-# 📦 SISTEMA
+# 📦 SISTEMA (INTERFACE PROFISSIONAL)
 @app.route("/sistema", methods=["GET","POST"])
 def sistema():
     if "user" not in session:
@@ -70,38 +70,66 @@ def sistema():
         qtd = int(request.form["qtd"])
         estoque[nome] = estoque.get(nome, 0) + qtd
 
-    itens_html = ""
+    tabela = ""
     for p, q in estoque.items():
-        itens_html += f"<li class='list-group-item'>{p}: {q}</li>"
+        tabela += f"""
+        <tr>
+            <td>{p}</td>
+            <td>{q}</td>
+        </tr>
+        """
 
     botao_admin = ""
     if session["user"] in admins:
-        botao_admin = '<a href="/criar_usuario" class="btn btn-warning me-2">Criar Usuário</a>'
+        botao_admin = '<a href="/criar_usuario" class="btn btn-warning me-2">👤 Criar Usuário</a>'
 
     return f"""
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Estoque</title>
+        <title>KBSistemas</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     </head>
 
     <body class="bg-light">
 
-    <div class="container mt-5">
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-dark bg-dark px-4">
+        <span class="navbar-brand mb-0 h1">📦 KBSistemas</span>
+        <div>
+            {botao_admin}
+            <a href="/logout" class="btn btn-danger ms-2">Sair</a>
+        </div>
+    </nav>
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>📦 KBSistemas - Estoque</h2>
-            <div>
-                {botao_admin}
-                <a href="/logout" class="btn btn-danger">Sair</a>
+    <div class="container mt-4">
+
+        <!-- CARDS -->
+        <div class="row mb-4">
+
+            <div class="col-md-6">
+                <div class="card shadow p-3 text-center">
+                    <h5>Total de Produtos</h5>
+                    <h2>{len(estoque)}</h2>
+                </div>
             </div>
+
+            <div class="col-md-6">
+                <div class="card shadow p-3 text-center">
+                    <h5>Total em Estoque</h5>
+                    <h2>{sum(estoque.values())}</h2>
+                </div>
+            </div>
+
         </div>
 
-        <div class="card p-4 mb-4 shadow">
+        <!-- FORM -->
+        <div class="card shadow p-4 mb-4">
+            <h4>➕ Adicionar Produto</h4>
             <form method="POST" class="row g-3">
+
                 <div class="col-md-6">
-                    <input name="produto" class="form-control" placeholder="Produto" required>
+                    <input name="produto" class="form-control" placeholder="Nome do produto" required>
                 </div>
 
                 <div class="col-md-4">
@@ -111,14 +139,25 @@ def sistema():
                 <div class="col-md-2">
                     <button class="btn btn-success w-100">Adicionar</button>
                 </div>
+
             </form>
         </div>
 
-        <div class="card p-3 shadow">
-            <h4>📊 Estoque Atual</h4>
-            <ul class="list-group">
-                {itens_html}
-            </ul>
+        <!-- TABELA -->
+        <div class="card shadow p-4">
+            <h4>📊 Estoque</h4>
+
+            <table class="table table-striped mt-3">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Produto</th>
+                        <th>Quantidade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {tabela}
+                </tbody>
+            </table>
         </div>
 
     </div>
@@ -127,7 +166,7 @@ def sistema():
     </html>
     """
 
-# 👥 CRIAR USUÁRIO (SÓ ADMIN)
+# 👥 CRIAR USUÁRIO
 @app.route("/criar_usuario", methods=["GET", "POST"])
 def criar_usuario():
     if "user" not in session or session["user"] not in admins:
