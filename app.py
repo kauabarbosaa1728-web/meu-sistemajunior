@@ -31,6 +31,17 @@ def criar_banco():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS movimentacoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        produto TEXT,
+        quantidade INTEGER,
+        tipo TEXT,
+        usuario TEXT,
+        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -112,6 +123,12 @@ def sistema():
         qtd = int(request.form["qtd"])
 
         cursor.execute("INSERT INTO estoque (produto, quantidade) VALUES (?,?)", (produto, qtd))
+
+        cursor.execute("""
+        INSERT INTO movimentacoes (produto, quantidade, tipo, usuario)
+        VALUES (?, ?, ?, ?)
+        """, (produto, qtd, "entrada", session["user"]))
+
         conn.commit()
 
     cursor.execute("SELECT produto, quantidade FROM estoque")
@@ -141,15 +158,40 @@ def sistema():
     <!DOCTYPE html>
     <html>
     <head>
-    <title>Painel</title>
+    <title>KBSistemas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     </head>
 
     <body>
 
-    <nav class="navbar navbar-dark bg-dark px-4">
-        <span class="navbar-brand">📦 KBSistemas</span>
-        <a href="/logout" class="btn btn-danger">Sair</a>
+    <!-- MENU ERP -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand">📦 KBSistemas</a>
+
+        <div class="collapse navbar-collapse">
+          <ul class="navbar-nav me-auto">
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Estoque</a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="/sistema">Movimentações</a></li>
+                <li><a class="dropdown-item" href="/historico">Histórico</a></li>
+              </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Relatórios</a>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item">Em breve</a></li>
+              </ul>
+            </li>
+
+          </ul>
+
+          <a href="/logout" class="btn btn-danger">Sair</a>
+        </div>
+      </div>
     </nav>
 
     <div class="container mt-4">
@@ -200,6 +242,9 @@ def sistema():
     </div>
 
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     </body>
     </html>
     """
@@ -213,6 +258,12 @@ def editar(produto):
     cursor = conn.cursor()
 
     cursor.execute("UPDATE estoque SET quantidade=? WHERE produto=?", (nova_qtd, produto))
+
+    cursor.execute("""
+    INSERT INTO movimentacoes (produto, quantidade, tipo, usuario)
+    VALUES (?, ?, ?, ?)
+    """, (produto, nova_qtd, "edição", session["user"]))
+
     conn.commit()
     conn.close()
 
@@ -225,10 +276,74 @@ def deletar(produto):
     cursor = conn.cursor()
 
     cursor.execute("DELETE FROM estoque WHERE produto=?", (produto,))
+
+    cursor.execute("""
+    INSERT INTO movimentacoes (produto, quantidade, tipo, usuario)
+    VALUES (?, ?, ?, ?)
+    """, (produto, 0, "exclusão", session["user"]))
+
     conn.commit()
     conn.close()
 
     return redirect("/sistema")
+
+# HISTÓRICO
+@app.route("/historico")
+def historico():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT produto, quantidade, tipo, usuario, data FROM movimentacoes ORDER BY id DESC")
+    dados = cursor.fetchall()
+    conn.close()
+
+    tabela = ""
+    for p, q, t, u, d in dados:
+        tabela += f"""
+        <tr>
+            <td>{p}</td>
+            <td>{q}</td>
+            <td>{t}</td>
+            <td>{u}</td>
+            <td>{d}</td>
+        </tr>
+        """
+
+    return f"""
+    <html>
+    <head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+
+    <body class="bg-light">
+
+    <div class="container mt-4">
+        <h2>📊 Histórico de Movimentações</h2>
+
+        <table class="table table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Produto</th>
+                    <th>Quantidade</th>
+                    <th>Tipo</th>
+                    <th>Usuário</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody>
+                {tabela}
+            </tbody>
+        </table>
+
+        <a href="/sistema" class="btn btn-secondary">Voltar</a>
+    </div>
+
+    </body>
+    </html>
+    """
 
 # LOGOUT
 @app.route("/logout")
