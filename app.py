@@ -51,11 +51,10 @@ def criar_admin():
 
     cursor.execute("SELECT * FROM usuarios WHERE user=?", ("kaua.barbosa1728@gmail.com",))
     if not cursor.fetchone():
-        cursor.execute("""
-        INSERT INTO usuarios VALUES (?,?,?)
-        """, ("kaua.barbosa1728@gmail.com",
-              generate_password_hash("997401054"),
-              "admin"))
+        cursor.execute("INSERT INTO usuarios VALUES (?,?,?)",
+                       ("kaua.barbosa1728@gmail.com",
+                        generate_password_hash("997401054"),
+                        "admin"))
         conn.commit()
 
     conn.close()
@@ -119,34 +118,87 @@ button {{background:#4a90e2 !important;}}
 </html>
 """
 
-# ================= LAYOUT =================
+# ================= LAYOUT PREMIUM =================
 def layout_topo():
     return f"""
     <html>
     <head>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <style>
-    body {{background:#0f172a;color:white;}}
-    .sidebar {{width:220px;height:100vh;background:#020617;position:fixed;padding:20px;}}
-    .sidebar a {{display:block;color:#cbd5f5;padding:10px;text-decoration:none;}}
-    .sidebar a:hover {{background:#1e293b;}}
-    .content {{margin-left:240px;padding:20px;}}
-    .card {{background:#020617;border:1px solid #1e293b;border-radius:10px;}}
-    input, select {{background:#020617 !important;border:1px solid #334155 !important;color:white !important;}}
+
+    body {{
+        background:#0b1120;
+        color:#e5e7eb;
+        font-family: 'Segoe UI', sans-serif;
+    }}
+
+    .sidebar {{
+        width:240px;
+        height:100vh;
+        background:#020617;
+        position:fixed;
+        padding:20px;
+        border-right:1px solid #1e293b;
+    }}
+
+    .sidebar h4 {{
+        color:#38bdf8;
+    }}
+
+    .sidebar a {{
+        display:block;
+        color:#94a3b8;
+        padding:12px;
+        margin-bottom:5px;
+        border-radius:8px;
+        text-decoration:none;
+    }}
+
+    .sidebar a:hover {{
+        background:#1e293b;
+        color:#38bdf8;
+    }}
+
+    .content {{
+        margin-left:260px;
+        padding:30px;
+    }}
+
+    .topbar {{
+        background:#020617;
+        padding:15px;
+        border-radius:10px;
+        margin-bottom:20px;
+        display:flex;
+        justify-content:space-between;
+        border:1px solid #1e293b;
+    }}
+
+    .card {{
+        background:#020617;
+        border:1px solid #1e293b;
+        border-radius:12px;
+    }}
+
+    input, select {{
+        background:#020617 !important;
+        border:1px solid #334155 !important;
+        color:white !important;
+    }}
+
     </style>
     </head>
+
     <body>
 
     <div class="sidebar">
         <h4>KBSistemas</h4>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/estoque">Estoque</a>
+        <a href="/historico">Histórico</a>
+        {"<a href='/admin'>Admin</a>" if session["cargo"] == "admin" else ""}
         <hr>
-        <a href="/dashboard">🏠 Dashboard</a>
-        <a href="/estoque">📦 Estoque</a>
-        <a href="/historico">📊 Histórico</a>
-        {"<a href='/admin'>⚙ Admin</a>" if session["cargo"] == "admin" else ""}
-        <hr>
-        <p>{session["user"]}</p>
-        <a href="/logout" style="color:red;">Sair</a>
+        <a href="/logout">Sair</a>
     </div>
     """
 
@@ -171,7 +223,10 @@ def dashboard():
     {layout_topo()}
     <div class="content">
 
-    <h3>Dashboard</h3>
+    <div class="topbar">
+    <h4>Dashboard</h4>
+    <span>{session["user"]}</span>
+    </div>
 
     <canvas id="grafico"></canvas>
 
@@ -181,10 +236,7 @@ def dashboard():
         type: 'bar',
         data: {{
             labels: {categorias},
-            datasets: [{{
-                label: 'Estoque por Categoria',
-                data: {quantidades}
-            }}]
+            datasets: [{{ data: {quantidades} }}]
         }}
     }});
     </script>
@@ -233,9 +285,7 @@ def estoque():
         <td>{p}</td>
         <td>{q}</td>
         <td>{c}</td>
-        <td>
-        <a href="/saida/{p}" class="btn btn-warning btn-sm">Saída</a>
-        </td>
+        <td><a href="/saida/{p}" class="btn btn-warning btn-sm">Saída</a></td>
         </tr>
         """
 
@@ -243,37 +293,27 @@ def estoque():
     {layout_topo()}
     <div class="content">
 
-    <h3>Estoque</h3>
+    <div class="topbar"><h4>Estoque</h4></div>
 
-    <form method="GET" class="mb-3">
-    <input name="busca" class="form-control" placeholder="Buscar produto">
+    <form method="GET">
+    <input name="busca" class="form-control mb-3" placeholder="Buscar produto">
     </form>
 
     <div class="card p-3 mb-3">
-        <form method="POST" class="row">
-            <div class="col-md-4">
-                <input name="produto" class="form-control" placeholder="Produto">
-            </div>
-            <div class="col-md-3">
-                <input name="qtd" type="number" class="form-control" placeholder="Quantidade">
-            </div>
-            <div class="col-md-3">
-                <select name="categoria" class="form-control">
-                    <option>Eletrônicos</option>
-                    <option>Ferramentas</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-success w-100">Adicionar</button>
-            </div>
-        </form>
+    <form method="POST" class="row">
+    <div class="col-md-4"><input name="produto" class="form-control"></div>
+    <div class="col-md-3"><input name="qtd" type="number" class="form-control"></div>
+    <div class="col-md-3"><select name="categoria" class="form-control">
+    <option>Eletrônicos</option><option>Ferramentas</option></select></div>
+    <div class="col-md-2"><button class="btn btn-success w-100">Add</button></div>
+    </form>
     </div>
 
     <div class="card p-3">
-        <table class="table">
-        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Ações</th></tr>
-        {tabela}
-        </table>
+    <table class="table">
+    <tr><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Ação</th></tr>
+    {tabela}
+    </table>
     </div>
 
     </div>
@@ -286,7 +326,6 @@ def saida(produto):
     cursor = conn.cursor()
 
     cursor.execute("UPDATE estoque SET quantidade = quantidade - 1 WHERE produto=?", (produto,))
-
     cursor.execute("""
     INSERT INTO movimentacoes (produto, quantidade, tipo, usuario)
     VALUES (?, ?, ?, ?)
@@ -316,15 +355,13 @@ def historico():
     return f"""
     {layout_topo()}
     <div class="content">
-    <h3>Histórico</h3>
-
+    <div class="topbar"><h4>Histórico</h4></div>
     <div class="card p-3">
     <table class="table">
     <tr><th>Produto</th><th>Qtd</th><th>Tipo</th><th>Usuário</th><th>Data</th></tr>
     {tabela}
     </table>
     </div>
-
     </div>
     """
 
@@ -368,18 +405,15 @@ def admin():
     return f"""
     {layout_topo()}
     <div class="content">
-
-    <h3>Admin</h3>
+    <div class="topbar"><h4>Admin</h4></div>
 
     <div class="card p-3 mb-3">
     <form method="POST">
-        <input name="user" placeholder="Usuário" class="form-control mb-2">
-        <input name="senha" placeholder="Senha" class="form-control mb-2">
-        <select name="cargo" class="form-control mb-2">
-            <option>admin</option>
-            <option>operador</option>
-        </select>
-        <button class="btn btn-warning">Criar usuário</button>
+    <input name="user" class="form-control mb-2" placeholder="Usuário">
+    <input name="senha" class="form-control mb-2" placeholder="Senha">
+    <select name="cargo" class="form-control mb-2">
+    <option>admin</option><option>operador</option></select>
+    <button class="btn btn-warning">Criar</button>
     </form>
     </div>
 
@@ -393,7 +427,6 @@ def admin():
     </div>
     """
 
-# ================= ALTERAR SENHA =================
 @app.route("/alterar/<user>", methods=["POST"])
 def alterar(user):
     conn = conectar()
@@ -404,7 +437,6 @@ def alterar(user):
 
     conn.commit()
     conn.close()
-
     return redirect("/admin")
 
 # ================= LOGOUT =================
