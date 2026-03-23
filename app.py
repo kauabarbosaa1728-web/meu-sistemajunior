@@ -61,7 +61,7 @@ def criar_admin():
 
 criar_admin()
 
-# ================= LOGIN =================
+# ================= LOGIN (ATUALIZADO) =================
 @app.route("/", methods=["GET","POST"])
 def login():
     erro = ""
@@ -91,34 +91,80 @@ def login():
 <head>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 <style>
-body {{background:#2f3e4e;height:100vh;}}
-.left {{display:flex;align-items:center;justify-content:center;color:white;}}
-.right {{display:flex;align-items:center;justify-content:center;}}
-input {{background:#3b4f63 !important;border:none;color:white !important;}}
-button {{background:#4a90e2 !important;}}
+
+body {{
+    background: linear-gradient(135deg, #0b1120, #1e293b);
+    height:100vh;
+    margin:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family: 'Segoe UI', sans-serif;
+}}
+
+.login-box {{
+    width: 400px;
+    padding: 40px;
+    background:#020617;
+    border:1px solid #1e293b;
+    border-radius:15px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+}}
+
+.title {{
+    font-size: 42px;
+    font-weight: bold;
+    color:#38bdf8;
+    text-align:center;
+    margin-bottom: 25px;
+}}
+
+.subtitle {{
+    text-align:center;
+    color:#94a3b8;
+    margin-bottom: 30px;
+}}
+
+input {{
+    background:#0b1120 !important;
+    border:1px solid #334155 !important;
+    color:white !important;
+    padding:12px !important;
+}}
+
+button {{
+    background:#38bdf8 !important;
+    border:none !important;
+    padding:12px !important;
+    font-weight:bold;
+}}
+
+button:hover {{
+    background:#0ea5e9 !important;
+}}
+
 </style>
 </head>
+
 <body>
-<div class="container-fluid h-100">
-<div class="row h-100">
-<div class="col-md-6 left">
-<h1 style="font-size:70px;">KBSistemas</h1>
+
+<div class="login-box">
+    <div class="title">KBSistemas</div>
+    <div class="subtitle">Acesse com seu usuário</div>
+
+    <form method="POST">
+        <input name="user" class="form-control mb-3" placeholder="Usuário">
+        <input name="senha" type="password" class="form-control mb-3" placeholder="Senha">
+        <button class="btn w-100">Entrar</button>
+        <p class="text-danger mt-3 text-center">{erro}</p>
+    </form>
 </div>
-<div class="col-md-6 right">
-<form method="POST" style="width:300px;">
-<input name="user" class="form-control mb-3" placeholder="Usuário">
-<input name="senha" type="password" class="form-control mb-3" placeholder="Senha">
-<button class="btn btn-primary w-100">Acessar</button>
-<p class="text-danger mt-2">{erro}</p>
-</form>
-</div>
-</div>
-</div>
+
 </body>
 </html>
 """
 
-# ================= LAYOUT PREMIUM =================
+# ================= LAYOUT =================
 def layout_topo():
     return f"""
     <html>
@@ -141,10 +187,6 @@ def layout_topo():
         border-right:1px solid #1e293b;
     }}
 
-    .sidebar h4 {{
-        color:#38bdf8;
-    }}
-
     .sidebar a {{
         display:block;
         color:#94a3b8;
@@ -164,28 +206,6 @@ def layout_topo():
         padding:30px;
     }}
 
-    .topbar {{
-        background:#020617;
-        padding:15px;
-        border-radius:10px;
-        margin-bottom:20px;
-        display:flex;
-        justify-content:space-between;
-        border:1px solid #1e293b;
-    }}
-
-    .card {{
-        background:#020617;
-        border:1px solid #1e293b;
-        border-radius:12px;
-    }}
-
-    input, select {{
-        background:#020617 !important;
-        border:1px solid #334155 !important;
-        color:white !important;
-    }}
-
     </style>
     </head>
 
@@ -196,7 +216,7 @@ def layout_topo():
         <a href="/dashboard">Dashboard</a>
         <a href="/estoque">Estoque</a>
         <a href="/historico">Histórico</a>
-        {"<a href='/admin'>Admin</a>" if session["cargo"] == "admin" else ""}
+        {"<a href='/admin'>Admin</a>" if session.get("cargo") == "admin" else ""}
         <hr>
         <a href="/logout">Sair</a>
     </div>
@@ -208,39 +228,11 @@ def dashboard():
     if "user" not in session:
         return redirect("/")
 
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT categoria, SUM(quantidade) FROM estoque GROUP BY categoria")
-    dados = cursor.fetchall()
-
-    categorias = [d[0] for d in dados]
-    quantidades = [d[1] for d in dados]
-
-    conn.close()
-
     return f"""
     {layout_topo()}
     <div class="content">
-
-    <div class="topbar">
-    <h4>Dashboard</h4>
-    <span>{session["user"]}</span>
-    </div>
-
-    <canvas id="grafico"></canvas>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-    new Chart(document.getElementById('grafico'), {{
-        type: 'bar',
-        data: {{
-            labels: {categorias},
-            datasets: [{{ data: {quantidades} }}]
-        }}
-    }});
-    </script>
-
+    <h2>Dashboard</h2>
+    <p>Bem-vindo, {session["user"]}</p>
     </div>
     """
 
@@ -253,88 +245,41 @@ def estoque():
     conn = conectar()
     cursor = conn.cursor()
 
-    busca = request.args.get("busca", "")
-
     if request.method == "POST":
         produto = request.form["produto"]
         qtd = int(request.form["qtd"])
         categoria = request.form["categoria"]
 
-        cursor.execute("INSERT INTO estoque VALUES (?,?,?)",
-                       (produto, qtd, categoria))
-
-        cursor.execute("""
-        INSERT INTO movimentacoes (produto, quantidade, tipo, usuario)
-        VALUES (?, ?, ?, ?)
-        """, (produto, qtd, "entrada", session["user"]))
-
+        cursor.execute("INSERT INTO estoque VALUES (?,?,?)", (produto, qtd, categoria))
         conn.commit()
 
-    if busca:
-        cursor.execute("SELECT * FROM estoque WHERE produto LIKE ?", (f"%{busca}%",))
-    else:
-        cursor.execute("SELECT * FROM estoque")
-
+    cursor.execute("SELECT * FROM estoque")
     dados = cursor.fetchall()
     conn.close()
 
     tabela = ""
     for p, q, c in dados:
-        tabela += f"""
-        <tr>
-        <td>{p}</td>
-        <td>{q}</td>
-        <td>{c}</td>
-        <td><a href="/saida/{p}" class="btn btn-warning btn-sm">Saída</a></td>
-        </tr>
-        """
+        tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td></tr>"
 
     return f"""
     {layout_topo()}
     <div class="content">
+    <h2>Estoque</h2>
 
-    <div class="topbar"><h4>Estoque</h4></div>
-
-    <form method="GET">
-    <input name="busca" class="form-control mb-3" placeholder="Buscar produto">
+    <form method="POST">
+    <input name="produto" placeholder="Produto">
+    <input name="qtd" type="number" placeholder="Quantidade">
+    <input name="categoria" placeholder="Categoria">
+    <button>Adicionar</button>
     </form>
 
-    <div class="card p-3 mb-3">
-    <form method="POST" class="row">
-    <div class="col-md-4"><input name="produto" class="form-control"></div>
-    <div class="col-md-3"><input name="qtd" type="number" class="form-control"></div>
-    <div class="col-md-3"><select name="categoria" class="form-control">
-    <option>Eletrônicos</option><option>Ferramentas</option></select></div>
-    <div class="col-md-2"><button class="btn btn-success w-100">Add</button></div>
-    </form>
-    </div>
-
-    <div class="card p-3">
-    <table class="table">
-    <tr><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Ação</th></tr>
+    <table class="table text-white">
+    <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
     {tabela}
     </table>
-    </div>
 
     </div>
     """
-
-# ================= SAÍDA =================
-@app.route("/saida/<produto>")
-def saida(produto):
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("UPDATE estoque SET quantidade = quantidade - 1 WHERE produto=?", (produto,))
-    cursor.execute("""
-    INSERT INTO movimentacoes (produto, quantidade, tipo, usuario)
-    VALUES (?, ?, ?, ?)
-    """, (produto, 1, "saida", session["user"]))
-
-    conn.commit()
-    conn.close()
-
-    return redirect("/estoque")
 
 # ================= HISTÓRICO =================
 @app.route("/historico")
@@ -342,26 +287,10 @@ def historico():
     if "user" not in session:
         return redirect("/")
 
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM movimentacoes ORDER BY data DESC")
-    dados = cursor.fetchall()
-    conn.close()
-
-    tabela = ""
-    for d in dados:
-        tabela += f"<tr><td>{d[0]}</td><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td><td>{d[4]}</td></tr>"
-
     return f"""
     {layout_topo()}
     <div class="content">
-    <div class="topbar"><h4>Histórico</h4></div>
-    <div class="card p-3">
-    <table class="table">
-    <tr><th>Produto</th><th>Qtd</th><th>Tipo</th><th>Usuário</th><th>Data</th></tr>
-    {tabela}
-    </table>
-    </div>
+    <h2>Histórico</h2>
     </div>
     """
 
@@ -371,73 +300,12 @@ def admin():
     if "user" not in session or session["cargo"] != "admin":
         return redirect("/")
 
-    conn = conectar()
-    cursor = conn.cursor()
-
-    if request.method == "POST":
-        user = request.form["user"]
-        senha = request.form["senha"]
-        cargo = request.form["cargo"]
-
-        cursor.execute("INSERT INTO usuarios VALUES (?,?,?)",
-                       (user, generate_password_hash(senha), cargo))
-        conn.commit()
-
-    cursor.execute("SELECT user, cargo FROM usuarios")
-    dados = cursor.fetchall()
-    conn.close()
-
-    tabela = ""
-    for u, c in dados:
-        tabela += f"""
-        <tr>
-        <td>{u}</td>
-        <td>{c}</td>
-        <td>
-        <form action="/alterar/{u}" method="POST">
-        <input name="senha" placeholder="Nova senha">
-        <button class="btn btn-warning btn-sm">Alterar</button>
-        </form>
-        </td>
-        </tr>
-        """
-
     return f"""
     {layout_topo()}
     <div class="content">
-    <div class="topbar"><h4>Admin</h4></div>
-
-    <div class="card p-3 mb-3">
-    <form method="POST">
-    <input name="user" class="form-control mb-2" placeholder="Usuário">
-    <input name="senha" class="form-control mb-2" placeholder="Senha">
-    <select name="cargo" class="form-control mb-2">
-    <option>admin</option><option>operador</option></select>
-    <button class="btn btn-warning">Criar</button>
-    </form>
-    </div>
-
-    <div class="card p-3">
-    <table class="table">
-    <tr><th>Usuário</th><th>Cargo</th><th>Ação</th></tr>
-    {tabela}
-    </table>
-    </div>
-
+    <h2>Admin</h2>
     </div>
     """
-
-@app.route("/alterar/<user>", methods=["POST"])
-def alterar(user):
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("UPDATE usuarios SET senha=? WHERE user=?",
-                   (generate_password_hash(request.form["senha"]), user))
-
-    conn.commit()
-    conn.close()
-    return redirect("/admin")
 
 # ================= LOGOUT =================
 @app.route("/logout")
