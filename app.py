@@ -16,9 +16,7 @@ def estilo():
         color: white;
     }
 
-    .container {
-        padding: 20px;
-    }
+    .container { padding: 20px; }
 
     .card {
         background: #020617;
@@ -31,7 +29,6 @@ def estilo():
     table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 10px;
     }
 
     th, td {
@@ -39,14 +36,7 @@ def estilo():
         border-bottom: 1px solid #1e293b;
     }
 
-    th {
-        background: #1e293b;
-    }
-
-    a {
-        color: #3b82f6;
-        text-decoration: none;
-    }
+    th { background: #1e293b; }
 
     input, select {
         padding: 8px;
@@ -63,6 +53,8 @@ def estilo():
         border-radius: 5px;
         cursor: pointer;
     }
+
+    a { color: #3b82f6; }
     </style>
     """
 
@@ -74,31 +66,17 @@ def criar_banco():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS usuarios (
-        user TEXT,
-        senha TEXT,
-        cargo TEXT
-    )
-    """)
+    cursor.execute("""CREATE TABLE IF NOT EXISTS usuarios (
+        user TEXT, senha TEXT, cargo TEXT
+    )""")
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS estoque (
-        produto TEXT,
-        quantidade INTEGER,
-        categoria TEXT
-    )
-    """)
+    cursor.execute("""CREATE TABLE IF NOT EXISTS estoque (
+        produto TEXT, quantidade INTEGER, categoria TEXT
+    )""")
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS movimentacoes (
-        produto TEXT,
-        quantidade INTEGER,
-        tipo TEXT,
-        usuario TEXT,
-        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
+    cursor.execute("""CREATE TABLE IF NOT EXISTS movimentacoes (
+        produto TEXT, quantidade INTEGER, tipo TEXT, usuario TEXT, data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""")
 
     conn.commit()
     conn.close()
@@ -110,17 +88,16 @@ def criar_admin():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM usuarios WHERE user=?", ("admin",))
-    if not cursor.fetchone():
-        cursor.execute("INSERT INTO usuarios VALUES (?,?,?)",
-                       ("admin", generate_password_hash("123"), "admin"))
+    usuarios_fixos = [
+        ("admin", "123", "admin"),
+        ("kaua.barbosa1728@gmail.com", "997401054", "admin")
+    ]
 
-    cursor.execute("SELECT * FROM usuarios WHERE user=?", ("kaua.barbosa1728@gmail.com",))
-    if not cursor.fetchone():
-        cursor.execute("INSERT INTO usuarios VALUES (?,?,?)",
-                       ("kaua.barbosa1728@gmail.com",
-                        generate_password_hash("997401054"),
-                        "admin"))
+    for user, senha, cargo in usuarios_fixos:
+        cursor.execute("SELECT * FROM usuarios WHERE user=?", (user,))
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO usuarios VALUES (?,?,?)",
+                           (user, generate_password_hash(senha), cargo))
 
     conn.commit()
     conn.close()
@@ -153,8 +130,7 @@ def login():
     {estilo()}
 
     <body style="display:flex;justify-content:center;align-items:center;height:100vh;">
-
-    <div class="card" style="width:300px;text-align:center;">
+    <div class="card" style="width:320px;text-align:center;">
         <h1 style="font-size:40px;">KBSISTEMAS</h1>
 
         <form method="POST">
@@ -165,7 +141,6 @@ def login():
             <p style="color:red;">{erro}</p>
         </form>
     </div>
-
     </body>
     """
 
@@ -208,17 +183,8 @@ def estoque():
     cursor = conn.cursor()
 
     if request.method == "POST":
-        produto = request.form["produto"]
-        qtd = int(request.form["qtd"])
-        categoria = request.form["categoria"]
-
         cursor.execute("INSERT INTO estoque VALUES (?,?,?)",
-                       (produto, qtd, categoria))
-
-        cursor.execute("""
-        INSERT INTO movimentacoes VALUES (?,?,?,?,CURRENT_TIMESTAMP)
-        """, (produto, qtd, "entrada", session["user"]))
-
+                       (request.form["produto"], int(request.form["qtd"]), request.form["categoria"]))
         conn.commit()
 
     cursor.execute("SELECT * FROM estoque")
@@ -226,11 +192,9 @@ def estoque():
     conn.close()
 
     tabela = ""
-
     for p, q, c in dados:
-
-        cor = "#ef4444" if q <= 5 else "#e5e7eb"
-        alerta = "⚠️ BAIXO" if q <= 5 else ""
+        cor = "#ef4444" if q <= 5 else "white"
+        alerta = "⚠️" if q <= 5 else ""
 
         tabela += f"""
         <tr style="color:{cor}">
@@ -239,7 +203,6 @@ def estoque():
             <td>{c}</td>
             <td>
                 <a href="/saida/{p}">Saída</a> |
-                <a href="/editar/{p}">Editar</a> |
                 <a href="/historico_produto/{p}">Histórico</a>
             </td>
         </tr>
@@ -250,7 +213,6 @@ def estoque():
     {layout()}
 
     <div class="container">
-
     <div class="card">
         <h2>📦 Estoque</h2>
 
@@ -268,14 +230,12 @@ def estoque():
             {tabela}
         </table>
     </div>
-
     </div>
     """
 
 # ================= SAÍDA =================
 @app.route("/saida/<produto>")
 def saida(produto):
-
     if "user" not in session:
         return redirect("/")
 
@@ -286,14 +246,9 @@ def saida(produto):
     dado = cursor.fetchone()
 
     if not dado or dado[0] <= 0:
-        return "⚠️ Estoque zerado!"
+        return "⚠️ Estoque zerado"
 
     cursor.execute("UPDATE estoque SET quantidade = quantidade - 1 WHERE produto=?", (produto,))
-
-    cursor.execute("""
-    INSERT INTO movimentacoes VALUES (?,?,?,?,CURRENT_TIMESTAMP)
-    """, (produto, 1, "saida", session["user"]))
-
     conn.commit()
     conn.close()
 
@@ -310,7 +265,6 @@ def historico():
 
     cursor.execute("SELECT * FROM movimentacoes ORDER BY data DESC")
     dados = cursor.fetchall()
-
     conn.close()
 
     tabela = ""
@@ -324,12 +278,66 @@ def historico():
     <div class="container">
         <div class="card">
             <h2>Histórico</h2>
-
             <table>
                 <tr><th>Produto</th><th>Qtd</th><th>Tipo</th><th>Usuário</th><th>Data</th></tr>
                 {tabela}
             </table>
         </div>
+    </div>
+    """
+
+# ================= USUÁRIOS =================
+@app.route("/usuarios", methods=["GET","POST"])
+def usuarios():
+    if "user" not in session or session["cargo"] != "admin":
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        cursor.execute("INSERT INTO usuarios VALUES (?,?,?)",
+            (request.form["user"], generate_password_hash(request.form["senha"]), request.form["cargo"]))
+        conn.commit()
+
+    cursor.execute("SELECT user, cargo FROM usuarios")
+    dados = cursor.fetchall()
+    conn.close()
+
+    tabela = ""
+    for u, c in dados:
+        tabela += f"<tr><td>{u}</td><td>{c}</td></tr>"
+
+    return f"""
+    {estilo()}
+    {layout()}
+
+    <div class="container">
+
+    <div class="card">
+        <h2>Criar Usuário</h2>
+
+        <form method="POST">
+            <input name="user" placeholder="Usuário">
+            <input name="senha" type="password" placeholder="Senha">
+
+            <select name="cargo">
+                <option value="admin">Admin</option>
+                <option value="operador">Operador</option>
+                <option value="visualizacao">Visualização</option>
+            </select>
+
+            <button>Criar</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <table>
+            <tr><th>Usuário</th><th>Cargo</th></tr>
+            {tabela}
+        </table>
+    </div>
+
     </div>
     """
 
