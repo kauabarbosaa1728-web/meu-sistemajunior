@@ -1,16 +1,14 @@
-from flask import Flask, render_template_string, request, redirect, session
+from flask import Flask, request, redirect, session
 from werkzeug.security import generate_password_hash, check_password_hash
-import sqlite3
-import os
+import sqlite3, os
 
 app = Flask(__name__)
 app.secret_key = "segredo123"
 
-ADMIN = "kaua.barbosa1728@gmail.com"
-
 def conectar():
     return sqlite3.connect("banco.db")
 
+# BANCO
 def criar_banco():
     conn = conectar()
     cursor = conn.cursor()
@@ -20,6 +18,7 @@ def criar_banco():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user TEXT UNIQUE,
         senha TEXT,
+        cargo TEXT,
         online INTEGER DEFAULT 0,
         ultimo_login TIMESTAMP
     )
@@ -41,7 +40,6 @@ def criar_banco():
         quantidade INTEGER,
         tipo TEXT,
         usuario TEXT,
-        categoria TEXT,
         data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -51,14 +49,17 @@ def criar_banco():
 
 criar_banco()
 
+# CRIAR ADMIN
 def criar_admin():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM usuarios WHERE user=?", (ADMIN,))
+    cursor.execute("SELECT * FROM usuarios WHERE user=?", ("kaua.barbosa1728@gmail.com",))
     if not cursor.fetchone():
-        cursor.execute("INSERT INTO usuarios (user, senha) VALUES (?,?)",
-                       (ADMIN, generate_password_hash("997401054")))
+        cursor.execute("""
+        INSERT INTO usuarios (user, senha, cargo)
+        VALUES (?, ?, ?)
+        """, ("kaua.barbosa1728@gmail.com", generate_password_hash("997401054"), "admin"))
         conn.commit()
 
     conn.close()
@@ -76,222 +77,123 @@ def login():
 
         conn = conectar()
         cursor = conn.cursor()
-        cursor.execute("SELECT senha FROM usuarios WHERE user=?", (user,))
+
+        cursor.execute("SELECT senha, cargo FROM usuarios WHERE user=?", (user,))
         dado = cursor.fetchone()
 
         if dado and check_password_hash(dado[0], senha):
             session["user"] = user
+            session["cargo"] = dado[1]
 
-            cursor.execute("""
-            UPDATE usuarios SET online=1, ultimo_login=CURRENT_TIMESTAMP WHERE user=?
-            """, (user,))
+            cursor.execute("UPDATE usuarios SET online=1, ultimo_login=CURRENT_TIMESTAMP WHERE user=?", (user,))
             conn.commit()
             conn.close()
 
             return redirect("/sistema")
-        else:
-            erro = "Login inválido"
-            conn.close()
+
+        erro = "Login inválido"
+        conn.close()
 
     return f"""
-    <html><head>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    </head>
-    <body class="bg-dark d-flex justify-content-center align-items-center" style="height:100vh;">
-    <div class="card p-4" style="width:350px;">
-    <h3>🔐 KBSistemas</h3>
+    <html><body style="display:flex;justify-content:center;align-items:center;height:100vh;background:#111;color:white;">
     <form method="POST">
-    <input name="user" class="form-control mb-2" placeholder="Usuário">
-    <input name="senha" type="password" class="form-control mb-3" placeholder="Senha">
-    <button class="btn btn-primary w-100">Entrar</button>
+    <h2>KBSistemas</h2>
+    <input name="user" placeholder="Usuário"><br><br>
+    <input name="senha" type="password" placeholder="Senha"><br><br>
+    <button>Entrar</button>
+    <p>{erro}</p>
     </form>
-    <p class="text-danger">{erro}</p>
-    </div>
     </body></html>
     """
 
 # SISTEMA
-@app.route("/sistema", methods=["GET","POST"])
+@app.route("/sistema")
 def sistema():
     if "user" not in session:
         return redirect("/")
 
-    conn = conectar()
-    cursor = conn.cursor()
-
-    busca = request.args.get("busca", "")
-    filtro = request.args.get("filtro", "")
-
-    if request.method == "POST":
-        produto = request.form["produto"]
-        qtd = int(request.form["qtd"])
-        categoria = request.form["categoria"]
-
-        cursor.execute("INSERT INTO estoque (produto, quantidade, categoria) VALUES (?,?,?)",
-                       (produto, qtd, categoria))
-
-        cursor.execute("""
-        INSERT INTO movimentacoes (produto, quantidade, tipo, usuario, categoria)
-        VALUES (?, ?, ?, ?, ?)
-        """, (produto, qtd, "entrada", session["user"], categoria))
-
-        conn.commit()
-
-    query = "SELECT produto, quantidade, categoria FROM estoque WHERE 1=1"
-    params = []
-
-    if busca:
-        query += " AND produto LIKE ?"
-        params.append(f"%{busca}%")
-
-    if filtro:
-        query += " AND categoria=?"
-        params.append(filtro)
-
-    cursor.execute(query, params)
-    dados = cursor.fetchall()
-    conn.close()
-
-    tabela = ""
-    total = 0
-
-    for p, q, c in dados:
-        tabela += f"""
-        <tr>
-            <td>{p}</td>
-            <td>{q}</td>
-            <td>{c}</td>
-            <td>
-                <form action="/editar/{p}" method="POST" style="display:inline;">
-                    <input name="qtd" type="number" value="{q}" style="width:80px;">
-                    <button class="btn btn-primary btn-sm">Atualizar</button>
-                </form>
-                <a href="/deletar/{p}" class="btn btn-danger btn-sm">Excluir</a>
-            </td>
-        </tr>
-        """
-        total += q
-
     botao_admin = ""
-    if session["user"] == ADMIN:
-        botao_admin = '<li><a class="dropdown-item" href="/admin">Usuários</a></li>'
+    if session["cargo"] == "admin":
+        botao_admin = '<a href="/admin">Painel Admin</a>'
 
     return f"""
-    <html><head>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    </head>
-    <body>
-
-    <nav class="navbar navbar-dark bg-dark">
-    <div class="container-fluid">
-    <span class="navbar-brand">📦 KBSistemas</span>
-
-    <div class="dropdown">
-    <button class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown">Menu</button>
-    <ul class="dropdown-menu">
-        <li><a class="dropdown-item" href="/sistema">Estoque</a></li>
-        <li><a class="dropdown-item" href="/historico">Histórico</a></li>
-        {botao_admin}
-    </ul>
-    </div>
-
-    <a href="/logout" class="btn btn-danger">Sair</a>
-    </div>
-    </nav>
-
-    <div class="container mt-4">
-
-    <form method="GET" class="row mb-3">
-        <input name="busca" class="form-control col" placeholder="Buscar">
-    </form>
-
-    <form method="POST" class="row mb-3">
-        <input name="produto" class="form-control col" placeholder="Produto">
-        <input name="qtd" type="number" class="form-control col" placeholder="Qtd">
-        <select name="categoria" class="form-control col">
-            <option>Eletrônicos</option>
-            <option>Ferramentas</option>
-            <option>Escritório</option>
-        </select>
-        <button class="btn btn-success col">Adicionar</button>
-    </form>
-
-    <table class="table table-striped">
-    <tr><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Ações</th></tr>
-    {tabela}
-    </table>
-
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    </body></html>
+    <h2>Sistema</h2>
+    <p>Usuário: {session['user']} ({session['cargo']})</p>
+    {botao_admin}
+    <br><br>
+    <a href="/logout">Sair</a>
     """
 
 # ADMIN
 @app.route("/admin", methods=["GET","POST"])
 def admin():
-    if "user" not in session or session["user"] != ADMIN:
+    if "user" not in session or session["cargo"] != "admin":
         return redirect("/")
 
     conn = conectar()
     cursor = conn.cursor()
 
+    # CRIAR USUÁRIO
     if request.method == "POST":
-        novo = request.form["novo"]
+        user = request.form["user"]
         senha = request.form["senha"]
+        cargo = request.form["cargo"]
 
-        cursor.execute("INSERT INTO usuarios (user, senha) VALUES (?,?)",
-                       (novo, generate_password_hash(senha)))
+        cursor.execute("""
+        INSERT INTO usuarios (user, senha, cargo)
+        VALUES (?, ?, ?)
+        """, (user, generate_password_hash(senha), cargo))
         conn.commit()
 
-    cursor.execute("SELECT user, online, ultimo_login FROM usuarios")
+    cursor.execute("SELECT user, cargo, online FROM usuarios")
     dados = cursor.fetchall()
     conn.close()
 
     tabela = ""
-    for u, o, l in dados:
+    for u, c, o in dados:
         status = "🟢" if o else "🔴"
 
         tabela += f"""
         <tr>
             <td>{u}</td>
+            <td>{c}</td>
             <td>{status}</td>
-            <td>{l}</td>
             <td>
                 <form action="/alterar/{u}" method="POST">
                     <input name="senha" placeholder="Nova senha">
-                    <button class="btn btn-warning btn-sm">Alterar</button>
+                    <button>Alterar</button>
                 </form>
             </td>
         </tr>
         """
 
     return f"""
-    <html><head>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    </head>
-    <body class="container mt-4">
+    <h2>Painel Admin</h2>
 
-    <h2>👑 Admin</h2>
-
-    <form method="POST" class="mb-3">
-        <input name="novo" placeholder="Novo usuário">
+    <form method="POST">
+        <input name="user" placeholder="Usuário">
         <input name="senha" placeholder="Senha">
-        <button class="btn btn-success">Criar</button>
+        <select name="cargo">
+            <option value="admin">Admin</option>
+            <option value="operador">Operador</option>
+        </select>
+        <button>Criar</button>
     </form>
 
-    <table class="table">
-    <tr><th>Usuário</th><th>Status</th><th>Último Login</th><th>Ação</th></tr>
+    <table border="1">
+    <tr><th>Usuário</th><th>Cargo</th><th>Status</th><th>Ação</th></tr>
     {tabela}
     </table>
 
-    <a href="/sistema" class="btn btn-secondary">Voltar</a>
-
-    </body></html>
+    <a href="/sistema">Voltar</a>
     """
 
+# ALTERAR SENHA
 @app.route("/alterar/<user>", methods=["POST"])
 def alterar(user):
+    if session.get("cargo") != "admin":
+        return redirect("/")
+
     conn = conectar()
     cursor = conn.cursor()
 
