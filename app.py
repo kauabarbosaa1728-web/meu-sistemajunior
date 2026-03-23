@@ -6,11 +6,11 @@ import os
 app = Flask(__name__)
 app.secret_key = "segredo123"
 
-# CONEXÃO
+ADMIN = "kaua.barbosa1728@gmail.com"
+
 def conectar():
     return sqlite3.connect("banco.db")
 
-# CRIAR BANCO
 def criar_banco():
     conn = conectar()
     cursor = conn.cursor()
@@ -19,7 +19,9 @@ def criar_banco():
     CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user TEXT UNIQUE,
-        senha TEXT
+        senha TEXT,
+        online INTEGER DEFAULT 0,
+        ultimo_login TIMESTAMP
     )
     """)
 
@@ -49,15 +51,14 @@ def criar_banco():
 
 criar_banco()
 
-# CRIAR ADMIN
 def criar_admin():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM usuarios WHERE user=?", ("kaua.barbosa1728@gmail.com",))
+    cursor.execute("SELECT * FROM usuarios WHERE user=?", (ADMIN,))
     if not cursor.fetchone():
         cursor.execute("INSERT INTO usuarios (user, senha) VALUES (?,?)",
-                       ("kaua.barbosa1728@gmail.com", generate_password_hash("997401054")))
+                       (ADMIN, generate_password_hash("997401054")))
         conn.commit()
 
     conn.close()
@@ -65,30 +66,6 @@ def criar_admin():
 criar_admin()
 
 # LOGIN
-html_login = """
-<!DOCTYPE html>
-<html>
-<head>
-<title>Login</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-
-<body class="bg-dark d-flex justify-content-center align-items-center" style="height:100vh;">
-<div class="card p-4" style="width:350px;">
-<h3 class="text-center">🔐 KBSistemas</h3>
-
-<form method="POST">
-<input name="user" class="form-control mb-2" placeholder="Usuário">
-<input name="senha" type="password" class="form-control mb-3" placeholder="Senha">
-<button class="btn btn-primary w-100">Entrar</button>
-</form>
-
-<p class="text-danger">{{erro}}</p>
-</div>
-</body>
-</html>
-"""
-
 @app.route("/", methods=["GET","POST"])
 def login():
     erro = ""
@@ -101,15 +78,37 @@ def login():
         cursor = conn.cursor()
         cursor.execute("SELECT senha FROM usuarios WHERE user=?", (user,))
         dado = cursor.fetchone()
-        conn.close()
 
         if dado and check_password_hash(dado[0], senha):
             session["user"] = user
+
+            cursor.execute("""
+            UPDATE usuarios SET online=1, ultimo_login=CURRENT_TIMESTAMP WHERE user=?
+            """, (user,))
+            conn.commit()
+            conn.close()
+
             return redirect("/sistema")
         else:
             erro = "Login inválido"
+            conn.close()
 
-    return render_template_string(html_login, erro=erro)
+    return f"""
+    <html><head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    </head>
+    <body class="bg-dark d-flex justify-content-center align-items-center" style="height:100vh;">
+    <div class="card p-4" style="width:350px;">
+    <h3>🔐 KBSistemas</h3>
+    <form method="POST">
+    <input name="user" class="form-control mb-2" placeholder="Usuário">
+    <input name="senha" type="password" class="form-control mb-3" placeholder="Senha">
+    <button class="btn btn-primary w-100">Entrar</button>
+    </form>
+    <p class="text-danger">{erro}</p>
+    </div>
+    </body></html>
+    """
 
 # SISTEMA
 @app.route("/sistema", methods=["GET","POST"])
@@ -120,11 +119,9 @@ def sistema():
     conn = conectar()
     cursor = conn.cursor()
 
-    # FILTRO
     busca = request.args.get("busca", "")
     filtro = request.args.get("filtro", "")
 
-    # ADICIONAR
     if request.method == "POST":
         produto = request.form["produto"]
         qtd = int(request.form["qtd"])
@@ -140,7 +137,6 @@ def sistema():
 
         conn.commit()
 
-    # BUSCA + FILTRO
     query = "SELECT produto, quantidade, categoria FROM estoque WHERE 1=1"
     params = []
 
@@ -176,228 +172,153 @@ def sistema():
         """
         total += q
 
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <title>KBSistemas</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    </head>
+    botao_admin = ""
+    if session["user"] == ADMIN:
+        botao_admin = '<li><a class="dropdown-item" href="/admin">Usuários</a></li>'
 
+    return f"""
+    <html><head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    </head>
     <body>
 
-    <!-- MENU -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-      <div class="container-fluid">
-        <a class="navbar-brand">📦 KBSistemas</a>
+    <nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+    <span class="navbar-brand">📦 KBSistemas</span>
 
-        <div class="collapse navbar-collapse">
-          <ul class="navbar-nav me-auto">
+    <div class="dropdown">
+    <button class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown">Menu</button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/sistema">Estoque</a></li>
+        <li><a class="dropdown-item" href="/historico">Histórico</a></li>
+        {botao_admin}
+    </ul>
+    </div>
 
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Estoque</a>
-              <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="/sistema">Movimentações</a></li>
-                <li><a class="dropdown-item" href="/historico">Histórico</a></li>
-              </ul>
-            </li>
-
-          </ul>
-
-          <a href="/logout" class="btn btn-danger">Sair</a>
-        </div>
-      </div>
+    <a href="/logout" class="btn btn-danger">Sair</a>
+    </div>
     </nav>
 
     <div class="container mt-4">
 
-    <!-- BUSCA -->
     <form method="GET" class="row mb-3">
-        <div class="col-md-4">
-            <input name="busca" class="form-control" placeholder="Buscar produto">
-        </div>
-
-        <div class="col-md-4">
-            <select name="filtro" class="form-control">
-                <option value="">Todas categorias</option>
-                <option>Eletrônicos</option>
-                <option>Ferramentas</option>
-                <option>Escritório</option>
-            </select>
-        </div>
-
-        <div class="col-md-2">
-            <button class="btn btn-primary w-100">Filtrar</button>
-        </div>
+        <input name="busca" class="form-control col" placeholder="Buscar">
     </form>
 
-    <!-- CARDS -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card p-3 text-center shadow">
-                <h5>Total de Produtos</h5>
-                <h2>{len(dados)}</h2>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card p-3 text-center shadow">
-                <h5>Total em Estoque</h5>
-                <h2>{total}</h2>
-            </div>
-        </div>
-    </div>
-
-    <!-- FORM -->
-    <div class="card p-4 mb-4 shadow">
-    <form method="POST" class="row g-3">
-        <div class="col-md-4">
-            <input name="produto" class="form-control" placeholder="Produto">
-        </div>
-        <div class="col-md-3">
-            <input name="qtd" type="number" class="form-control" placeholder="Quantidade">
-        </div>
-        <div class="col-md-3">
-            <select name="categoria" class="form-control">
-                <option>Eletrônicos</option>
-                <option>Ferramentas</option>
-                <option>Escritório</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-success w-100">Adicionar</button>
-        </div>
+    <form method="POST" class="row mb-3">
+        <input name="produto" class="form-control col" placeholder="Produto">
+        <input name="qtd" type="number" class="form-control col" placeholder="Qtd">
+        <select name="categoria" class="form-control col">
+            <option>Eletrônicos</option>
+            <option>Ferramentas</option>
+            <option>Escritório</option>
+        </select>
+        <button class="btn btn-success col">Adicionar</button>
     </form>
-    </div>
 
-    <!-- TABELA -->
-    <div class="card p-4 shadow">
     <table class="table table-striped">
-        <thead class="table-dark">
-            <tr>
-                <th>Produto</th>
-                <th>Quantidade</th>
-                <th>Categoria</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {tabela}
-        </tbody>
+    <tr><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Ações</th></tr>
+    {tabela}
     </table>
-    </div>
 
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    </body>
-    </html>
+    </body></html>
     """
 
-# EDITAR
-@app.route("/editar/<produto>", methods=["POST"])
-def editar(produto):
-    nova_qtd = request.form["qtd"]
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("UPDATE estoque SET quantidade=? WHERE produto=?", (nova_qtd, produto))
-
-    cursor.execute("""
-    INSERT INTO movimentacoes (produto, quantidade, tipo, usuario)
-    VALUES (?, ?, ?, ?)
-    """, (produto, nova_qtd, "edição", session["user"]))
-
-    conn.commit()
-    conn.close()
-
-    return redirect("/sistema")
-
-# DELETAR
-@app.route("/deletar/<produto>")
-def deletar(produto):
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("DELETE FROM estoque WHERE produto=?", (produto,))
-
-    cursor.execute("""
-    INSERT INTO movimentacoes (produto, quantidade, tipo, usuario)
-    VALUES (?, ?, ?, ?)
-    """, (produto, 0, "exclusão", session["user"]))
-
-    conn.commit()
-    conn.close()
-
-    return redirect("/sistema")
-
-# HISTÓRICO
-@app.route("/historico")
-def historico():
-    if "user" not in session:
+# ADMIN
+@app.route("/admin", methods=["GET","POST"])
+def admin():
+    if "user" not in session or session["user"] != ADMIN:
         return redirect("/")
 
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT produto, quantidade, tipo, usuario, data FROM movimentacoes ORDER BY id DESC")
+    if request.method == "POST":
+        novo = request.form["novo"]
+        senha = request.form["senha"]
+
+        cursor.execute("INSERT INTO usuarios (user, senha) VALUES (?,?)",
+                       (novo, generate_password_hash(senha)))
+        conn.commit()
+
+    cursor.execute("SELECT user, online, ultimo_login FROM usuarios")
     dados = cursor.fetchall()
     conn.close()
 
     tabela = ""
-    for p, q, t, u, d in dados:
+    for u, o, l in dados:
+        status = "🟢" if o else "🔴"
+
         tabela += f"""
         <tr>
-            <td>{p}</td>
-            <td>{q}</td>
-            <td>{t}</td>
             <td>{u}</td>
-            <td>{d}</td>
+            <td>{status}</td>
+            <td>{l}</td>
+            <td>
+                <form action="/alterar/{u}" method="POST">
+                    <input name="senha" placeholder="Nova senha">
+                    <button class="btn btn-warning btn-sm">Alterar</button>
+                </form>
+            </td>
         </tr>
         """
 
     return f"""
-    <html>
-    <head>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <html><head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     </head>
+    <body class="container mt-4">
 
-    <body class="bg-light">
+    <h2>👑 Admin</h2>
 
-    <div class="container mt-4">
-        <h2>📊 Histórico de Movimentações</h2>
+    <form method="POST" class="mb-3">
+        <input name="novo" placeholder="Novo usuário">
+        <input name="senha" placeholder="Senha">
+        <button class="btn btn-success">Criar</button>
+    </form>
 
-        <table class="table table-striped">
-            <thead class="table-dark">
-                <tr>
-                    <th>Produto</th>
-                    <th>Quantidade</th>
-                    <th>Tipo</th>
-                    <th>Usuário</th>
-                    <th>Data</th>
-                </tr>
-            </thead>
-            <tbody>
-                {tabela}
-            </tbody>
-        </table>
+    <table class="table">
+    <tr><th>Usuário</th><th>Status</th><th>Último Login</th><th>Ação</th></tr>
+    {tabela}
+    </table>
 
-        <a href="/sistema" class="btn btn-secondary">Voltar</a>
-    </div>
+    <a href="/sistema" class="btn btn-secondary">Voltar</a>
 
-    </body>
-    </html>
+    </body></html>
     """
+
+@app.route("/alterar/<user>", methods=["POST"])
+def alterar(user):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    senha = request.form["senha"]
+
+    cursor.execute("UPDATE usuarios SET senha=? WHERE user=?",
+                   (generate_password_hash(senha), user))
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/admin")
 
 # LOGOUT
 @app.route("/logout")
 def logout():
+    conn = conectar()
+    cursor = conn.cursor()
+
+    if "user" in session:
+        cursor.execute("UPDATE usuarios SET online=0 WHERE user=?", (session["user"],))
+        conn.commit()
+
+    conn.close()
     session.clear()
     return redirect("/")
 
-# RODAR
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
