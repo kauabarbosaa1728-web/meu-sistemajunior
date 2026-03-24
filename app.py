@@ -172,7 +172,7 @@ def estoque():
     </div>
     """
 
-# ================= SAÍDA COM DETALHES =================
+# ================= SAÍDA =================
 @app.route("/saida/<produto>", methods=["GET","POST"])
 def saida(produto):
     if "user" not in session:
@@ -269,6 +269,7 @@ def logout():
     session.clear()
     return redirect("/")
 
-# ================= RUN =================
+# ================= RUN CORRIGIDO PRA RENDER =================
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
