@@ -1,21 +1,28 @@
 from flask import Flask, request, redirect, session
 from werkzeug.security import generate_password_hash, check_password_hash
-import sqlite3, os
+import psycopg2, os
 
 app = Flask(__name__)
 app.secret_key = "segredo123"
 
-# ================= BANCO =================
+# ================= CONEXÃO NEON =================
 def conectar():
-    return sqlite3.connect("banco.db")
+    return psycopg2.connect(
+        host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
+        database="neondb",
+        user="neondb_owner",
+        password="npg_zGebRqQWoB06",
+        port="5432",
+        sslmode="require"
+    )
 
+# ================= CRIAR TABELAS =================
 def criar_banco():
     conn = conectar()
     cursor = conn.cursor()
 
-    # 🔥 atualizado (novos campos)
     cursor.execute("""CREATE TABLE IF NOT EXISTS usuarios (
-        user TEXT,
+        user TEXT PRIMARY KEY,
         senha TEXT,
         cargo TEXT,
         pode_estoque INTEGER DEFAULT 1,
@@ -26,6 +33,7 @@ def criar_banco():
     )""")
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS saldo_historico (
+        id SERIAL PRIMARY KEY,
         usuario TEXT,
         valor INTEGER,
         descricao TEXT,
@@ -34,10 +42,13 @@ def criar_banco():
     )""")
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS estoque (
-        produto TEXT, quantidade INTEGER, categoria TEXT
+        produto TEXT,
+        quantidade INTEGER,
+        categoria TEXT
     )""")
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS movimentacoes (
+        id SERIAL PRIMARY KEY,
         produto TEXT,
         quantidade INTEGER,
         tipo TEXT,
@@ -58,33 +69,27 @@ def criar_admin():
     conn = conectar()
     cursor = conn.cursor()
 
-    if not cursor.execute("SELECT * FROM usuarios WHERE user=?", ("admin",)).fetchone():
-        cursor.execute("INSERT INTO usuarios VALUES (?,?,?,?,?,?,?,?)",
-                       ("admin", generate_password_hash("123"), "admin", 1, 1, 1, 0, 0))
+    cursor.execute("SELECT * FROM usuarios WHERE user=%s", ("admin",))
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO usuarios VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (
+            "admin",
+            generate_password_hash("123"),
+            "admin",
+            1, 1, 1, 0, 0
+        ))
 
     conn.commit()
     conn.close()
 
 criar_admin()
 
-# ================= PERMISSÃO =================
-def verificar_permissao(tipo):
-    if "user" not in session:
-        return False
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute(f"SELECT {tipo} FROM usuarios WHERE user=?", (session["user"],))
-    dado = cursor.fetchone()
-    conn.close()
-
-    return dado and dado[0] == 1
-
 # ================= LOGIN =================
 @app.route("/", methods=["GET","POST"])
 def login():
     erro = ""
+
     if request.method == "POST":
         user = request.form["user"]
         senha = request.form["senha"]
@@ -92,15 +97,14 @@ def login():
         conn = conectar()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT senha, cargo FROM usuarios WHERE user=?", (user,))
+        cursor.execute("SELECT senha, cargo FROM usuarios WHERE user=%s", (user,))
         dado = cursor.fetchone()
 
         if dado and check_password_hash(dado[0], senha):
             session["user"] = user
             session["cargo"] = dado[1]
 
-            # 🟢 ONLINE
-            cursor.execute("UPDATE usuarios SET online=1 WHERE user=?", (user,))
+            cursor.execute("UPDATE usuarios SET online=1 WHERE user=%s", (user,))
             conn.commit()
             conn.close()
 
@@ -109,31 +113,13 @@ def login():
         erro = "Login inválido"
 
     return f"""
-    {estilo()}
-    <body style="display:flex;justify-content:center;align-items:center;height:100vh;">
-    <div class="card" style="width:320px;text-align:center;">
-        <h1>KBSISTEMAS</h1>
-        <form method="POST">
-            <input name="user" placeholder="Usuário"><br>
-            <input name="senha" type="password" placeholder="Senha"><br>
-            <button>Entrar</button>
-            <p style="color:red;">{erro}</p>
-        </form>
-    </div>
-    </body>
-    """
-
-# ================= MENU =================
-def layout():
-    return """
-    <div class="card">
-        <a href="/dashboard">Dashboard</a> |
-        <a href="/estoque">Estoque</a> |
-        <a href="/historico">Histórico</a> |
-        <a href="/usuarios">Usuários</a> |
-        <a href="/saldo">Meu Saldo</a> |
-        <a href="/logout">Sair</a>
-    </div>
+    <h2>Login</h2>
+    <form method="POST">
+        <input name="user" placeholder="Usuário"><br>
+        <input name="senha" type="password" placeholder="Senha"><br>
+        <button>Entrar</button>
+        <p style="color:red;">{erro}</p>
+    </form>
     """
 
 # ================= DASHBOARD =================
@@ -141,7 +127,7 @@ def layout():
 def dashboard():
     if "user" not in session:
         return redirect("/")
-    return f"{estilo()}{layout()}<div class='container'><div class='card'><h2>Bem-vindo {session['user']}</h2></div></div>"
+    return f"<h2>Bem-vindo {session['user']}</h2>"
 
 # ================= SALDO =================
 @app.route("/saldo")
@@ -152,20 +138,12 @@ def saldo():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT saldo FROM usuarios WHERE user=?", (session["user"],))
+    cursor.execute("SELECT saldo FROM usuarios WHERE user=%s", (session["user"],))
     saldo = cursor.fetchone()[0]
 
     conn.close()
 
-    return f"""
-    {estilo()}{layout()}
-    <div class="container">
-        <div class="card">
-            <h2>Seu saldo: {saldo}</h2>
-            <a href="/extrato/{session['user']}">Ver extrato</a>
-        </div>
-    </div>
-    """
+    return f"<h2>Seu saldo: {saldo}</h2>"
 
 # ================= EXTRATO =================
 @app.route("/extrato/<usuario>")
@@ -179,27 +157,17 @@ def extrato(usuario):
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM saldo_historico WHERE usuario=? ORDER BY data DESC", (usuario,))
-    dados = cursor.fetchall()
+    cursor.execute("""
+        SELECT valor, descricao, quem_lancou, data 
+        FROM saldo_historico 
+        WHERE usuario=%s
+        ORDER BY data DESC
+    """, (usuario,))
 
+    dados = cursor.fetchall()
     conn.close()
 
-    tabela = ""
-    for d in dados:
-        tabela += f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td><td>{d[4]}</td></tr>"
-
-    return f"""
-    {estilo()}{layout()}
-    <div class="container">
-        <div class="card">
-            <h2>Extrato de {usuario}</h2>
-            <table>
-                <tr><th>Valor</th><th>Descrição</th><th>Quem lançou</th><th>Data</th></tr>
-                {tabela}
-            </table>
-        </div>
-    </div>
-    """
+    return str(dados)
 
 # ================= USUÁRIOS =================
 @app.route("/usuarios", methods=["GET","POST"])
@@ -207,22 +175,20 @@ def usuarios():
     if "user" not in session:
         return redirect("/")
 
-    if not verificar_permissao("pode_usuarios"):
+    if session.get("cargo") != "admin":
         return "Não autorizado. Falar com o administrador."
 
     conn = conectar()
     cursor = conn.cursor()
 
     if request.method == "POST":
-        cursor.execute("INSERT INTO usuarios VALUES (?,?,?,?,?,?,?,?)", (
+        cursor.execute("""
+            INSERT INTO usuarios VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (
             request.form["user"],
             generate_password_hash(request.form["senha"]),
             request.form["cargo"],
-            1 if request.form.get("estoque") else 0,
-            1 if request.form.get("historico") else 0,
-            1 if request.form.get("usuarios") else 0,
-            0,
-            0
+            1, 1, 1, 0, 0
         ))
         conn.commit()
 
@@ -230,70 +196,9 @@ def usuarios():
     dados = cursor.fetchall()
     conn.close()
 
-    tabela = ""
-    for u, c, o in dados:
-        status = "🟢 Online" if o == 1 else "🔴 Offline"
-        tabela += f"<tr><td>{u}</td><td>{c}</td><td>{status}</td><td><a href='/ver_saldo/{u}'>Saldo</a></td></tr>"
+    return str(dados)
 
-    return f"""
-    {estilo()}{layout()}
-    <div class="container">
-
-    <div class="card">
-        <h2>Criar Usuário</h2>
-        <form method="POST">
-            <input name="user" placeholder="Usuário">
-            <input name="senha" type="password" placeholder="Senha">
-
-            <select name="cargo">
-                <option value="admin">Admin</option>
-                <option value="operador">Operador</option>
-            </select><br>
-
-            <label><input type="checkbox" name="estoque"> Estoque</label><br>
-            <label><input type="checkbox" name="historico"> Histórico</label><br>
-            <label><input type="checkbox" name="usuarios"> Usuários</label><br>
-
-            <button>Criar</button>
-        </form>
-    </div>
-
-    <div class="card">
-        <table>
-            <tr><th>Usuário</th><th>Cargo</th><th>Status</th><th>Saldo</th></tr>
-            {tabela}
-        </table>
-    </div>
-
-    </div>
-    """
-
-# ================= VER SALDO =================
-@app.route("/ver_saldo/<usuario>")
-def ver_saldo(usuario):
-    if session.get("cargo") != "admin":
-        return "Não autorizado. Falar com o administrador."
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT saldo FROM usuarios WHERE user=?", (usuario,))
-    saldo = cursor.fetchone()[0]
-
-    conn.close()
-
-    return f"""
-    {estilo()}{layout()}
-    <div class="container">
-        <div class="card">
-            <h2>Saldo de {usuario}: {saldo}</h2>
-            <a href="/extrato/{usuario}">Ver extrato</a><br><br>
-            <a href="/lancar/{usuario}">Lançar saldo</a>
-        </div>
-    </div>
-    """
-
-# ================= LANÇAR =================
+# ================= LANÇAR SALDO =================
 @app.route("/lancar/<usuario>", methods=["GET","POST"])
 def lancar(usuario):
     if session.get("cargo") != "admin":
@@ -306,28 +211,28 @@ def lancar(usuario):
         conn = conectar()
         cursor = conn.cursor()
 
-        cursor.execute("UPDATE usuarios SET saldo = saldo + ? WHERE user=?", (valor, usuario))
+        cursor.execute("""
+            UPDATE usuarios 
+            SET saldo = saldo + %s 
+            WHERE user=%s
+        """, (valor, usuario))
 
-        cursor.execute("INSERT INTO saldo_historico VALUES (?,?,?,?)",
-                       (usuario, valor, desc, session["user"]))
+        cursor.execute("""
+            INSERT INTO saldo_historico (usuario, valor, descricao, quem_lancou)
+            VALUES (%s,%s,%s,%s)
+        """, (usuario, valor, desc, session["user"]))
 
         conn.commit()
         conn.close()
 
-        return redirect(f"/ver_saldo/{usuario}")
+        return redirect("/saldo")
 
-    return f"""
-    {estilo()}{layout()}
-    <div class="container">
-        <div class="card">
-            <h2>Lançar saldo para {usuario}</h2>
-            <form method="POST">
-                <input name="valor" type="number" placeholder="Valor">
-                <input name="desc" placeholder="Descrição">
-                <button>Lançar</button>
-            </form>
-        </div>
-    </div>
+    return """
+    <form method="POST">
+        <input name="valor" placeholder="Valor">
+        <input name="desc" placeholder="Descrição">
+        <button>Lançar</button>
+    </form>
     """
 
 # ================= LOGOUT =================
@@ -336,7 +241,9 @@ def logout():
     if "user" in session:
         conn = conectar()
         cursor = conn.cursor()
-        cursor.execute("UPDATE usuarios SET online=0 WHERE user=?", (session["user"],))
+
+        cursor.execute("UPDATE usuarios SET online=0 WHERE user=%s", (session["user"],))
+
         conn.commit()
         conn.close()
 
