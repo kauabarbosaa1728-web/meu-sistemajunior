@@ -30,7 +30,12 @@ def criar_banco():
     cursor = conn.cursor()
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS usuarios (
-        user TEXT, senha TEXT, cargo TEXT
+        user TEXT,
+        senha TEXT,
+        cargo TEXT,
+        pode_estoque INTEGER DEFAULT 1,
+        pode_historico INTEGER DEFAULT 1,
+        pode_usuarios INTEGER DEFAULT 0
     )""")
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS estoque (
@@ -59,13 +64,27 @@ def criar_admin():
     cursor = conn.cursor()
 
     if not cursor.execute("SELECT * FROM usuarios WHERE user=?", ("admin",)).fetchone():
-        cursor.execute("INSERT INTO usuarios VALUES (?,?,?)",
-                       ("admin", generate_password_hash("123"), "admin"))
+        cursor.execute("INSERT INTO usuarios VALUES (?,?,?,?,?,?)",
+                       ("admin", generate_password_hash("123"), "admin", 1, 1, 1))
 
     conn.commit()
     conn.close()
 
 criar_admin()
+
+# ================= PERMISSÃO =================
+def verificar_permissao(tipo):
+    if "user" not in session:
+        return False
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute(f"SELECT {tipo} FROM usuarios WHERE user=?", (session["user"],))
+    dado = cursor.fetchone()
+    conn.close()
+
+    return dado and dado[0] == 1
 
 # ================= LOGIN =================
 @app.route("/", methods=["GET","POST"])
@@ -110,6 +129,7 @@ def layout():
         <a href="/dashboard">Dashboard</a> |
         <a href="/estoque">Estoque</a> |
         <a href="/historico">Histórico</a> |
+        <a href="/usuarios">Usuários</a> |
         <a href="/logout">Sair</a>
     </div>
     """
@@ -126,6 +146,9 @@ def dashboard():
 def estoque():
     if "user" not in session:
         return redirect("/")
+
+    if not verificar_permissao("pode_estoque"):
+        return "Não autorizado. Falar com o administrador."
 
     conn = conectar()
     cursor = conn.cursor()
@@ -172,58 +195,14 @@ def estoque():
     </div>
     """
 
-# ================= SAÍDA =================
-@app.route("/saida/<produto>", methods=["GET","POST"])
-def saida(produto):
-    if "user" not in session:
-        return redirect("/")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    if request.method == "POST":
-        local = request.form["local"]
-        destino = request.form["destino"]
-        obs = request.form["obs"]
-
-        cursor.execute("SELECT quantidade FROM estoque WHERE produto=?", (produto,))
-        q = cursor.fetchone()
-
-        if not q or q[0] <= 0:
-            return "⚠️ Estoque zerado"
-
-        cursor.execute("UPDATE estoque SET quantidade = quantidade - 1 WHERE produto=?", (produto,))
-
-        cursor.execute("""
-        INSERT INTO movimentacoes (produto, quantidade, tipo, usuario, local_saida, destino, observacao)
-        VALUES (?,?,?,?,?,?,?)
-        """, (produto, 1, "saida", session["user"], local, destino, obs))
-
-        conn.commit()
-        conn.close()
-
-        return redirect("/estoque")
-
-    return f"""
-    {estilo()}{layout()}
-    <div class="container">
-        <div class="card">
-            <h2>Saída: {produto}</h2>
-            <form method="POST">
-                <input name="local" placeholder="Local de saída">
-                <input name="destino" placeholder="Destino">
-                <input name="obs" placeholder="Observação">
-                <button>Confirmar</button>
-            </form>
-        </div>
-    </div>
-    """
-
 # ================= HISTÓRICO =================
 @app.route("/historico")
 def historico():
     if "user" not in session:
         return redirect("/")
+
+    if not verificar_permissao("pode_historico"):
+        return "Não autorizado. Falar com o administrador."
 
     conn = conectar()
     cursor = conn.cursor()
@@ -263,13 +242,77 @@ def historico():
     </div>
     """
 
+# ================= USUÁRIOS =================
+@app.route("/usuarios", methods=["GET","POST"])
+def usuarios():
+    if "user" not in session:
+        return redirect("/")
+
+    if not verificar_permissao("pode_usuarios"):
+        return "Não autorizado. Falar com o administrador."
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        cursor.execute("INSERT INTO usuarios VALUES (?,?,?,?,?,?)", (
+            request.form["user"],
+            generate_password_hash(request.form["senha"]),
+            request.form["cargo"],
+            1 if request.form.get("estoque") else 0,
+            1 if request.form.get("historico") else 0,
+            1 if request.form.get("usuarios") else 0
+        ))
+        conn.commit()
+
+    cursor.execute("SELECT user, cargo FROM usuarios")
+    dados = cursor.fetchall()
+    conn.close()
+
+    tabela = ""
+    for u, c in dados:
+        tabela += f"<tr><td>{u}</td><td>{c}</td></tr>"
+
+    return f"""
+    {estilo()}{layout()}
+    <div class="container">
+
+    <div class="card">
+        <h2>Criar Usuário</h2>
+        <form method="POST">
+            <input name="user" placeholder="Usuário">
+            <input name="senha" type="password" placeholder="Senha">
+
+            <select name="cargo">
+                <option value="admin">Admin</option>
+                <option value="operador">Operador</option>
+            </select><br>
+
+            <label><input type="checkbox" name="estoque"> Estoque</label><br>
+            <label><input type="checkbox" name="historico"> Histórico</label><br>
+            <label><input type="checkbox" name="usuarios"> Usuários</label><br>
+
+            <button>Criar</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <table>
+            <tr><th>Usuário</th><th>Cargo</th></tr>
+            {tabela}
+        </table>
+    </div>
+
+    </div>
+    """
+
 # ================= LOGOUT =================
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
 
-# ================= RUN CORRIGIDO PRA RENDER =================
+# ================= RUN =================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
