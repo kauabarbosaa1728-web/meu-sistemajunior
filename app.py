@@ -57,52 +57,52 @@ def criar_admin():
         cursor.execute("""
         INSERT INTO usuarios (usuario, senha, cargo, saldo, pode_estoque, pode_usuarios, online)
         VALUES (%s,%s,%s,%s,%s,%s,%s)
-        """, (
-            "admin",
-            generate_password_hash("123"),
-            "admin",
-            0,1,1,0
-        ))
+        """, ("admin", generate_password_hash("123"), "admin", 0,1,1,0))
 
     conn.commit()
     conn.close()
 
 criar_admin()
 
-# ================= MENU =================
-def menu():
-    return """
+# ================= TOPO (SGP STYLE) =================
+def topo():
+    return f"""
     <div style="
-        width:220px;
-        height:100vh;
-        background:linear-gradient(180deg,#0a192f,#1b263b);
         position:fixed;
-        padding:20px;
+        top:0;
+        left:0;
+        width:100%;
+        height:60px;
+        background:#0a192f;
         color:white;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        padding:0 20px;
+        box-shadow:0 2px 10px rgba(0,0,0,0.5);
     ">
-        <div style="
-            text-align:center;
-            font-size:22px;
-            font-weight:bold;
-            margin-bottom:30px;
-            color:#3a86ff;
-        ">
+
+        <div style="font-weight:bold;font-size:20px;color:#3a86ff;">
             ⚡ KB Sistemas
         </div>
 
-        <a href="/dashboard" style="color:white;display:block;margin:15px 0;text-decoration:none;">🏠 Dashboard</a>
-        <a href="/estoque" style="color:white;display:block;margin:15px 0;text-decoration:none;">📦 Estoque</a>
-        <a href="/usuarios" style="color:white;display:block;margin:15px 0;text-decoration:none;">👥 Usuários</a>
-        <a href="/saldo" style="color:white;display:block;margin:15px 0;text-decoration:none;">💰 Saldo</a>
-        <a href="/logout" style="color:red;display:block;margin:15px 0;text-decoration:none;">🚪 Sair</a>
+        <div>
+            <a href="/dashboard" style="color:white;margin:0 10px;text-decoration:none;">Dashboard</a>
+            <a href="/estoque" style="color:white;margin:0 10px;text-decoration:none;">Estoque</a>
+            <a href="/usuarios" style="color:white;margin:0 10px;text-decoration:none;">Usuários</a>
+            <a href="/saldo" style="color:white;margin:0 10px;text-decoration:none;">Saldo</a>
+            <a href="/logout" style="color:red;margin:0 10px;text-decoration:none;">Sair</a>
+        </div>
+
     </div>
     """
 
 def container(conteudo):
     return f"""
+    {topo()}
     <div style="
-        margin-left:240px;
-        padding:30px;
+        margin-top:70px;
+        padding:20px;
         background:linear-gradient(135deg,#0a192f,#1b263b);
         min-height:100vh;
         color:white;
@@ -125,6 +125,7 @@ def login():
 
         cursor.execute("SELECT senha, cargo FROM usuarios WHERE usuario=%s", (usuario,))
         dado = cursor.fetchone()
+
         conn.close()
 
         if dado and check_password_hash(dado[0], senha):
@@ -138,25 +139,19 @@ def login():
     <html>
     <body style="
         margin:0;
-        background:linear-gradient(135deg,#0a192f,#1b263b);
+        background:#0a192f;
         display:flex;
         justify-content:center;
         align-items:center;
         height:100vh;
         color:white;
     ">
-    <div style="background:#1b263b;padding:40px;border-radius:12px;text-align:center;">
 
-        <div style="
-            font-size:26px;
-            font-weight:bold;
-            color:#3a86ff;
-        ">
-            ⚡ KB Sistemas
-        </div>
+    <div style="background:#1b263b;padding:40px;border-radius:10px;text-align:center;">
 
-        <h3>Bem-vindo 👋</h3>
-        <p>venha conhecer nosso serviço 🚀</p>
+        <h2 style="color:#3a86ff;">⚡ KB Sistemas</h2>
+
+        <p>Bem-vindo 👋</p>
 
         <form method="POST">
             <input name="user" placeholder="Usuário"><br><br>
@@ -167,6 +162,7 @@ def login():
         <p style="color:red;">{erro}</p>
 
     </div>
+
     </body>
     </html>
     """
@@ -176,8 +172,7 @@ def login():
 def dashboard():
     if "user" not in session:
         return redirect("/")
-
-    return container(menu() + f"<h1>Bem-vindo {session['user']}</h1>")
+    return container(f"<h1>Dashboard</h1><p>Bem-vindo {session['user']}</p>")
 
 # ================= ESTOQUE =================
 @app.route("/estoque", methods=["GET","POST"])
@@ -207,7 +202,7 @@ def estoque():
     for p,q,c in dados:
         tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td></tr>"
 
-    return container(menu() + f"""
+    return container(f"""
     <h2>Estoque</h2>
 
     <form method="POST">
@@ -253,7 +248,7 @@ def usuarios():
         status = "🟢" if o else "🔴"
         tabela += f"<tr><td>{u}</td><td>{c}</td><td>{status}</td></tr>"
 
-    return container(menu() + f"""
+    return container(f"""
     <h2>Usuários</h2>
 
     <form method="POST">
@@ -286,7 +281,7 @@ def saldo():
 
     conn.close()
 
-    return container(menu() + f"<h2>Saldo: {saldo}</h2>")
+    return container(f"<h2>Saldo: {saldo}</h2>")
 
 # ================= LOGOUT =================
 @app.route("/logout")
