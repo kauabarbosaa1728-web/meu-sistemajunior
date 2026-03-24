@@ -21,22 +21,26 @@ def criar_banco():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""CREATE TABLE IF NOT EXISTS usuarios (
-        user TEXT PRIMARY KEY,
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS usuarios (
+        usuario TEXT PRIMARY KEY,
         senha TEXT,
         cargo TEXT,
         saldo INTEGER DEFAULT 0,
         pode_estoque INTEGER DEFAULT 1,
         pode_usuarios INTEGER DEFAULT 1,
         online INTEGER DEFAULT 0
-    )""")
+    )
+    """)
 
-    cursor.execute("""CREATE TABLE IF NOT EXISTS estoque (
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS estoque (
         id SERIAL PRIMARY KEY,
         produto TEXT,
         quantidade INTEGER,
         categoria TEXT
-    )""")
+    )
+    """)
 
     conn.commit()
     conn.close()
@@ -48,10 +52,11 @@ def criar_admin():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM usuarios WHERE user=%s", ("admin",))
+    cursor.execute("SELECT * FROM usuarios WHERE usuario=%s", ("admin",))
     if not cursor.fetchone():
         cursor.execute("""
-        INSERT INTO usuarios VALUES (%s,%s,%s,%s,%s,%s,%s)
+        INSERT INTO usuarios (usuario, senha, cargo, saldo, pode_estoque, pode_usuarios, online)
+        VALUES (%s,%s,%s,%s,%s,%s,%s)
         """, (
             "admin",
             generate_password_hash("123"),
@@ -75,7 +80,6 @@ def menu():
         padding:20px;
         color:white;
     ">
-
         <div style="
             text-align:center;
             font-size:22px;
@@ -91,7 +95,6 @@ def menu():
         <a href="/usuarios" style="color:white;display:block;margin:15px 0;text-decoration:none;">👥 Usuários</a>
         <a href="/saldo" style="color:white;display:block;margin:15px 0;text-decoration:none;">💰 Saldo</a>
         <a href="/logout" style="color:red;display:block;margin:15px 0;text-decoration:none;">🚪 Sair</a>
-
     </div>
     """
 
@@ -114,17 +117,18 @@ def login():
     erro = ""
 
     if request.method == "POST":
-        user = request.form["user"]
+        usuario = request.form["user"]
         senha = request.form["senha"]
 
         conn = conectar()
         cursor = conn.cursor()
-        cursor.execute("SELECT senha, cargo FROM usuarios WHERE user=%s", (user,))
+
+        cursor.execute("SELECT senha, cargo FROM usuarios WHERE usuario=%s", (usuario,))
         dado = cursor.fetchone()
         conn.close()
 
         if dado and check_password_hash(dado[0], senha):
-            session["user"] = user
+            session["user"] = usuario
             session["cargo"] = dado[1]
             return redirect("/dashboard")
 
@@ -141,34 +145,28 @@ def login():
         height:100vh;
         color:white;
     ">
-
     <div style="background:#1b263b;padding:40px;border-radius:12px;text-align:center;">
 
         <div style="
             font-size:26px;
             font-weight:bold;
-            margin-bottom:10px;
             color:#3a86ff;
         ">
             ⚡ KB Sistemas
         </div>
 
         <h3>Bem-vindo 👋</h3>
-
-        <p style="font-size:13px;">venha conhecer nosso serviço 🚀</p>
+        <p>venha conhecer nosso serviço 🚀</p>
 
         <form method="POST">
             <input name="user" placeholder="Usuário"><br><br>
             <input name="senha" type="password" placeholder="Senha"><br><br>
-            <button style="padding:10px 20px;background:#3a86ff;color:white;border:none;">
-                Entrar
-            </button>
+            <button>Entrar</button>
         </form>
 
         <p style="color:red;">{erro}</p>
 
     </div>
-
     </body>
     </html>
     """
@@ -236,7 +234,7 @@ def usuarios():
 
     if request.method == "POST":
         cursor.execute("""
-        INSERT INTO usuarios (user, senha, cargo, saldo, pode_estoque, pode_usuarios, online)
+        INSERT INTO usuarios (usuario, senha, cargo, saldo, pode_estoque, pode_usuarios, online)
         VALUES (%s,%s,%s,%s,%s,%s,%s)
         """, (
             request.form["user"],
@@ -246,7 +244,7 @@ def usuarios():
         ))
         conn.commit()
 
-    cursor.execute("SELECT user, cargo, online FROM usuarios")
+    cursor.execute("SELECT usuario, cargo, online FROM usuarios")
     dados = cursor.fetchall()
     conn.close()
 
@@ -269,7 +267,7 @@ def usuarios():
     </form>
 
     <table border="1" style="color:white;">
-        <tr><th>User</th><th>Cargo</th><th>Status</th></tr>
+        <tr><th>Usuário</th><th>Cargo</th><th>Status</th></tr>
         {tabela}
     </table>
     """)
@@ -282,8 +280,10 @@ def saldo():
 
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("SELECT saldo FROM usuarios WHERE user=%s", (session["user"],))
+
+    cursor.execute("SELECT saldo FROM usuarios WHERE usuario=%s", (session["user"],))
     saldo = cursor.fetchone()[0]
+
     conn.close()
 
     return container(menu() + f"<h2>Saldo: {saldo}</h2>")
