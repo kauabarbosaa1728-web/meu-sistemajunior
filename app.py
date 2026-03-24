@@ -1,6 +1,6 @@
 from flask import Flask, request, redirect, session
 from werkzeug.security import generate_password_hash, check_password_hash
-import sqlite3, os
+import psycopg2, os
 
 app = Flask(__name__)
 app.secret_key = "segredo123"
@@ -58,24 +58,34 @@ def estilo():
     </style>
     """
 
-# ================= BANCO =================
+# ================= BANCO (NEON) =================
 def conectar():
-    return sqlite3.connect("banco.db")
+    return psycopg2.connect(
+        "postgresql://neondb_owner:npg_zGebRqQWoB06@ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+    )
 
 def criar_banco():
     conn = conectar()
     cursor = conn.cursor()
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS usuarios (
-        user TEXT, senha TEXT, cargo TEXT
+        user TEXT,
+        senha TEXT,
+        cargo TEXT
     )""")
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS estoque (
-        produto TEXT, quantidade INTEGER, categoria TEXT
+        produto TEXT,
+        quantidade INTEGER,
+        categoria TEXT
     )""")
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS movimentacoes (
-        produto TEXT, quantidade INTEGER, tipo TEXT, usuario TEXT, data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        produto TEXT,
+        quantidade INTEGER,
+        tipo TEXT,
+        usuario TEXT,
+        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""")
 
     conn.commit()
@@ -94,9 +104,9 @@ def criar_admin():
     ]
 
     for user, senha, cargo in usuarios_fixos:
-        cursor.execute("SELECT * FROM usuarios WHERE user=?", (user,))
+        cursor.execute("SELECT * FROM usuarios WHERE user=%s", (user,))
         if not cursor.fetchone():
-            cursor.execute("INSERT INTO usuarios VALUES (?,?,?)",
+            cursor.execute("INSERT INTO usuarios VALUES (%s,%s,%s)",
                            (user, generate_password_hash(senha), cargo))
 
     conn.commit()
@@ -116,7 +126,7 @@ def login():
         conn = conectar()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT senha, cargo FROM usuarios WHERE user=?", (user,))
+        cursor.execute("SELECT senha, cargo FROM usuarios WHERE user=%s", (user,))
         dado = cursor.fetchone()
 
         if dado and check_password_hash(dado[0], senha):
@@ -183,8 +193,12 @@ def estoque():
     cursor = conn.cursor()
 
     if request.method == "POST":
-        cursor.execute("INSERT INTO estoque VALUES (?,?,?)",
+        cursor.execute("INSERT INTO estoque VALUES (%s,%s,%s)",
                        (request.form["produto"], int(request.form["qtd"]), request.form["categoria"]))
+
+        cursor.execute("INSERT INTO movimentacoes (produto, quantidade, tipo, usuario) VALUES (%s,%s,%s,%s)",
+                       (request.form["produto"], int(request.form["qtd"]), "entrada", session["user"]))
+
         conn.commit()
 
     cursor.execute("SELECT * FROM estoque")
@@ -242,13 +256,17 @@ def saida(produto):
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT quantidade FROM estoque WHERE produto=?", (produto,))
+    cursor.execute("SELECT quantidade FROM estoque WHERE produto=%s", (produto,))
     dado = cursor.fetchone()
 
     if not dado or dado[0] <= 0:
         return "⚠️ Estoque zerado"
 
-    cursor.execute("UPDATE estoque SET quantidade = quantidade - 1 WHERE produto=?", (produto,))
+    cursor.execute("UPDATE estoque SET quantidade = quantidade - 1 WHERE produto=%s", (produto,))
+
+    cursor.execute("INSERT INTO movimentacoes (produto, quantidade, tipo, usuario) VALUES (%s,%s,%s,%s)",
+                   (produto, 1, "saida", session["user"]))
+
     conn.commit()
     conn.close()
 
@@ -286,6 +304,38 @@ def historico():
     </div>
     """
 
+# ================= HISTÓRICO PRODUTO =================
+@app.route("/historico_produto/<produto>")
+def historico_produto(produto):
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM movimentacoes WHERE produto=%s ORDER BY data DESC", (produto,))
+    dados = cursor.fetchall()
+    conn.close()
+
+    tabela = ""
+    for d in dados:
+        tabela += f"<tr><td>{d[0]}</td><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td><td>{d[4]}</td></tr>"
+
+    return f"""
+    {estilo()}
+    {layout()}
+
+    <div class="container">
+        <div class="card">
+            <h2>Histórico do Produto: {produto}</h2>
+            <table>
+                <tr><th>Produto</th><th>Qtd</th><th>Tipo</th><th>Usuário</th><th>Data</th></tr>
+                {tabela}
+            </table>
+        </div>
+    </div>
+    """
+
 # ================= USUÁRIOS =================
 @app.route("/usuarios", methods=["GET","POST"])
 def usuarios():
@@ -296,7 +346,7 @@ def usuarios():
     cursor = conn.cursor()
 
     if request.method == "POST":
-        cursor.execute("INSERT INTO usuarios VALUES (?,?,?)",
+        cursor.execute("INSERT INTO usuarios VALUES (%s,%s,%s)",
             (request.form["user"], generate_password_hash(request.form["senha"]), request.form["cargo"]))
         conn.commit()
 
