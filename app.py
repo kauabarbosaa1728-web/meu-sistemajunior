@@ -58,7 +58,7 @@ def estilo():
     </style>
     """
 
-# ================= BANCO (NEON) =================
+# ================= BANCO =================
 def conectar():
     return psycopg2.connect(
         "postgresql://neondb_owner:npg_zGebRqQWoB06@ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
@@ -93,21 +93,18 @@ def criar_banco():
 
 criar_banco()
 
-# ================= ADMIN =================
+# ================= ADMIN GARANTIDO =================
 def criar_admin():
     conn = conectar()
     cursor = conn.cursor()
 
-    usuarios_fixos = [
-        ("admin", "123", "admin"),
-        ("kaua.barbosa1728@gmail.com", "997401054", "admin")
-    ]
+    # apaga se já existir e recria
+    cursor.execute("DELETE FROM usuarios WHERE user=%s", ("kaua.barbosa1728@gmail.com",))
 
-    for user, senha, cargo in usuarios_fixos:
-        cursor.execute("SELECT * FROM usuarios WHERE user=%s", (user,))
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO usuarios VALUES (%s,%s,%s)",
-                           (user, generate_password_hash(senha), cargo))
+    cursor.execute("INSERT INTO usuarios VALUES (%s,%s,%s)",
+        ("kaua.barbosa1728@gmail.com",
+         generate_password_hash("997401054"),
+         "admin"))
 
     conn.commit()
     conn.close()
@@ -138,7 +135,6 @@ def login():
 
     return f"""
     {estilo()}
-
     <body style="display:flex;justify-content:center;align-items:center;height:100vh;">
     <div class="card" style="width:320px;text-align:center;">
         <h1 style="font-size:40px;">KBSISTEMAS</h1>
@@ -156,7 +152,7 @@ def login():
 
 # ================= MENU =================
 def layout():
-    return f"""
+    return """
     <div class="card">
         <a href="/dashboard">Dashboard</a> |
         <a href="/estoque">Estoque</a> |
@@ -175,7 +171,6 @@ def dashboard():
     return f"""
     {estilo()}
     {layout()}
-
     <div class="container">
         <div class="card">
             <h2>Bem-vindo {session["user"]}</h2>
@@ -207,187 +202,29 @@ def estoque():
 
     tabela = ""
     for p, q, c in dados:
-        cor = "#ef4444" if q <= 5 else "white"
-        alerta = "⚠️" if q <= 5 else ""
-
-        tabela += f"""
-        <tr style="color:{cor}">
-            <td>{p} {alerta}</td>
-            <td>{q}</td>
-            <td>{c}</td>
-            <td>
-                <a href="/saida/{p}">Saída</a> |
-                <a href="/historico_produto/{p}">Histórico</a>
-            </td>
-        </tr>
-        """
+        tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td></tr>"
 
     return f"""
     {estilo()}
     {layout()}
-
-    <div class="container">
-    <div class="card">
-        <h2>📦 Estoque</h2>
-
-        <form method="POST">
-            <input name="produto" placeholder="Produto">
-            <input name="qtd" type="number" placeholder="Qtd">
-            <input name="categoria" placeholder="Categoria">
-            <button>Adicionar</button>
-        </form>
-    </div>
-
-    <div class="card">
-        <table>
-            <tr><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Ações</th></tr>
-            {tabela}
-        </table>
-    </div>
-    </div>
-    """
-
-# ================= SAÍDA =================
-@app.route("/saida/<produto>")
-def saida(produto):
-    if "user" not in session:
-        return redirect("/")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT quantidade FROM estoque WHERE produto=%s", (produto,))
-    dado = cursor.fetchone()
-
-    if not dado or dado[0] <= 0:
-        return "⚠️ Estoque zerado"
-
-    cursor.execute("UPDATE estoque SET quantidade = quantidade - 1 WHERE produto=%s", (produto,))
-
-    cursor.execute("INSERT INTO movimentacoes (produto, quantidade, tipo, usuario) VALUES (%s,%s,%s,%s)",
-                   (produto, 1, "saida", session["user"]))
-
-    conn.commit()
-    conn.close()
-
-    return redirect("/estoque")
-
-# ================= HISTÓRICO =================
-@app.route("/historico")
-def historico():
-    if "user" not in session:
-        return redirect("/")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM movimentacoes ORDER BY data DESC")
-    dados = cursor.fetchall()
-    conn.close()
-
-    tabela = ""
-    for d in dados:
-        tabela += f"<tr><td>{d[0]}</td><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td><td>{d[4]}</td></tr>"
-
-    return f"""
-    {estilo()}
-    {layout()}
-
     <div class="container">
         <div class="card">
-            <h2>Histórico</h2>
+            <h2>Estoque</h2>
+
+            <form method="POST">
+                <input name="produto" placeholder="Produto">
+                <input name="qtd" type="number" placeholder="Qtd">
+                <input name="categoria" placeholder="Categoria">
+                <button>Adicionar</button>
+            </form>
+        </div>
+
+        <div class="card">
             <table>
-                <tr><th>Produto</th><th>Qtd</th><th>Tipo</th><th>Usuário</th><th>Data</th></tr>
+                <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
                 {tabela}
             </table>
         </div>
-    </div>
-    """
-
-# ================= HISTÓRICO PRODUTO =================
-@app.route("/historico_produto/<produto>")
-def historico_produto(produto):
-    if "user" not in session:
-        return redirect("/")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM movimentacoes WHERE produto=%s ORDER BY data DESC", (produto,))
-    dados = cursor.fetchall()
-    conn.close()
-
-    tabela = ""
-    for d in dados:
-        tabela += f"<tr><td>{d[0]}</td><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td><td>{d[4]}</td></tr>"
-
-    return f"""
-    {estilo()}
-    {layout()}
-
-    <div class="container">
-        <div class="card">
-            <h2>Histórico do Produto: {produto}</h2>
-            <table>
-                <tr><th>Produto</th><th>Qtd</th><th>Tipo</th><th>Usuário</th><th>Data</th></tr>
-                {tabela}
-            </table>
-        </div>
-    </div>
-    """
-
-# ================= USUÁRIOS =================
-@app.route("/usuarios", methods=["GET","POST"])
-def usuarios():
-    if "user" not in session or session["cargo"] != "admin":
-        return redirect("/")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    if request.method == "POST":
-        cursor.execute("INSERT INTO usuarios VALUES (%s,%s,%s)",
-            (request.form["user"], generate_password_hash(request.form["senha"]), request.form["cargo"]))
-        conn.commit()
-
-    cursor.execute("SELECT user, cargo FROM usuarios")
-    dados = cursor.fetchall()
-    conn.close()
-
-    tabela = ""
-    for u, c in dados:
-        tabela += f"<tr><td>{u}</td><td>{c}</td></tr>"
-
-    return f"""
-    {estilo()}
-    {layout()}
-
-    <div class="container">
-
-    <div class="card">
-        <h2>Criar Usuário</h2>
-
-        <form method="POST">
-            <input name="user" placeholder="Usuário">
-            <input name="senha" type="password" placeholder="Senha">
-
-            <select name="cargo">
-                <option value="admin">Admin</option>
-                <option value="operador">Operador</option>
-                <option value="visualizacao">Visualização</option>
-            </select>
-
-            <button>Criar</button>
-        </form>
-    </div>
-
-    <div class="card">
-        <table>
-            <tr><th>Usuário</th><th>Cargo</th></tr>
-            {tabela}
-        </table>
-    </div>
-
     </div>
     """
 
