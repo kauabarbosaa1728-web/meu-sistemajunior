@@ -22,7 +22,7 @@ def criar_banco():
     cursor = conn.cursor()
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS usuarios (
-        user TEXT PRIMARY KEY,
+        usuario TEXT PRIMARY KEY,
         senha TEXT,
         cargo TEXT,
         pode_estoque INTEGER DEFAULT 1,
@@ -69,7 +69,7 @@ def criar_admin():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM usuarios WHERE user=%s", ("admin",))
+    cursor.execute("SELECT * FROM usuarios WHERE usuario=%s", ("admin",))
     if not cursor.fetchone():
         cursor.execute("""
             INSERT INTO usuarios VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
@@ -97,14 +97,14 @@ def login():
         conn = conectar()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT senha, cargo FROM usuarios WHERE user=%s", (user,))
+        cursor.execute("SELECT senha, cargo FROM usuarios WHERE usuario=%s", (user,))
         dado = cursor.fetchone()
 
         if dado and check_password_hash(dado[0], senha):
-            session["user"] = user
+            session["usuario"] = user
             session["cargo"] = dado[1]
 
-            cursor.execute("UPDATE usuarios SET online=1 WHERE user=%s", (user,))
+            cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (user,))
             conn.commit()
             conn.close()
 
@@ -125,20 +125,20 @@ def login():
 # ================= DASHBOARD =================
 @app.route("/dashboard")
 def dashboard():
-    if "user" not in session:
+    if "usuario" not in session:
         return redirect("/")
-    return f"<h2>Bem-vindo {session['user']}</h2>"
+    return f"<h2>Bem-vindo {session['usuario']}</h2>"
 
 # ================= SALDO =================
 @app.route("/saldo")
 def saldo():
-    if "user" not in session:
+    if "usuario" not in session:
         return redirect("/")
 
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT saldo FROM usuarios WHERE user=%s", (session["user"],))
+    cursor.execute("SELECT saldo FROM usuarios WHERE usuario=%s", (session["usuario"],))
     saldo = cursor.fetchone()[0]
 
     conn.close()
@@ -148,11 +148,11 @@ def saldo():
 # ================= EXTRATO =================
 @app.route("/extrato/<usuario>")
 def extrato(usuario):
-    if "user" not in session:
+    if "usuario" not in session:
         return redirect("/")
 
-    if session["user"] != usuario and session["cargo"] != "admin":
-        return "Não autorizado. Falar com o administrador."
+    if session["usuario"] != usuario and session["cargo"] != "admin":
+        return "Não autorizado"
 
     conn = conectar()
     cursor = conn.cursor()
@@ -172,11 +172,11 @@ def extrato(usuario):
 # ================= USUÁRIOS =================
 @app.route("/usuarios", methods=["GET","POST"])
 def usuarios():
-    if "user" not in session:
+    if "usuario" not in session:
         return redirect("/")
 
     if session.get("cargo") != "admin":
-        return "Não autorizado. Falar com o administrador."
+        return "Não autorizado"
 
     conn = conectar()
     cursor = conn.cursor()
@@ -192,7 +192,7 @@ def usuarios():
         ))
         conn.commit()
 
-    cursor.execute("SELECT user, cargo, online FROM usuarios")
+    cursor.execute("SELECT usuario, cargo, online FROM usuarios")
     dados = cursor.fetchall()
     conn.close()
 
@@ -202,7 +202,7 @@ def usuarios():
 @app.route("/lancar/<usuario>", methods=["GET","POST"])
 def lancar(usuario):
     if session.get("cargo") != "admin":
-        return "Não autorizado. Falar com o administrador."
+        return "Não autorizado"
 
     if request.method == "POST":
         valor = int(request.form["valor"])
@@ -214,13 +214,13 @@ def lancar(usuario):
         cursor.execute("""
             UPDATE usuarios 
             SET saldo = saldo + %s 
-            WHERE user=%s
+            WHERE usuario=%s
         """, (valor, usuario))
 
         cursor.execute("""
             INSERT INTO saldo_historico (usuario, valor, descricao, quem_lancou)
             VALUES (%s,%s,%s,%s)
-        """, (usuario, valor, desc, session["user"]))
+        """, (usuario, valor, desc, session["usuario"]))
 
         conn.commit()
         conn.close()
@@ -238,11 +238,11 @@ def lancar(usuario):
 # ================= LOGOUT =================
 @app.route("/logout")
 def logout():
-    if "user" in session:
+    if "usuario" in session:
         conn = conectar()
         cursor = conn.cursor()
 
-        cursor.execute("UPDATE usuarios SET online=0 WHERE user=%s", (session["user"],))
+        cursor.execute("UPDATE usuarios SET online=0 WHERE usuario=%s", (session["usuario"],))
 
         conn.commit()
         conn.close()
