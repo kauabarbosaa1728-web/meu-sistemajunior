@@ -75,29 +75,30 @@ def criar_admin():
 
 criar_admin()
 
-# ================= MENU LATERAL =================
+# ================= MENU =================
 def menu():
     return """
     <div style="
-        width:200px;
+        width:220px;
         height:100vh;
-        background:#1b263b;
+        background:linear-gradient(180deg,#0a192f,#1b263b);
         position:fixed;
         padding:20px;
         color:white;
     ">
-        <h3>Sistema</h3>
-        <a href="/dashboard" style="color:white;display:block;margin:10px 0;">Dashboard</a>
-        <a href="/estoque" style="color:white;display:block;margin:10px 0;">Estoque</a>
-        <a href="/usuarios" style="color:white;display:block;margin:10px 0;">Usuários</a>
-        <a href="/saldo" style="color:white;display:block;margin:10px 0;">Saldo</a>
-        <a href="/logout" style="color:white;display:block;margin:10px 0;">Sair</a>
+        <img src="/static/logo.png" width="100"><br><br>
+
+        <a href="/dashboard" style="color:white;display:block;margin:15px 0;">🏠 Dashboard</a>
+        <a href="/estoque" style="color:white;display:block;margin:15px 0;">📦 Estoque</a>
+        <a href="/usuarios" style="color:white;display:block;margin:15px 0;">👥 Usuários</a>
+        <a href="/saldo" style="color:white;display:block;margin:15px 0;">💰 Saldo</a>
+        <a href="/logout" style="color:red;display:block;margin:15px 0;">🚪 Sair</a>
     </div>
     """
 
 def container(conteudo):
     return f"""
-    <div style="margin-left:220px;padding:20px;color:white;">
+    <div style="margin-left:240px;padding:30px;background:#0d1b2a;min-height:100vh;color:white;">
         {conteudo}
     </div>
     """
@@ -120,28 +121,40 @@ def login():
         if dado and check_password_hash(dado[0], senha):
             session["user"] = user
             session["cargo"] = dado[1]
-
             return redirect("/dashboard")
 
         erro = "Login inválido"
 
     return f"""
     <html>
-    <body style="margin:0;background:#0d1b2a;display:flex;justify-content:center;align-items:center;height:100vh;">
-        <div style="background:#1b263b;padding:30px;border-radius:10px;text-align:center;color:white;">
-            
-            <img src="/static/logo.png" width="120"><br><br>
+    <body style="
+        margin:0;
+        background:linear-gradient(135deg,#0a192f,#1b263b,#0a192f);
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        height:100vh;
+        color:white;
+    ">
 
-            <form method="POST">
-                <input name="user" placeholder="Usuário"><br><br>
-                <input name="senha" type="password" placeholder="Senha"><br><br>
-                <button>Entrar</button>
-            </form>
+    <div style="background:#1b263b;padding:40px;border-radius:12px;text-align:center;">
 
-            <p style="color:red;">{erro}</p>
+        <img src="/static/logo.png" width="120"><br><br>
 
-            <p style="font-size:12px;">venha conhecer nosso serviço</p>
-        </div>
+        <h2>Bem-vindo 👋</h2>
+
+        <p>venha conhecer nosso serviço 🚀</p>
+
+        <form method="POST">
+            <input name="user" placeholder="Usuário"><br><br>
+            <input name="senha" type="password" placeholder="Senha"><br><br>
+            <button>Entrar</button>
+        </form>
+
+        <p style="color:red;">{erro}</p>
+
+    </div>
+
     </body>
     </html>
     """
@@ -152,11 +165,7 @@ def dashboard():
     if "user" not in session:
         return redirect("/")
 
-    return container(f"""
-        {menu()}
-        <h1>Dashboard</h1>
-        <p>Bem-vindo {session['user']}</p>
-    """)
+    return container(menu() + f"<h1>Bem-vindo {session['user']}</h1>")
 
 # ================= ESTOQUE =================
 @app.route("/estoque", methods=["GET","POST"])
@@ -181,27 +190,24 @@ def estoque():
     cursor.execute("SELECT produto, quantidade, categoria FROM estoque")
     dados = cursor.fetchall()
 
-    conn.close()
-
     tabela = ""
     for p,q,c in dados:
         tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td></tr>"
 
-    return container(f"""
-        {menu()}
-        <h2>Estoque</h2>
+    return container(menu() + f"""
+    <h2>Estoque</h2>
 
-        <form method="POST">
-            <input name="produto" placeholder="Produto">
-            <input name="quantidade" placeholder="Quantidade">
-            <input name="categoria" placeholder="Categoria">
-            <button>Adicionar</button>
-        </form>
+    <form method="POST">
+        <input name="produto" placeholder="Produto">
+        <input name="quantidade" placeholder="Quantidade">
+        <input name="categoria" placeholder="Categoria">
+        <button>Adicionar</button>
+    </form>
 
-        <table border="1" style="color:white;">
-            <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
-            {tabela}
-        </table>
+    <table border="1" style="color:white;">
+        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
+        {tabela}
+    </table>
     """)
 
 # ================= SALDO =================
@@ -216,18 +222,13 @@ def saldo():
     cursor.execute("SELECT saldo FROM usuarios WHERE user=%s", (session["user"],))
     saldo = cursor.fetchone()[0]
 
-    conn.close()
-
-    return container(f"""
-        {menu()}
-        <h2>Saldo: {saldo}</h2>
-    """)
+    return container(menu() + f"<h2>Saldo: {saldo}</h2>")
 
 # ================= USUÁRIOS =================
 @app.route("/usuarios", methods=["GET","POST"])
 def usuarios():
-    if "user" not in session:
-        return redirect("/")
+    if session.get("cargo") != "admin":
+        return "Não autorizado"
 
     conn = conectar()
     cursor = conn.cursor()
@@ -245,31 +246,29 @@ def usuarios():
 
     cursor.execute("SELECT user, cargo, online FROM usuarios")
     dados = cursor.fetchall()
-    conn.close()
 
     tabela = ""
     for u,c,o in dados:
         status = "🟢" if o else "🔴"
         tabela += f"<tr><td>{u}</td><td>{c}</td><td>{status}</td></tr>"
 
-    return container(f"""
-        {menu()}
-        <h2>Usuários</h2>
+    return container(menu() + f"""
+    <h2>Usuários</h2>
 
-        <form method="POST">
-            <input name="user" placeholder="Usuário">
-            <input name="senha" type="password" placeholder="Senha">
-            <select name="cargo">
-                <option>admin</option>
-                <option>operador</option>
-            </select>
-            <button>Criar</button>
-        </form>
+    <form method="POST">
+        <input name="user" placeholder="Usuário">
+        <input name="senha" type="password" placeholder="Senha">
+        <select name="cargo">
+            <option>admin</option>
+            <option>operador</option>
+        </select>
+        <button>Criar</button>
+    </form>
 
-        <table border="1" style="color:white;">
-            <tr><th>User</th><th>Cargo</th><th>Status</th></tr>
-            {tabela}
-        </table>
+    <table border="1" style="color:white;">
+        <tr><th>User</th><th>Cargo</th><th>Status</th></tr>
+        {tabela}
+    </table>
     """)
 
 # ================= LOGOUT =================
