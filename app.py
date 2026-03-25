@@ -102,9 +102,10 @@ def criar_admin():
 
     cursor.execute("SELECT * FROM usuarios WHERE usuario=%s", ("admin",))
     if not cursor.fetchone():
-        cursor.execute("""
-        INSERT INTO usuarios VALUES (%s,%s,%s,%s)
-        """, ("admin", generate_password_hash("123"), "admin", 0))
+        cursor.execute(
+            "INSERT INTO usuarios VALUES (%s,%s,%s,%s)",
+            ("admin", generate_password_hash("123"), "admin", 0)
+        )
 
     conn.commit()
     conn.close()
@@ -179,7 +180,8 @@ def login():
 
         erro = "Login inválido"
 
-    return f"""<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#000;">
+    return f"""
+    <div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#000;">
     <div style="background:#1e293b;padding:40px;border-radius:20px;text-align:center;">
         <h2>KBSISTEMAS</h2>
         <form method="POST">
@@ -189,7 +191,8 @@ def login():
         </form>
         <p style="color:red;">{erro}</p>
     </div>
-    </div>"""
+    </div>
+    """
 
 # ================= DASHBOARD =================
 @app.route("/dashboard")
@@ -224,11 +227,15 @@ def estoque():
             except:
                 return container("<h3>Quantidade inválida</h3>")
 
-            cursor.execute("INSERT INTO estoque (produto, quantidade, categoria) VALUES (%s,%s,%s)",
-                           (produto,qtd,categoria))
+            cursor.execute(
+                "INSERT INTO estoque (produto, quantidade, categoria) VALUES (%s,%s,%s)",
+                (produto, qtd, categoria)
+            )
 
-            cursor.execute("INSERT INTO historico (acao, usuario) VALUES (%s,%s)",
-                           (f"Adicionou {produto} ({qtd})", session.get("user")))
+            cursor.execute(
+                "INSERT INTO historico (acao, usuario) VALUES (%s,%s)",
+                (f"Adicionou {produto} ({qtd})", session.get("user"))
+            )
 
             conn.commit()
             conn.close()
@@ -297,8 +304,10 @@ def transferencia():
                  request.form.get("destino"),
                  session.get("user")))
 
-            cursor.execute("INSERT INTO historico (acao, usuario) VALUES (%s,%s)",
-                           (f"Transferiu {produto} ({qtd})", session.get("user")))
+            cursor.execute(
+                "INSERT INTO historico (acao, usuario) VALUES (%s,%s)",
+                (f"Transferiu {produto} ({qtd})", session.get("user"))
+            )
 
             conn.commit()
 
