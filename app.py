@@ -20,6 +20,97 @@ def conectar():
         print("ERRO BANCO:", e)
         return None
 
+# ================= BANCO =================
+def criar_banco():
+    conn = conectar()
+    if not conn:
+        return
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS usuarios (
+        usuario TEXT PRIMARY KEY,
+        senha TEXT,
+        cargo TEXT,
+        saldo INTEGER DEFAULT 0
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS estoque (
+        id SERIAL PRIMARY KEY,
+        produto TEXT,
+        quantidade INTEGER,
+        categoria TEXT
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS estoque_user (
+        id SERIAL PRIMARY KEY,
+        usuario TEXT,
+        produto TEXT,
+        quantidade INTEGER
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS correcoes (
+        id SERIAL PRIMARY KEY,
+        tipo TEXT,
+        nome TEXT,
+        quantidade INTEGER,
+        motivo TEXT,
+        usuario TEXT,
+        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS transferencias (
+        id SERIAL PRIMARY KEY,
+        produto TEXT,
+        quantidade INTEGER,
+        origem TEXT,
+        destino TEXT,
+        usuario TEXT,
+        status TEXT DEFAULT 'Pendente',
+        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS historico (
+        id SERIAL PRIMARY KEY,
+        acao TEXT,
+        usuario TEXT,
+        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+criar_banco()
+
+# ================= ADMIN =================
+def criar_admin():
+    conn = conectar()
+    if not conn:
+        return
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM usuarios WHERE usuario=%s", ("admin",))
+    if not cursor.fetchone():
+        cursor.execute("""
+        INSERT INTO usuarios VALUES (%s,%s,%s,%s)
+        """, ("admin", generate_password_hash("123"), "admin", 0))
+
+    conn.commit()
+    conn.close()
+
+criar_admin()
+
 # ================= MENU =================
 def topo():
     return """
@@ -67,6 +158,7 @@ def container(c):
 @app.route("/", methods=["GET","POST"])
 def login():
     erro = ""
+
     if request.method == "POST":
         user = request.form.get("user")
         senha = request.form.get("senha")
@@ -87,9 +179,17 @@ def login():
 
         erro = "Login inválido"
 
-    return f"""<form method="POST">
-    <input name="user"><input type="password" name="senha">
-    <button>LOGIN</button><p>{erro}</p></form>"""
+    return f"""<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#000;">
+    <div style="background:#1e293b;padding:40px;border-radius:20px;text-align:center;">
+        <h2>KBSISTEMAS</h2>
+        <form method="POST">
+            <input name="user" placeholder="Usuário"><br><br>
+            <input type="password" name="senha" placeholder="Senha"><br><br>
+            <button>LOGIN</button>
+        </form>
+        <p style="color:red;">{erro}</p>
+    </div>
+    </div>"""
 
 # ================= DASHBOARD =================
 @app.route("/dashboard")
@@ -106,6 +206,9 @@ def estoque():
 
     try:
         conn = conectar()
+        if not conn:
+            return container("<h3>Erro banco</h3>")
+
         cursor = conn.cursor()
 
         if request.method == "POST":
@@ -113,18 +216,23 @@ def estoque():
             qtd = request.form.get("qtd")
             categoria = request.form.get("categoria")
 
-            if produto and qtd:
-                try:
-                    qtd = int(qtd)
-                except:
-                    return container("<h3>Quantidade inválida</h3>")
+            if not produto or not qtd:
+                return container("<h3>Preencha os campos</h3>")
 
-                cursor.execute("""
-                INSERT INTO estoque (produto, quantidade, categoria)
-                VALUES (%s,%s,%s)
-                """,(produto,qtd,categoria))
+            try:
+                qtd = int(qtd)
+            except:
+                return container("<h3>Quantidade inválida</h3>")
 
-                conn.commit()
+            cursor.execute("INSERT INTO estoque (produto, quantidade, categoria) VALUES (%s,%s,%s)",
+                           (produto,qtd,categoria))
+
+            cursor.execute("INSERT INTO historico (acao, usuario) VALUES (%s,%s)",
+                           (f"Adicionou {produto} ({qtd})", session.get("user")))
+
+            conn.commit()
+            conn.close()
+            return redirect("/estoque")
 
         cursor.execute("SELECT * FROM estoque")
         dados = cursor.fetchall()
@@ -147,16 +255,16 @@ def estoque():
             <button>Salvar</button>
         </form>
         <table>
-        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
-        {tabela}
+            <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
+            {tabela}
         </table>
         """)
 
     except Exception as e:
         print("ERRO ESTOQUE:", e)
-        return container("<h3>Erro interno</h3>")
+        return container("<h3>Erro interno no estoque</h3>")
 
-# ================= TRANSFERENCIA =================
+# ================= TRANSFERÊNCIA =================
 @app.route("/transferencia", methods=["GET","POST"])
 def transferencia():
     if "user" not in session:
@@ -164,68 +272,62 @@ def transferencia():
 
     try:
         conn = conectar()
+        if not conn:
+            return container("<h3>Erro banco</h3>")
+
         cursor = conn.cursor()
 
         if request.method == "POST":
             produto = request.form.get("produto")
             qtd = request.form.get("qtd")
 
-            if produto and qtd:
-                try:
-                    qtd = int(qtd)
-                except:
-                    return container("<h3>Quantidade inválida</h3>")
+            if not produto or not qtd:
+                return container("<h3>Preencha os campos</h3>")
 
-                cursor.execute("""
-                INSERT INTO transferencias (produto, quantidade, origem, destino, usuario)
-                VALUES (%s,%s,%s,%s,%s)
-                """,(produto,qtd,
-                     request.form.get("origem"),
-                     request.form.get("destino"),
-                     session["user"]))
+            try:
+                qtd = int(qtd)
+            except:
+                return container("<h3>Quantidade inválida</h3>")
 
-                conn.commit()
+            cursor.execute("""
+            INSERT INTO transferencias (produto, quantidade, origem, destino, usuario)
+            VALUES (%s,%s,%s,%s,%s)
+            """,(produto,qtd,
+                 request.form.get("origem"),
+                 request.form.get("destino"),
+                 session.get("user")))
 
-        cursor.execute("SELECT * FROM transferencias")
+            cursor.execute("INSERT INTO historico (acao, usuario) VALUES (%s,%s)",
+                           (f"Transferiu {produto} ({qtd})", session.get("user")))
+
+            conn.commit()
+
+        cursor.execute("SELECT * FROM transferencias ORDER BY id DESC")
         dados = cursor.fetchall()
         conn.close()
 
         tabela=""
         for d in dados:
-            tabela += f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td><td>{d[4]}</td><td>{d[5]}</td></tr>"
+            tabela += f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td><td>{d[4]}</td><td>{d[5]}</td><td>{d[6]}</td></tr>"
 
         return container(f"""
         <h2>Transferência</h2>
         <form method="POST">
-            <input name="produto">
-            <input name="qtd">
-            <input name="origem">
-            <input name="destino">
+            <input name="produto" placeholder="Produto">
+            <input name="qtd" placeholder="Quantidade">
+            <input name="origem" placeholder="Origem">
+            <input name="destino" placeholder="Destino">
             <button>Enviar</button>
         </form>
-        <table>{tabela}</table>
+        <table>
+            <tr><th>Produto</th><th>Qtd</th><th>Origem</th><th>Destino</th><th>Usuário</th><th>Status</th></tr>
+            {tabela}
+        </table>
         """)
 
     except Exception as e:
-        print("ERRO TRANSF:", e)
-        return container("<h3>Erro interno</h3>")
-
-# ================= ROTAS QUE FALTAVAM =================
-@app.route("/correcao")
-def correcao():
-    return container("<h2>Correções funcionando</h2>")
-
-@app.route("/estoque_usuarios")
-def estoque_usuarios():
-    return container("<h2>Estoque usuários funcionando</h2>")
-
-@app.route("/historico")
-def historico():
-    return container("<h2>Histórico funcionando</h2>")
-
-@app.route("/usuarios")
-def usuarios():
-    return container("<h2>Usuários funcionando</h2>")
+        print("ERRO TRANSFERENCIA:", e)
+        return container("<h3>Erro interno na transferência</h3>")
 
 # ================= LOGOUT =================
 @app.route("/logout")
