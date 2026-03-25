@@ -70,7 +70,6 @@ def criar_admin():
     conn = conectar()
     cursor = conn.cursor()
 
-    # cria ou atualiza admin com seus dados
     cursor.execute("SELECT * FROM usuarios WHERE usuario=%s", ("kaua.barbosaa1728@gmail.com",))
     if not cursor.fetchone():
         cursor.execute(
@@ -92,12 +91,12 @@ criar_admin()
 def topo():
     return """
     <div style="background:#0f172a;padding:15px;color:white;">
-        <b>⚡ KB SISTEMAS</b> |
-        <a href="/estoque">Estoque</a> |
-        <a href="/transferencia">Transferência</a> |
-        <a href="/correcao">Correção</a> |
-        <a href="/usuarios">Usuários</a> |
-        <a href="/logout">Sair</a>
+        <b style="font-size:18px;">⚡ KBSISTEMAS</b> |
+        <a href="/estoque" style="color:white;">Estoque</a> |
+        <a href="/transferencia" style="color:white;">Transferência</a> |
+        <a href="/correcao" style="color:white;">Correção</a> |
+        <a href="/usuarios" style="color:white;">Usuários</a> |
+        <a href="/logout" style="color:red;">Sair</a>
     </div>
     """
 
@@ -131,13 +130,56 @@ def login():
         erro = "Login inválido"
 
     return f"""
-    <h2>Login</h2>
-    <form method="POST">
-        <input name="user" placeholder="Usuário"><br>
-        <input name="senha" type="password" placeholder="Senha"><br>
-        <button>Entrar</button>
-    </form>
-    <p>{erro}</p>
+    <style>
+    body {{
+        margin:0;
+        font-family:Arial;
+        background: linear-gradient(135deg, #020617, #0f172a);
+        color:white;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        height:100vh;
+    }}
+    .card {{
+        background:#020617;
+        padding:30px;
+        border-radius:12px;
+        width:320px;
+        text-align:center;
+        box-shadow:0 0 30px rgba(0,0,0,0.8);
+    }}
+    input {{
+        width:100%;
+        padding:10px;
+        margin:8px 0;
+        border:none;
+        border-radius:6px;
+    }}
+    button {{
+        width:100%;
+        padding:10px;
+        background:#3b82f6;
+        border:none;
+        border-radius:6px;
+        color:white;
+        cursor:pointer;
+    }}
+    </style>
+
+    <div class="card">
+        <h1>⚡ KBSISTEMAS</h1>
+        <p style="font-size:12px;color:#94a3b8;">Sistema inteligente de controle</p>
+
+        <form method="POST">
+            <input name="user" placeholder="Usuário">
+            <input name="senha" type="password" placeholder="Senha">
+            <button>Entrar</button>
+        </form>
+
+        <p style="color:red;">{erro}</p>
+        <p style="font-size:11px;color:#64748b;">Venha conhecer nosso serviço 🚀</p>
+    </div>
     """
 
 # ================= ESTOQUE =================
