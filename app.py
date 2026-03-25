@@ -1,25 +1,32 @@
 from flask import Flask, request, redirect, session
 from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
-from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "segredo123"
+app.config['PROPAGATE_EXCEPTIONS'] = True
 
 # ================= CONEXÃO =================
 def conectar():
-    return psycopg2.connect(
-        host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
-        database="neondb",
-        user="neondb_owner",
-        password="npg_zGebRqQWoB06",
-        port="5432",
-        sslmode="require"
-    )
+    try:
+        return psycopg2.connect(
+            host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
+            database="neondb",
+            user="neondb_owner",
+            password="npg_zGebRqQWoB06",
+            port="5432",
+            sslmode="require"
+        )
+    except Exception as e:
+        print("ERRO BANCO:", e)
+        return None
 
 # ================= BANCO =================
 def criar_banco():
     conn = conectar()
+    if not conn:
+        return
+
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -42,11 +49,22 @@ def criar_banco():
     """)
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS historico (
+    CREATE TABLE IF NOT EXISTS estoque_user (
         id SERIAL PRIMARY KEY,
-        acao TEXT,
         usuario TEXT,
-        detalhe TEXT,
+        produto TEXT,
+        quantidade INTEGER
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS correcoes (
+        id SERIAL PRIMARY KEY,
+        tipo TEXT,
+        nome TEXT,
+        quantidade INTEGER,
+        motivo TEXT,
+        usuario TEXT,
         data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -71,6 +89,9 @@ criar_banco()
 # ================= ADMIN =================
 def criar_admin():
     conn = conectar()
+    if not conn:
+        return
+
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM usuarios WHERE usuario=%s", ("admin",))
@@ -105,14 +126,15 @@ def topo():
             <a href="#">Estoque ▼</a>
             <div class="dropdown">
                 <a href="/estoque">Produtos</a>
+                <a href="/estoque_usuarios">Estoque Usuários</a>
+                <a href="/correcao">Correções</a>
                 <a href="/transferencia">Transferência</a>
             </div>
         </div>
 
         <div class="menu-item">
-            <a href="#">Sistema ▼</a>
+            <a href="#">Administração ▼</a>
             <div class="dropdown">
-                <a href="/historico">Histórico</a>
                 <a href="/usuarios">Usuários</a>
             </div>
         </div>
@@ -135,8 +157,11 @@ def login():
         senha = request.form.get("senha")
 
         conn = conectar()
+        if not conn:
+            return "Erro de conexão com banco"
+
         cursor = conn.cursor()
-        cursor.execute("SELECT senha,cargo FROM usuarios WHERE usuario=%s",(user,))
+        cursor.execute("SELECT senha, cargo FROM usuarios WHERE usuario=%s",(user,))
         dado = cursor.fetchone()
 
         if dado and check_password_hash(dado[0], senha):
@@ -179,6 +204,9 @@ def estoque():
         return redirect("/")
 
     conn = conectar()
+    if not conn:
+        return container("<h3>Erro no banco</h3>")
+
     cursor = conn.cursor()
 
     if request.method == "POST":
@@ -186,18 +214,17 @@ def estoque():
         qtd = request.form.get("qtd")
         categoria = request.form.get("categoria")
 
-        if produto and qtd:
-            cursor.execute("""
-            INSERT INTO estoque (produto, quantidade, categoria)
-            VALUES (%s,%s,%s)
-            """,(produto,int(qtd),categoria))
+        try:
+            qtd = int(qtd)
+        except:
+            return container("<h3>Quantidade inválida</h3>")
 
-            cursor.execute("""
-            INSERT INTO historico (acao,usuario,detalhe)
-            VALUES (%s,%s,%s)
-            """,("ADD PRODUTO",session["user"],produto))
-
-            conn.commit()
+        cursor.execute("""
+        INSERT INTO estoque (produto, quantidade, categoria)
+        VALUES (%s,%s,%s)
+        """,(produto,qtd,categoria))
+        conn.commit()
+        return redirect("/estoque")
 
     cursor.execute("SELECT * FROM estoque")
     dados = cursor.fetchall()
@@ -209,7 +236,6 @@ def estoque():
 
     return container(f"""
     <h2>Produtos</h2>
-
     <form method="POST">
         <input name="produto" placeholder="Nome do produto">
         <input name="qtd" placeholder="Quantidade">
@@ -220,7 +246,6 @@ def estoque():
         </select>
         <button>Salvar</button>
     </form>
-
     <table>
         <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
         {tabela}
@@ -234,11 +259,14 @@ def transferencia():
         return redirect("/")
 
     conn = conectar()
+    if not conn:
+        return container("<h3>Erro no banco</h3>")
+
     cursor = conn.cursor()
 
     if request.method == "POST":
         cursor.execute("""
-        INSERT INTO transferencias (produto,quantidade,origem,destino,usuario)
+        INSERT INTO transferencias (produto, quantidade, origem, destino, usuario)
         VALUES (%s,%s,%s,%s,%s)
         """,(
             request.form.get("produto"),
@@ -259,7 +287,6 @@ def transferencia():
 
     return container(f"""
     <h2>Transferência</h2>
-
     <form method="POST">
         <input name="produto" placeholder="Produto">
         <input name="qtd" placeholder="Quantidade">
@@ -267,30 +294,8 @@ def transferencia():
         <input name="destino" placeholder="Destino">
         <button>Enviar</button>
     </form>
-
     <table>
         <tr><th>Produto</th><th>Qtd</th><th>Origem</th><th>Destino</th><th>Usuário</th><th>Status</th></tr>
-        {tabela}
-    </table>
-    """)
-
-# ================= HISTÓRICO =================
-@app.route("/historico")
-def historico():
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM historico ORDER BY id DESC")
-    dados = cursor.fetchall()
-    conn.close()
-
-    tabela=""
-    for d in dados:
-        tabela += f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td></tr>"
-
-    return container(f"""
-    <h2>Histórico</h2>
-    <table>
-        <tr><th>Ação</th><th>Usuário</th><th>Detalhe</th></tr>
         {tabela}
     </table>
     """)
@@ -300,10 +305,11 @@ def historico():
 def logout():
     if "user" in session:
         conn = conectar()
-        cursor = conn.cursor()
-        cursor.execute("UPDATE usuarios SET online=FALSE WHERE usuario=%s",(session["user"],))
-        conn.commit()
-        conn.close()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE usuarios SET online=FALSE WHERE usuario=%s",(session["user"],))
+            conn.commit()
+            conn.close()
 
     session.clear()
     return redirect("/")
