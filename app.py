@@ -39,7 +39,6 @@ def criar_banco():
     )
     """)
 
-    # 🔥 NOVO (CORREÇÃO)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS correcoes (
         id SERIAL PRIMARY KEY,
@@ -48,6 +47,20 @@ def criar_banco():
         quantidade INTEGER,
         motivo TEXT,
         usuario TEXT,
+        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # 🔥 NOVO
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS transferencias (
+        id SERIAL PRIMARY KEY,
+        produto TEXT,
+        quantidade INTEGER,
+        origem TEXT,
+        destino TEXT,
+        usuario TEXT,
+        status TEXT DEFAULT 'Pendente',
         data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -73,7 +86,7 @@ def criar_admin():
 
 criar_admin()
 
-# ================= MENU TOP =================
+# ================= MENU =================
 def topo():
     return """
     <style>
@@ -96,13 +109,13 @@ def topo():
     </style>
 
     <div class="menu">
-
         <div class="menu-item">
             <a href="#">Estoque ▼</a>
             <div class="dropdown">
                 <a href="/estoque">Produtos</a>
                 <a href="/estoque_usuarios">Estoque Usuários</a>
-                <a href="/correcao">Correções</a> <!-- 🔥 NOVO -->
+                <a href="/correcao">Correções</a>
+                <a href="/transferencia">Transferência</a>
             </div>
         </div>
 
@@ -115,7 +128,6 @@ def topo():
 
         <a href="/dashboard">Dashboard</a>
         <a href="/logout" style="color:red;">Sair</a>
-
     </div>
     """
 
@@ -175,11 +187,25 @@ def estoque():
     cursor = conn.cursor()
 
     if request.method == "POST":
+        produto = request.form.get("produto")
+        qtd = request.form.get("qtd")
+        categoria = request.form.get("categoria")
+
+        if not produto or not qtd:
+            return container("<h3>Preencha produto e quantidade</h3>")
+
+        try:
+            qtd = int(qtd)
+        except:
+            return container("<h3>Quantidade inválida</h3>")
+
         cursor.execute("""
         INSERT INTO estoque (produto, quantidade, categoria)
         VALUES (%s,%s,%s)
-        """,(request.form["produto"],request.form["qtd"],request.form["categoria"]))
+        """,(produto,qtd,categoria))
         conn.commit()
+
+        return redirect("/estoque")
 
     cursor.execute("SELECT * FROM estoque")
     dados = cursor.fetchall()
@@ -209,9 +235,9 @@ def estoque():
     </table>
     """)
 
-# ================= CORREÇÃO =================
-@app.route("/correcao", methods=["GET","POST"])
-def correcao():
+# ================= TRANSFERÊNCIA =================
+@app.route("/transferencia", methods=["GET","POST"])
+def transferencia():
     if "user" not in session:
         return redirect("/")
 
@@ -219,145 +245,54 @@ def correcao():
     cursor = conn.cursor()
 
     if request.method == "POST":
-        tipo = request.form["tipo"]
-        nome = request.form["nome"]
-        quantidade = int(request.form["quantidade"])
-        motivo = request.form["motivo"]
-
-        if tipo == "produto":
-            cursor.execute("""
-            UPDATE estoque SET quantidade = quantidade + %s WHERE produto=%s
-            """, (quantidade, nome))
-
-        elif tipo == "usuario":
-            cursor.execute("""
-            UPDATE estoque_user SET quantidade = quantidade + %s WHERE usuario=%s
-            """, (quantidade, nome))
+        try:
+            qtd = int(request.form.get("qtd"))
+        except:
+            return container("<h3>Quantidade inválida</h3>")
 
         cursor.execute("""
-        INSERT INTO correcoes (tipo, nome, quantidade, motivo, usuario)
+        INSERT INTO transferencias (produto, quantidade, origem, destino, usuario)
         VALUES (%s,%s,%s,%s,%s)
-        """, (tipo, nome, quantidade, motivo, session["user"]))
-
+        """,(
+            request.form.get("produto"),
+            qtd,
+            request.form.get("origem"),
+            request.form.get("destino"),
+            session["user"]
+        ))
         conn.commit()
 
-    cursor.execute("SELECT * FROM correcoes ORDER BY id DESC")
-    dados = cursor.fetchall()
-    conn.close()
-
-    tabela=""
-    for d in dados:
-        tabela += f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td><td>{d[4]}</td><td>{d[5]}</td></tr>"
-
-    return container(f"""
-    <h2>Correção de Estoque</h2>
-
-    <form method="POST">
-        <select name="tipo">
-            <option value="produto">Produto</option>
-            <option value="usuario">Usuário</option>
-        </select>
-
-        <input name="nome" placeholder="Nome">
-        <input name="quantidade" placeholder="Quantidade (+ ou -)">
-        <input name="motivo" placeholder="Motivo">
-
-        <button>Corrigir</button>
-    </form>
-
-    <table>
-        <tr><th>Tipo</th><th>Nome</th><th>Qtd</th><th>Motivo</th><th>Quem fez</th></tr>
-        {tabela}
-    </table>
-    """)
-
-# ================= ESTOQUE USUÁRIOS =================
-@app.route("/estoque_usuarios", methods=["GET","POST"])
-def estoque_usuarios():
-    if "user" not in session:
-        return redirect("/")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS estoque_user (
-        id SERIAL PRIMARY KEY,
-        usuario TEXT,
-        produto TEXT,
-        quantidade INTEGER
-    )
-    """)
-
-    if request.method == "POST":
+    if request.args.get("aprovar"):
         cursor.execute("""
-        INSERT INTO estoque_user (usuario, produto, quantidade)
-        VALUES (%s,%s,%s)
-        """,(request.form["usuario"],request.form["produto"],request.form["qtd"]))
+        UPDATE transferencias SET status='Aprovado' WHERE id=%s
+        """,(request.args.get("aprovar"),))
         conn.commit()
 
-    cursor.execute("SELECT * FROM estoque_user")
+    cursor.execute("SELECT * FROM transferencias ORDER BY id DESC")
     dados = cursor.fetchall()
     conn.close()
 
     tabela=""
     for d in dados:
-        tabela += f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td></tr>"
+        btn=""
+        if d[6] == "Pendente":
+            btn = f"<a href='/transferencia?aprovar={d[0]}'>Aprovar</a>"
+
+        tabela += f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td><td>{d[4]}</td><td>{d[5]}</td><td>{d[6]}</td><td>{btn}</td></tr>"
 
     return container(f"""
-    <h2>Estoque por Usuário</h2>
+    <h2>Transferências</h2>
 
     <form method="POST">
-        <input name="usuario">
         <input name="produto">
         <input name="qtd">
-        <button>Lançar</button>
+        <input name="origem">
+        <input name="destino">
+        <button>Enviar</button>
     </form>
 
     <table>
-        <tr><th>Usuário</th><th>Produto</th><th>Qtd</th></tr>
-        {tabela}
-    </table>
-    """)
-
-# ================= USUÁRIOS =================
-@app.route("/usuarios", methods=["GET","POST"])
-def usuarios():
-    if session.get("cargo") != "admin":
-        return "Não autorizado"
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    if request.method == "POST":
-        cursor.execute("""
-        INSERT INTO usuarios VALUES (%s,%s,%s,%s)
-        """,(request.form["user"],generate_password_hash(request.form["senha"]),request.form["cargo"],0))
-        conn.commit()
-
-    cursor.execute("SELECT usuario, cargo FROM usuarios")
-    dados = cursor.fetchall()
-    conn.close()
-
-    tabela=""
-    for u,c in dados:
-        tabela += f"<tr><td>{u}</td><td>{c}</td></tr>"
-
-    return container(f"""
-    <h2>Usuários</h2>
-
-    <form method="POST">
-        <input name="user">
-        <input name="senha" type="password">
-        <select name="cargo">
-            <option>admin</option>
-            <option>operador</option>
-        </select>
-        <button>Criar</button>
-    </form>
-
-    <table>
-        <tr><th>Usuário</th><th>Cargo</th></tr>
+        <tr><th>Produto</th><th>Qtd</th><th>Origem</th><th>Destino</th><th>Usuário</th><th>Status</th><th>Ação</th></tr>
         {tabela}
     </table>
     """)
