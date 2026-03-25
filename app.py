@@ -83,14 +83,16 @@ def topo():
     return """
     <div style="background:#0f172a;padding:15px;color:white;">
         <b style="font-size:18px;">⚡ KBSISTEMAS</b> |
+        <a href="/dashboard" style="color:white;">Dashboard</a> |
         <a href="/estoque" style="color:white;">Estoque</a> |
+        <a href="/estoque_usuarios" style="color:white;">Estoque Usuários</a> |
         <a href="/transferencia" style="color:white;">Transferência</a> |
         <a href="/usuarios" style="color:white;">Usuários</a> |
         <a href="/logout" style="color:red;">Sair</a>
     </div>
     """
 
-# ================= CONTAINER (NOVO VISUAL) =================
+# ================= CONTAINER =================
 def container(c):
     return topo() + f"""
     <style>
@@ -139,6 +141,55 @@ def container(c):
     </div>
     """
 
+# ================= DASHBOARD =================
+@app.route("/dashboard")
+def dashboard():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM estoque")
+    total_produtos = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COALESCE(SUM(quantidade),0) FROM estoque")
+    total_qtd = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM usuarios")
+    total_users = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM transferencias")
+    total_transf = cursor.fetchone()[0]
+
+    conn.close()
+
+    return container(f"""
+    <h2>📊 DASHBOARD</h2>
+
+    <div style="display:flex;gap:20px;flex-wrap:wrap;">
+        <div style="background:#020617;padding:20px;border-radius:10px;">
+            <h3>📦 Produtos</h3>
+            <h1>{total_produtos}</h1>
+        </div>
+
+        <div style="background:#020617;padding:20px;border-radius:10px;">
+            <h3>📊 Quantidade</h3>
+            <h1>{total_qtd}</h1>
+        </div>
+
+        <div style="background:#020617;padding:20px;border-radius:10px;">
+            <h3>👤 Usuários</h3>
+            <h1>{total_users}</h1>
+        </div>
+
+        <div style="background:#020617;padding:20px;border-radius:10px;">
+            <h3>🔄 Transferências</h3>
+            <h1>{total_transf}</h1>
+        </div>
+    </div>
+    """)
+
 # ================= LOGIN =================
 @app.route("/", methods=["GET","POST"])
 def login():
@@ -161,58 +212,18 @@ def login():
             conn.commit()
             conn.close()
 
-            return redirect("/estoque")
+            return redirect("/dashboard")
 
         erro = "Login inválido"
 
     return f"""
-    <style>
-    body {{
-        margin:0;
-        font-family:Arial;
-        background: linear-gradient(135deg, #020617, #0f172a);
-        color:white;
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        height:100vh;
-    }}
-    .card {{
-        background:#020617;
-        padding:30px;
-        border-radius:12px;
-        width:320px;
-        text-align:center;
-        box-shadow:0 0 30px rgba(0,0,0,0.8);
-    }}
-    input {{
-        width:100%;
-        padding:10px;
-        margin:8px 0;
-        border:none;
-        border-radius:6px;
-    }}
-    button {{
-        width:100%;
-        padding:10px;
-        background:#3b82f6;
-        border:none;
-        border-radius:6px;
-        color:white;
-        cursor:pointer;
-    }}
-    </style>
-
-    <div class="card">
+    <div style="text-align:center;margin-top:100px;">
         <h1>⚡ KBSISTEMAS</h1>
-        <p style="font-size:12px;color:#94a3b8;">Sistema inteligente de controle</p>
-
         <form method="POST">
-            <input name="user" placeholder="Usuário">
-            <input name="senha" type="password" placeholder="Senha">
+            <input name="user" placeholder="Usuário"><br>
+            <input name="senha" type="password" placeholder="Senha"><br>
             <button>Entrar</button>
         </form>
-
         <p style="color:red;">{erro}</p>
     </div>
     """
@@ -233,12 +244,19 @@ def estoque():
         )
         conn.commit()
 
-    cursor.execute("SELECT produto, quantidade, categoria FROM estoque")
+    cursor.execute("SELECT id, produto, quantidade, categoria FROM estoque")
     dados = cursor.fetchall()
 
     tabela = ""
-    for p,q,c in dados:
-        tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td></tr>"
+    for i,p,q,c in dados:
+        tabela += f"""
+        <tr>
+            <td>{p}</td>
+            <td>{q}</td>
+            <td>{c}</td>
+            <td><a href="/remover_estoque/{i}">❌ Remover</a></td>
+        </tr>
+        """
 
     return container(f"""
     <h2>📦 ESTOQUE</h2>
@@ -251,10 +269,72 @@ def estoque():
     </form>
 
     <table>
-        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
+        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th><th></th></tr>
         {tabela}
     </table>
     """)
+
+# ================= REMOVER ESTOQUE =================
+@app.route("/remover_estoque/<int:id>")
+def remover_estoque(id):
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM estoque WHERE id=%s", (id,))
+    conn.commit()
+    conn.close()
+
+    return redirect("/estoque")
+
+# ================= ESTOQUE USUÁRIOS =================
+@app.route("/estoque_usuarios")
+def estoque_usuarios():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, usuario, produto, quantidade FROM estoque_user")
+    dados = cursor.fetchall()
+
+    tabela = ""
+    for i,u,p,q in dados:
+        tabela += f"""
+        <tr>
+            <td>{u}</td>
+            <td>{p}</td>
+            <td>{q}</td>
+            <td><a href="/remover_user/{i}">❌ Remover</a></td>
+        </tr>
+        """
+
+    conn.close()
+
+    return container(f"""
+    <h2>👤 ESTOQUE DOS USUÁRIOS</h2>
+
+    <table>
+        <tr><th>Usuário</th><th>Produto</th><th>Qtd</th><th></th></tr>
+        {tabela}
+    </table>
+    """)
+
+# ================= REMOVER USER =================
+@app.route("/remover_user/<int:id>")
+def remover_user(id):
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM estoque_user WHERE id=%s", (id,))
+    conn.commit()
+    conn.close()
+
+    return redirect("/estoque_usuarios")
 
 # ================= TRANSFERÊNCIA =================
 @app.route("/transferencia", methods=["GET","POST"])
