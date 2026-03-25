@@ -42,15 +42,6 @@ def criar_banco():
         quantidade INTEGER
     )""")
 
-    cursor.execute("""CREATE TABLE IF NOT EXISTS correcoes (
-        id SERIAL PRIMARY KEY,
-        produto TEXT,
-        quantidade INTEGER,
-        motivo TEXT,
-        usuario TEXT,
-        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )""")
-
     cursor.execute("""CREATE TABLE IF NOT EXISTS transferencias (
         id SERIAL PRIMARY KEY,
         produto TEXT,
@@ -94,14 +85,59 @@ def topo():
         <b style="font-size:18px;">⚡ KBSISTEMAS</b> |
         <a href="/estoque" style="color:white;">Estoque</a> |
         <a href="/transferencia" style="color:white;">Transferência</a> |
-        <a href="/correcao" style="color:white;">Correção</a> |
         <a href="/usuarios" style="color:white;">Usuários</a> |
         <a href="/logout" style="color:red;">Sair</a>
     </div>
     """
 
+# ================= CONTAINER (NOVO VISUAL) =================
 def container(c):
-    return topo() + f"<div style='padding:20px'>{c}</div>"
+    return topo() + f"""
+    <style>
+    body {{
+        margin:0;
+        font-family:Arial;
+        background: url('https://images.unsplash.com/photo-1518770660439-4636190af475') no-repeat center center fixed;
+        background-size: cover;
+        color:white;
+    }}
+
+    .overlay {{
+        background: rgba(2,6,23,0.85);
+        min-height:100vh;
+        padding:20px;
+    }}
+
+    input, button {{
+        padding:10px;
+        margin:5px 0;
+        border-radius:6px;
+        border:none;
+    }}
+
+    button {{
+        background:#3b82f6;
+        color:white;
+        cursor:pointer;
+    }}
+
+    table {{
+        width:100%;
+        background:#020617;
+        border-collapse:collapse;
+        margin-top:15px;
+    }}
+
+    th, td {{
+        padding:10px;
+        border:1px solid #1e293b;
+    }}
+    </style>
+
+    <div class="overlay">
+        {c}
+    </div>
+    """
 
 # ================= LOGIN =================
 @app.route("/", methods=["GET","POST"])
@@ -178,7 +214,6 @@ def login():
         </form>
 
         <p style="color:red;">{erro}</p>
-        <p style="font-size:11px;color:#64748b;">Venha conhecer nosso serviço 🚀</p>
     </div>
     """
 
@@ -206,7 +241,7 @@ def estoque():
         tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td></tr>"
 
     return container(f"""
-    <h2>ESTOQUE</h2>
+    <h2>📦 ESTOQUE</h2>
 
     <form method="POST">
         <input name="produto" placeholder="Produto">
@@ -215,7 +250,7 @@ def estoque():
         <button>Adicionar</button>
     </form>
 
-    <table border="1">
+    <table>
         <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
         {tabela}
     </table>
@@ -253,54 +288,13 @@ def transferencia():
         conn.commit()
 
     return container("""
-    <h2>TRANSFERÊNCIA</h2>
+    <h2>🔄 TRANSFERÊNCIA</h2>
 
     <form method="POST">
         <input name="produto" placeholder="Produto">
         <input name="qtd" placeholder="Quantidade">
         <input name="destino" placeholder="Usuário destino">
         <button>Transferir</button>
-    </form>
-    """)
-
-# ================= CORREÇÃO =================
-@app.route("/correcao", methods=["GET","POST"])
-def correcao():
-    if "user" not in session:
-        return redirect("/")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    if request.method == "POST":
-        cursor.execute("""
-        INSERT INTO correcoes (produto, quantidade, motivo, usuario)
-        VALUES (%s,%s,%s,%s)
-        """, (
-            request.form["produto"],
-            request.form["qtd"],
-            request.form["motivo"],
-            session["user"]
-        ))
-
-        cursor.execute("""
-        UPDATE estoque SET quantidade = quantidade - %s
-        WHERE produto=%s
-        """, (
-            request.form["qtd"],
-            request.form["produto"]
-        ))
-
-        conn.commit()
-
-    return container("""
-    <h2>CORREÇÃO</h2>
-
-    <form method="POST">
-        <input name="produto" placeholder="Produto">
-        <input name="qtd" placeholder="Quantidade">
-        <input name="motivo" placeholder="Motivo">
-        <button>Corrigir</button>
     </form>
     """)
 
@@ -340,7 +334,7 @@ def usuarios():
         """
 
     return container(f"""
-    <h2>USUÁRIOS</h2>
+    <h2>👤 USUÁRIOS</h2>
 
     <form method="POST">
         <input name="user" placeholder="Usuário">
@@ -352,7 +346,7 @@ def usuarios():
         <button>Criar</button>
     </form>
 
-    <table border="1">
+    <table>
         <tr><th>Usuário</th><th>Cargo</th><th>Status</th><th></th><th></th></tr>
         {tabela}
     </table>
@@ -373,7 +367,7 @@ def excluir(usuario):
 
     return redirect("/usuarios")
 
-# ================= ALTERAR SENHA =================
+# ================= SENHA =================
 @app.route("/senha/<usuario>", methods=["GET","POST"])
 def senha(usuario):
     if session.get("cargo") != "admin":
