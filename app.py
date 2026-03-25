@@ -67,14 +67,11 @@ def container(c):
     body {{
         margin:0;
         font-family:Arial;
-        background: url('https://images.unsplash.com/photo-1518770660439-4636190af475') no-repeat center center fixed;
-        background-size: cover;
+        background: #020617;
         color:white;
     }}
 
     .overlay {{
-        background: rgba(2,6,23,0.85);
-        min-height:100vh;
         padding:20px;
     }}
 
@@ -134,11 +131,57 @@ def login():
             erro = "Login inválido"
 
     return f"""
-    <div style="padding:50px">
-        <h2>Login</h2>
+    <style>
+    body {{
+        margin:0;
+        font-family:Arial;
+        background: url('/static/login.png') no-repeat center center fixed;
+        background-size: cover;
+    }}
+
+    .login-box {{
+        position:absolute;
+        top:50%;
+        left:50%;
+        transform:translate(-50%,-50%);
+        background: rgba(0,0,0,0.75);
+        padding:30px;
+        border-radius:10px;
+        color:white;
+        width:300px;
+        text-align:center;
+        box-shadow: 0 0 20px #3b82f6;
+    }}
+
+    input {{
+        width:100%;
+        padding:10px;
+        margin:10px 0;
+        border:none;
+        border-radius:5px;
+    }}
+
+    button {{
+        width:100%;
+        padding:10px;
+        background:#3b82f6;
+        color:white;
+        border:none;
+        border-radius:5px;
+        cursor:pointer;
+    }}
+
+    h2 {{
+        margin-bottom:20px;
+    }}
+    </style>
+
+    <div class="login-box">
+        <h2>⚡ KBSISTEMAS</h2>
+
         <form method="POST">
-            <input name="user" placeholder="Usuário"><br>
-            <input name="senha" placeholder="Senha" type="password"><br>
+            <input name="user" placeholder="Usuário">
+            <input name="senha" placeholder="Senha" type="password">
             <button>Entrar</button>
         </form>
 
@@ -166,7 +209,6 @@ def estoque():
         ))
         conn.commit()
 
-    # EXCLUIR PRODUTO (só admin)
     if request.args.get("del") and session.get("cargo") == "admin":
         cursor.execute("DELETE FROM estoque WHERE id=%s", (request.args.get("del"),))
         conn.commit()
@@ -253,7 +295,6 @@ def usuarios():
         ))
         conn.commit()
 
-    # EXCLUIR USUARIO
     if request.args.get("del"):
         cursor.execute("DELETE FROM usuarios WHERE usuario=%s", (request.args.get("del"),))
         conn.commit()
