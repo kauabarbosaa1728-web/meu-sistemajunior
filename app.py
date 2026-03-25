@@ -42,6 +42,16 @@ def criar_banco():
     )
     """)
 
+    # 🔥 NOVO - estoque por usuário
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS estoque_usuarios (
+        id SERIAL PRIMARY KEY,
+        usuario TEXT,
+        produto TEXT,
+        quantidade INTEGER
+    )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -64,49 +74,26 @@ def criar_admin():
 
 criar_admin()
 
-# ================= TOPO (SGP STYLE) =================
+# ================= TOPO =================
 def topo():
     return f"""
-    <div style="
-        position:fixed;
-        top:0;
-        left:0;
-        width:100%;
-        height:60px;
-        background:#0a192f;
-        color:white;
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        padding:0 20px;
-        box-shadow:0 2px 10px rgba(0,0,0,0.5);
-    ">
-
-        <div style="font-weight:bold;font-size:20px;color:#3a86ff;">
-            ⚡ KB Sistemas
-        </div>
-
+    <div style="position:fixed;top:0;width:100%;height:60px;background:#0a192f;color:white;display:flex;align-items:center;justify-content:space-between;padding:0 20px;">
+        <div style="font-weight:bold;color:#3a86ff;">⚡ KB Sistemas</div>
         <div>
-            <a href="/dashboard" style="color:white;margin:0 10px;text-decoration:none;">Dashboard</a>
-            <a href="/estoque" style="color:white;margin:0 10px;text-decoration:none;">Estoque</a>
-            <a href="/usuarios" style="color:white;margin:0 10px;text-decoration:none;">Usuários</a>
-            <a href="/saldo" style="color:white;margin:0 10px;text-decoration:none;">Saldo</a>
-            <a href="/logout" style="color:red;margin:0 10px;text-decoration:none;">Sair</a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/estoque">Estoque</a>
+            <a href="/estoque_usuarios">Estoque Usuários</a>
+            <a href="/usuarios">Usuários</a>
+            <a href="/saldo">Saldo</a>
+            <a href="/logout" style="color:red;">Sair</a>
         </div>
-
     </div>
     """
 
 def container(conteudo):
     return f"""
     {topo()}
-    <div style="
-        margin-top:70px;
-        padding:20px;
-        background:linear-gradient(135deg,#0a192f,#1b263b);
-        min-height:100vh;
-        color:white;
-    ">
+    <div style="margin-top:70px;padding:20px;color:white;">
         {conteudo}
     </div>
     """
@@ -125,7 +112,6 @@ def login():
 
         cursor.execute("SELECT senha, cargo FROM usuarios WHERE usuario=%s", (usuario,))
         dado = cursor.fetchone()
-
         conn.close()
 
         if dado and check_password_hash(dado[0], senha):
@@ -135,44 +121,14 @@ def login():
 
         erro = "Login inválido"
 
-    return f"""
-    <html>
-    <body style="
-        margin:0;
-        background:#0a192f;
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        height:100vh;
-        color:white;
-    ">
-
-    <div style="background:#1b263b;padding:40px;border-radius:10px;text-align:center;">
-
-        <h2 style="color:#3a86ff;">⚡ KB Sistemas</h2>
-
-        <p>Bem-vindo 👋</p>
-
-        <form method="POST">
-            <input name="user" placeholder="Usuário"><br><br>
-            <input name="senha" type="password" placeholder="Senha"><br><br>
-            <button>Entrar</button>
-        </form>
-
-        <p style="color:red;">{erro}</p>
-
-    </div>
-
-    </body>
-    </html>
-    """
+    return f"<h2>Login</h2><form method='POST'><input name='user'><input name='senha' type='password'><button>Entrar</button></form><p>{erro}</p>"
 
 # ================= DASHBOARD =================
 @app.route("/dashboard")
 def dashboard():
     if "user" not in session:
         return redirect("/")
-    return container(f"<h1>Dashboard</h1><p>Bem-vindo {session['user']}</p>")
+    return container(f"<h1>Bem-vindo {session['user']}</h1>")
 
 # ================= ESTOQUE =================
 @app.route("/estoque", methods=["GET","POST"])
@@ -183,7 +139,8 @@ def estoque():
     conn = conectar()
     cursor = conn.cursor()
 
-    if request.method == "POST":
+    # 🔒 Apenas admin adiciona
+    if request.method == "POST" and session.get("cargo") == "admin":
         cursor.execute("""
         INSERT INTO estoque (produto, quantidade, categoria)
         VALUES (%s,%s,%s)
@@ -194,26 +151,94 @@ def estoque():
         ))
         conn.commit()
 
-    cursor.execute("SELECT produto, quantidade, categoria FROM estoque")
+    cursor.execute("SELECT id, produto, quantidade, categoria FROM estoque")
     dados = cursor.fetchall()
     conn.close()
 
     tabela = ""
-    for p,q,c in dados:
-        tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td></tr>"
+    for i,p,q,c in dados:
+        excluir = ""
+        if session.get("cargo") == "admin":
+            excluir = f"<a href='/excluir/{i}'>❌</a>"
+
+        tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td><td>{excluir}</td></tr>"
 
     return container(f"""
     <h2>Estoque</h2>
 
+    {"<form method='POST'>\
+    <input name='produto'>\
+    <input name='quantidade'>\
+    <select name='categoria'>\
+        <option>Produto</option>\
+        <option>Material</option>\
+        <option>Ferramenta</option>\
+    </select>\
+    <button>Adicionar</button>\
+    </form>" if session.get("cargo") == "admin" else ""}
+
+    <table border="1">
+        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Ação</th></tr>
+        {tabela}
+    </table>
+    """)
+
+# ================= EXCLUIR =================
+@app.route("/excluir/<int:id>")
+def excluir(id):
+    if session.get("cargo") != "admin":
+        return "Não autorizado"
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM estoque WHERE id=%s", (id,))
+    conn.commit()
+    conn.close()
+
+    return redirect("/estoque")
+
+# ================= ESTOQUE USUÁRIOS =================
+@app.route("/estoque_usuarios", methods=["GET","POST"])
+def estoque_usuarios():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    # 🔥 TODOS podem lançar
+    if request.method == "POST":
+        cursor.execute("""
+        INSERT INTO estoque_usuarios (usuario, produto, quantidade)
+        VALUES (%s,%s,%s)
+        """, (
+            request.form["usuario"],
+            request.form["produto"],
+            request.form["quantidade"]
+        ))
+        conn.commit()
+
+    cursor.execute("SELECT usuario, produto, quantidade FROM estoque_usuarios")
+    dados = cursor.fetchall()
+    conn.close()
+
+    tabela = ""
+    for u,p,q in dados:
+        tabela += f"<tr><td>{u}</td><td>{p}</td><td>{q}</td></tr>"
+
+    return container(f"""
+    <h2>Estoque por Usuário</h2>
+
     <form method="POST">
+        <input name="usuario" placeholder="Usuário">
         <input name="produto" placeholder="Produto">
-        <input name="quantidade" placeholder="Quantidade">
-        <input name="categoria" placeholder="Categoria">
-        <button>Adicionar</button>
+        <input name="quantidade" placeholder="Qtd">
+        <button>Lançar</button>
     </form>
 
-    <table border="1" style="color:white;">
-        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
+    <table border="1">
+        <tr><th>Usuário</th><th>Produto</th><th>Qtd</th></tr>
         {tabela}
     </table>
     """)
@@ -239,21 +264,20 @@ def usuarios():
         ))
         conn.commit()
 
-    cursor.execute("SELECT usuario, cargo, online FROM usuarios")
+    cursor.execute("SELECT usuario, cargo FROM usuarios")
     dados = cursor.fetchall()
     conn.close()
 
     tabela = ""
-    for u,c,o in dados:
-        status = "🟢" if o else "🔴"
-        tabela += f"<tr><td>{u}</td><td>{c}</td><td>{status}</td></tr>"
+    for u,c in dados:
+        tabela += f"<tr><td>{u}</td><td>{c}</td></tr>"
 
     return container(f"""
     <h2>Usuários</h2>
 
     <form method="POST">
-        <input name="user" placeholder="Usuário">
-        <input name="senha" type="password" placeholder="Senha">
+        <input name="user">
+        <input name="senha" type="password">
         <select name="cargo">
             <option>admin</option>
             <option>operador</option>
@@ -261,8 +285,8 @@ def usuarios():
         <button>Criar</button>
     </form>
 
-    <table border="1" style="color:white;">
-        <tr><th>Usuário</th><th>Cargo</th><th>Status</th></tr>
+    <table border="1">
+        <tr><th>Usuário</th><th>Cargo</th></tr>
         {tabela}
     </table>
     """)
@@ -270,9 +294,6 @@ def usuarios():
 # ================= SALDO =================
 @app.route("/saldo")
 def saldo():
-    if "user" not in session:
-        return redirect("/")
-
     conn = conectar()
     cursor = conn.cursor()
 
