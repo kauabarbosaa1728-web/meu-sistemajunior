@@ -35,22 +35,6 @@ def criar_banco():
         categoria TEXT
     )""")
 
-    cursor.execute("""CREATE TABLE IF NOT EXISTS estoque_user (
-        id SERIAL PRIMARY KEY,
-        usuario TEXT,
-        produto TEXT,
-        quantidade INTEGER
-    )""")
-
-    cursor.execute("""CREATE TABLE IF NOT EXISTS correcoes (
-        id SERIAL PRIMARY KEY,
-        produto TEXT,
-        quantidade INTEGER,
-        motivo TEXT,
-        usuario TEXT,
-        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )""")
-
     cursor.execute("""CREATE TABLE IF NOT EXISTS transferencias (
         id SERIAL PRIMARY KEY,
         produto TEXT,
@@ -71,7 +55,6 @@ def topo():
         <b style="font-size:18px;">⚡ KBSISTEMAS</b> |
         <a href="/estoque" style="color:white;">Estoque</a> |
         <a href="/transferencia" style="color:white;">Transferência</a> |
-        <a href="/correcao" style="color:white;">Correção</a> |
         <a href="/usuarios" style="color:white;">Usuários</a> |
         <a href="/logout" style="color:red;">Sair</a>
     </div>
@@ -160,7 +143,6 @@ def login():
         </form>
 
         <p style="color:red;">{erro}</p>
-        <p style="font-size:11px;color:#64748b;">Venha conhecer nosso serviço 🚀</p>
     </div>
     """
 
@@ -184,12 +166,22 @@ def estoque():
         ))
         conn.commit()
 
-    cursor.execute("SELECT produto, quantidade, categoria FROM estoque")
+    # EXCLUIR PRODUTO (só admin)
+    if request.args.get("del") and session.get("cargo") == "admin":
+        cursor.execute("DELETE FROM estoque WHERE id=%s", (request.args.get("del"),))
+        conn.commit()
+        return redirect("/estoque")
+
+    cursor.execute("SELECT id, produto, quantidade, categoria FROM estoque")
     dados = cursor.fetchall()
 
     tabela = ""
-    for p, q, c in dados:
-        tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td></tr>"
+    for i, p, q, c in dados:
+        botao = ""
+        if session.get("cargo") == "admin":
+            botao = f"<a href='/estoque?del={i}'><button>Excluir</button></a>"
+
+        tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td><td>{botao}</td></tr>"
 
     return container(f"""
     <h2>📦 ESTOQUE</h2>
@@ -202,7 +194,7 @@ def estoque():
     </form>
 
     <table>
-        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
+        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Ação</th></tr>
         {tabela}
     </table>
     """)
@@ -261,13 +253,19 @@ def usuarios():
         ))
         conn.commit()
 
+    # EXCLUIR USUARIO
+    if request.args.get("del"):
+        cursor.execute("DELETE FROM usuarios WHERE usuario=%s", (request.args.get("del"),))
+        conn.commit()
+        return redirect("/usuarios")
+
     cursor.execute("SELECT usuario, cargo, online FROM usuarios")
     dados = cursor.fetchall()
 
     tabela = ""
     for u, c, o in dados:
         status = "🟢" if o else "🔴"
-        tabela += f"<tr><td>{u}</td><td>{c}</td><td>{status}</td></tr>"
+        tabela += f"<tr><td>{u}</td><td>{c}</td><td>{status}</td><td><a href='/usuarios?del={u}'><button>Excluir</button></a></td></tr>"
 
     return container(f"""
     <h2>👤 USUÁRIOS</h2>
@@ -275,42 +273,20 @@ def usuarios():
     <form method="POST">
         <input name="user" placeholder="Usuário">
         <input name="senha" placeholder="Senha">
-        <input name="cargo" placeholder="Cargo">
+        
+        <select name="cargo">
+            <option value="operador">Operador</option>
+            <option value="admin">Admin</option>
+        </select>
+
         <button>Criar</button>
     </form>
 
     <table>
-        <tr><th>Usuário</th><th>Cargo</th><th>Status</th></tr>
+        <tr><th>Usuário</th><th>Cargo</th><th>Status</th><th>Ação</th></tr>
         {tabela}
     </table>
     """)
-
-# ================= SENHA =================
-@app.route("/senha/<usuario>", methods=["GET","POST"])
-def senha(usuario):
-    if session.get("cargo") != "admin":
-        return "Sem permissão"
-
-    if request.method == "POST":
-        conn = conectar()
-        cursor = conn.cursor()
-
-        cursor.execute(
-            "UPDATE usuarios SET senha=%s WHERE usuario=%s",
-            (generate_password_hash(request.form["nova"]), usuario)
-        )
-        conn.commit()
-        conn.close()
-
-        return redirect("/usuarios")
-
-    return f"""
-    <h3>Alterar senha de {usuario}</h3>
-    <form method="POST">
-        <input name="nova" placeholder="Nova senha">
-        <button>Salvar</button>
-    </form>
-    """
 
 # ================= LOGOUT =================
 @app.route("/logout")
