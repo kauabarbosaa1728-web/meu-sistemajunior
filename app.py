@@ -39,6 +39,19 @@ def criar_banco():
     )
     """)
 
+    # 🔥 NOVO (CORREÇÃO)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS correcoes (
+        id SERIAL PRIMARY KEY,
+        tipo TEXT,
+        nome TEXT,
+        quantidade INTEGER,
+        motivo TEXT,
+        usuario TEXT,
+        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -89,6 +102,7 @@ def topo():
             <div class="dropdown">
                 <a href="/estoque">Produtos</a>
                 <a href="/estoque_usuarios">Estoque Usuários</a>
+                <a href="/correcao">Correções</a> <!-- 🔥 NOVO -->
             </div>
         </div>
 
@@ -108,7 +122,7 @@ def topo():
 def container(c):
     return topo() + f"<div style='padding:20px'>{c}</div>"
 
-# ================= LOGIN BONITO =================
+# ================= LOGIN =================
 @app.route("/", methods=["GET","POST"])
 def login():
     erro = ""
@@ -131,49 +145,16 @@ def login():
         erro = "Login inválido"
 
     return f"""
-    <style>
-    body {{
-        margin:0;
-        background:linear-gradient(135deg,#000,#1e293b);
-        height:100vh;
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        font-family:Arial;
-        color:white;
-    }}
-    .login {{
-        background:rgba(255,255,255,0.1);
-        padding:40px;
-        border-radius:20px;
-        backdrop-filter: blur(20px);
-        text-align:center;
-    }}
-    input {{
-        display:block;
-        width:200px;
-        margin:10px auto;
-        padding:10px;
-        border:none;
-        border-radius:10px;
-    }}
-    button {{
-        padding:10px 20px;
-        border:none;
-        border-radius:10px;
-        background:#3a86ff;
-        color:white;
-    }}
-    </style>
-
-    <div class="login">
+    <div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#000;">
+    <div style="background:#1e293b;padding:40px;border-radius:20px;text-align:center;">
         <h2>KBSISTEMAS</h2>
         <form method="POST">
-            <input name="user" placeholder="Usuário">
-            <input type="password" name="senha" placeholder="Senha">
+            <input name="user"><br><br>
+            <input type="password" name="senha"><br><br>
             <button>LOGIN</button>
         </form>
         <p style="color:red;">{erro}</p>
+    </div>
     </div>
     """
 
@@ -212,8 +193,8 @@ def estoque():
     <h2>Produtos</h2>
 
     <form method="POST">
-        <input name="produto" placeholder="Produto">
-        <input name="qtd" placeholder="Quantidade">
+        <input name="produto">
+        <input name="qtd">
         <select name="categoria">
             <option>Produto</option>
             <option>Material</option>
@@ -224,6 +205,68 @@ def estoque():
 
     <table>
         <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
+        {tabela}
+    </table>
+    """)
+
+# ================= CORREÇÃO =================
+@app.route("/correcao", methods=["GET","POST"])
+def correcao():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        tipo = request.form["tipo"]
+        nome = request.form["nome"]
+        quantidade = int(request.form["quantidade"])
+        motivo = request.form["motivo"]
+
+        if tipo == "produto":
+            cursor.execute("""
+            UPDATE estoque SET quantidade = quantidade + %s WHERE produto=%s
+            """, (quantidade, nome))
+
+        elif tipo == "usuario":
+            cursor.execute("""
+            UPDATE estoque_user SET quantidade = quantidade + %s WHERE usuario=%s
+            """, (quantidade, nome))
+
+        cursor.execute("""
+        INSERT INTO correcoes (tipo, nome, quantidade, motivo, usuario)
+        VALUES (%s,%s,%s,%s,%s)
+        """, (tipo, nome, quantidade, motivo, session["user"]))
+
+        conn.commit()
+
+    cursor.execute("SELECT * FROM correcoes ORDER BY id DESC")
+    dados = cursor.fetchall()
+    conn.close()
+
+    tabela=""
+    for d in dados:
+        tabela += f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td><td>{d[4]}</td><td>{d[5]}</td></tr>"
+
+    return container(f"""
+    <h2>Correção de Estoque</h2>
+
+    <form method="POST">
+        <select name="tipo">
+            <option value="produto">Produto</option>
+            <option value="usuario">Usuário</option>
+        </select>
+
+        <input name="nome" placeholder="Nome">
+        <input name="quantidade" placeholder="Quantidade (+ ou -)">
+        <input name="motivo" placeholder="Motivo">
+
+        <button>Corrigir</button>
+    </form>
+
+    <table>
+        <tr><th>Tipo</th><th>Nome</th><th>Qtd</th><th>Motivo</th><th>Quem fez</th></tr>
         {tabela}
     </table>
     """)
@@ -265,9 +308,9 @@ def estoque_usuarios():
     <h2>Estoque por Usuário</h2>
 
     <form method="POST">
-        <input name="usuario" placeholder="Usuário">
-        <input name="produto" placeholder="Produto">
-        <input name="qtd" placeholder="Quantidade">
+        <input name="usuario">
+        <input name="produto">
+        <input name="qtd">
         <button>Lançar</button>
     </form>
 
