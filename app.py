@@ -67,7 +67,7 @@ def container(c):
     body {{
         margin:0;
         font-family:Arial;
-        background: #020617;
+        background:#020617;
         color:white;
     }}
 
@@ -150,7 +150,6 @@ def login():
         color:white;
         width:300px;
         text-align:center;
-        box-shadow: 0 0 20px #3b82f6;
     }}
 
     input {{
@@ -168,11 +167,6 @@ def login():
         color:white;
         border:none;
         border-radius:5px;
-        cursor:pointer;
-    }}
-
-    h2 {{
-        margin-bottom:20px;
     }}
     </style>
 
@@ -209,21 +203,12 @@ def estoque():
         ))
         conn.commit()
 
-    if request.args.get("del") and session.get("cargo") == "admin":
-        cursor.execute("DELETE FROM estoque WHERE id=%s", (request.args.get("del"),))
-        conn.commit()
-        return redirect("/estoque")
-
-    cursor.execute("SELECT id, produto, quantidade, categoria FROM estoque")
+    cursor.execute("SELECT produto, quantidade, categoria FROM estoque")
     dados = cursor.fetchall()
 
     tabela = ""
-    for i, p, q, c in dados:
-        botao = ""
-        if session.get("cargo") == "admin":
-            botao = f"<a href='/estoque?del={i}'><button>Excluir</button></a>"
-
-        tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td><td>{botao}</td></tr>"
+    for p, q, c in dados:
+        tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td></tr>"
 
     return container(f"""
     <h2>📦 ESTOQUE</h2>
@@ -236,7 +221,7 @@ def estoque():
     </form>
 
     <table>
-        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Ação</th></tr>
+        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
         {tabela}
     </table>
     """)
@@ -295,18 +280,13 @@ def usuarios():
         ))
         conn.commit()
 
-    if request.args.get("del"):
-        cursor.execute("DELETE FROM usuarios WHERE usuario=%s", (request.args.get("del"),))
-        conn.commit()
-        return redirect("/usuarios")
-
     cursor.execute("SELECT usuario, cargo, online FROM usuarios")
     dados = cursor.fetchall()
 
     tabela = ""
     for u, c, o in dados:
         status = "🟢" if o else "🔴"
-        tabela += f"<tr><td>{u}</td><td>{c}</td><td>{status}</td><td><a href='/usuarios?del={u}'><button>Excluir</button></a></td></tr>"
+        tabela += f"<tr><td>{u}</td><td>{c}</td><td>{status}</td></tr>"
 
     return container(f"""
     <h2>👤 USUÁRIOS</h2>
@@ -314,17 +294,12 @@ def usuarios():
     <form method="POST">
         <input name="user" placeholder="Usuário">
         <input name="senha" placeholder="Senha">
-        
-        <select name="cargo">
-            <option value="operador">Operador</option>
-            <option value="admin">Admin</option>
-        </select>
-
+        <input name="cargo" placeholder="Cargo">
         <button>Criar</button>
     </form>
 
     <table>
-        <tr><th>Usuário</th><th>Cargo</th><th>Status</th><th>Ação</th></tr>
+        <tr><th>Usuário</th><th>Cargo</th><th>Status</th></tr>
         {tabela}
     </table>
     """)
