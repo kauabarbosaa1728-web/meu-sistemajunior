@@ -30,8 +30,7 @@ def criar_banco():
     cursor.execute("""CREATE TABLE IF NOT EXISTS usuarios (
         usuario TEXT PRIMARY KEY,
         senha TEXT,
-        cargo TEXT,
-        saldo INTEGER DEFAULT 0
+        cargo TEXT
     )""")
 
     cursor.execute("""CREATE TABLE IF NOT EXISTS estoque (
@@ -84,15 +83,13 @@ criar_banco()
 # ================= ADMIN =================
 def criar_admin():
     conn = conectar()
-    if not conn:
-        return
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM usuarios WHERE usuario=%s", ("admin",))
     if not cursor.fetchone():
         cursor.execute(
-            "INSERT INTO usuarios VALUES (%s,%s,%s,%s)",
-            ("admin", generate_password_hash("123"), "admin", 0)
+            "INSERT INTO usuarios VALUES (%s,%s,%s)",
+            ("admin", generate_password_hash("123"), "admin")
         )
 
     conn.commit()
@@ -100,52 +97,17 @@ def criar_admin():
 
 criar_admin()
 
-# ================= HISTÓRICO =================
-def registrar(msg):
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO historico (acao, usuario) VALUES (%s,%s)",
-                   (msg, session.get("user")))
-    conn.commit()
-    conn.close()
-
 # ================= MENU =================
 def topo():
     return """
-    <style>
-    body {margin:0;background:#0f172a;color:white;font-family:Arial;}
-    .menu {background:#1e293b;padding:10px;display:flex;gap:20px;}
-    .menu-item {position:relative;}
-    .menu a {color:white;text-decoration:none;padding:8px;}
-    .dropdown {display:none;position:absolute;background:#334155;top:30px;}
-    .dropdown a {display:block;padding:8px;}
-    .menu-item:hover .dropdown {display:block;}
-    table {width:100%;margin-top:20px;}
-    td,th {padding:10px;border-bottom:1px solid #444;}
-    input,select,button {padding:8px;margin:5px;}
-    </style>
-
-    <div class="menu">
-        <div class="menu-item">
-            <a href="#">Estoque ▼</a>
-            <div class="dropdown">
-                <a href="/estoque">Produtos</a>
-                <a href="/estoque_usuarios">Estoque Usuários</a>
-                <a href="/correcao">Correções</a>
-                <a href="/transferencia">Transferência</a>
-                <a href="/historico">Histórico</a>
-            </div>
-        </div>
-
-        <div class="menu-item">
-            <a href="#">Administração ▼</a>
-            <div class="dropdown">
-                <a href="/usuarios">Usuários</a>
-            </div>
-        </div>
-
-        <a href="/dashboard">Dashboard</a>
-        <a href="/logout" style="color:red;">Sair</a>
+    <div style="background:#1e293b;padding:10px;">
+        <a href="/estoque">Produtos</a> |
+        <a href="/estoque_usuarios">Estoque Usuários</a> |
+        <a href="/correcao">Correções</a> |
+        <a href="/transferencia">Transferência</a> |
+        <a href="/historico">Histórico</a> |
+        <a href="/usuarios">Usuários</a> |
+        <a href="/logout">Sair</a>
     </div>
     """
 
@@ -160,9 +122,10 @@ def login():
     if request.method == "POST":
         conn = conectar()
         cursor = conn.cursor()
-        cursor.execute("SELECT senha, cargo FROM usuarios WHERE usuario=%s",(request.form.get("user"),))
+
+        cursor.execute("SELECT senha, cargo FROM usuarios WHERE usuario=%s",
+                       (request.form.get("user"),))
         dado = cursor.fetchone()
-        conn.close()
 
         if dado and check_password_hash(dado[0], request.form.get("senha")):
             session["user"] = request.form.get("user")
@@ -171,19 +134,19 @@ def login():
 
         erro = "Login inválido"
 
-    return f"""<form method="POST">
-    <input name="user"><br>
-    <input name="senha"><br>
-    <button>Login</button>
-    <p>{erro}</p>
-    </form>"""
+    return f"""
+    <form method="POST">
+        <input name="user">
+        <input name="senha" type="password">
+        <button>Login</button>
+    </form>
+    {erro}
+    """
 
 # ================= DASHBOARD =================
 @app.route("/dashboard")
 def dashboard():
-    if "user" not in session:
-        return redirect("/")
-    return container(f"<h1>Bem-vindo {session['user']}</h1>")
+    return container(f"Bem vindo {session.get('user')}")
 
 # ================= ESTOQUE =================
 @app.route("/estoque", methods=["GET","POST"])
@@ -194,133 +157,147 @@ def estoque():
     conn = conectar()
     cursor = conn.cursor()
 
-    busca = request.args.get("busca")
-
     if request.method == "POST":
-        if session.get("cargo") == "usuario":
-            return container("Sem permissão")
-
-        produto = request.form.get("produto")
-        qtd = request.form.get("qtd")
-
         try:
-            qtd = int(qtd)
-        except:
-            return container("Quantidade inválida")
+            cursor.execute(
+                "INSERT INTO estoque (produto, quantidade, categoria) VALUES (%s,%s,%s)",
+                (request.form["produto"], int(request.form["qtd"]), request.form["categoria"])
+            )
 
-        cursor.execute("INSERT INTO estoque (produto, quantidade, categoria) VALUES (%s,%s,%s)",
-                       (produto,qtd,request.form.get("categoria")))
+            cursor.execute(
+                "INSERT INTO historico (acao, usuario) VALUES (%s,%s)",
+                (f"Adicionou {request.form['produto']}", session["user"])
+            )
 
-        registrar(f"Adicionou {produto} ({qtd})")
-        conn.commit()
+            conn.commit()
+        except Exception as e:
+            print(e)
 
-    if busca:
-        cursor.execute("SELECT * FROM estoque WHERE produto ILIKE %s",(f"%{busca}%",))
-    else:
-        cursor.execute("SELECT * FROM estoque")
-
+    cursor.execute("SELECT * FROM estoque")
     dados = cursor.fetchall()
-    conn.close()
 
-    tabela="".join([f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td></tr>" for d in dados])
+    tabela = ""
+    for d in dados:
+        tabela += f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td></tr>"
 
     return container(f"""
     <h2>Produtos</h2>
-    <form>
-        <input name="busca" placeholder="Buscar produto">
-        <button>Buscar</button>
-    </form>
-
     <form method="POST">
         <input name="produto">
         <input name="qtd">
-        <select name="categoria">
-            <option>Produto</option>
-            <option>Material</option>
-            <option>Ferramenta</option>
-        </select>
+        <input name="categoria">
         <button>Salvar</button>
     </form>
-
     <table>
-        <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
-        {tabela}
+    {tabela}
     </table>
     """)
+
+# ================= ESTOQUE USUÁRIOS =================
+@app.route("/estoque_usuarios", methods=["GET","POST"])
+def estoque_usuarios():
+    conn = conectar()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        cursor.execute("""
+        INSERT INTO estoque_user (usuario, produto, quantidade)
+        VALUES (%s,%s,%s)
+        """,(request.form["usuario"],request.form["produto"],request.form["qtd"]))
+
+        conn.commit()
+
+    cursor.execute("SELECT * FROM estoque_user")
+    dados = cursor.fetchall()
+
+    tabela=""
+    for d in dados:
+        tabela += f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td></tr>"
+
+    return container(f"<table>{tabela}</table>")
 
 # ================= CORREÇÃO =================
 @app.route("/correcao", methods=["GET","POST"])
 def correcao():
-    if "user" not in session:
-        return redirect("/")
-
     conn = conectar()
     cursor = conn.cursor()
 
     if request.method == "POST":
-        cursor.execute("INSERT INTO correcoes (tipo,nome,quantidade,motivo,usuario) VALUES (%s,%s,%s,%s,%s)",
-                       (request.form.get("tipo"),request.form.get("nome"),request.form.get("quantidade"),
-                        request.form.get("motivo"),session["user"]))
+        cursor.execute("""
+        INSERT INTO correcoes (tipo, nome, quantidade, motivo, usuario)
+        VALUES (%s,%s,%s,%s,%s)
+        """,(request.form["tipo"],request.form["nome"],
+             request.form["quantidade"],request.form["motivo"],
+             session["user"]))
 
-        registrar("Correção realizada")
+        cursor.execute(
+            "INSERT INTO historico (acao, usuario) VALUES (%s,%s)",
+            (f"Correção {request.form['nome']}", session["user"])
+        )
+
         conn.commit()
 
-    cursor.execute("SELECT * FROM correcoes ORDER BY id DESC")
-    dados = cursor.fetchall()
-    conn.close()
-
-    tabela="".join([f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td></tr>" for d in dados])
-
-    return container(f"""
-    <h2>Correções</h2>
-    <form method="POST">
-        <input name="tipo">
-        <input name="nome">
-        <input name="quantidade">
-        <input name="motivo">
-        <button>Salvar</button>
-    </form>
-    <table>{tabela}</table>
-    """)
+    return container("Correção OK")
 
 # ================= TRANSFERÊNCIA =================
 @app.route("/transferencia", methods=["GET","POST"])
 def transferencia():
-    if "user" not in session:
-        return redirect("/")
+    conn = conectar()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        cursor.execute("""
+        INSERT INTO transferencias (produto, quantidade, origem, destino, usuario)
+        VALUES (%s,%s,%s,%s,%s)
+        """,(request.form["produto"],request.form["qtd"],
+             request.form["origem"],request.form["destino"],
+             session["user"]))
+
+        conn.commit()
+
+    return container("Transferência OK")
+
+# ================= HISTÓRICO =================
+@app.route("/historico")
+def historico():
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM historico ORDER BY id DESC")
+    dados = cursor.fetchall()
+
+    tabela=""
+    for d in dados:
+        tabela += f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td></tr>"
+
+    return container(f"<table>{tabela}</table>")
+
+# ================= USUÁRIOS =================
+@app.route("/usuarios", methods=["GET","POST"])
+def usuarios():
+    if session.get("cargo") != "admin":
+        return container("SEM PERMISSÃO")
 
     conn = conectar()
     cursor = conn.cursor()
 
     if request.method == "POST":
-        cursor.execute("""INSERT INTO transferencias 
-        (produto,quantidade,origem,destino,usuario)
-        VALUES (%s,%s,%s,%s,%s)""",
-        (request.form.get("produto"),
-         int(request.form.get("qtd")),
-         request.form.get("origem"),
-         request.form.get("destino"),
-         session["user"]))
-
-        registrar("Transferência realizada")
+        cursor.execute(
+            "INSERT INTO usuarios VALUES (%s,%s,%s)",
+            (request.form["user"], generate_password_hash(request.form["senha"]), request.form["cargo"])
+        )
         conn.commit()
 
-    cursor.execute("SELECT * FROM transferencias ORDER BY id DESC")
-    dados = cursor.fetchall()
-    conn.close()
-
-    tabela="".join([f"<tr><td>{d[1]}</td><td>{d[2]}</td><td>{d[3]}</td><td>{d[4]}</td></tr>" for d in dados])
-
-    return container(f"""
-    <h2>Transferência</h2>
+    return container("""
     <form method="POST">
-        <input name="produto">
-        <input name="qtd">
-        <input name="origem">
-        <input name="destino">
-        <button>Enviar</button>
+        <input name="user">
+        <input name="senha">
+        <select name="cargo">
+            <option>admin</option>
+            <option>operador</option>
+        </select>
+        <button>Criar</button>
     </form>
-    <table>{tabela}</table>
     """)
 
 # ================= LOGOUT =================
