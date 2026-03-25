@@ -70,11 +70,17 @@ def criar_admin():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM usuarios WHERE usuario=%s", ("admin",))
+    # cria ou atualiza admin com seus dados
+    cursor.execute("SELECT * FROM usuarios WHERE usuario=%s", ("kaua.barbosaa1728@gmail.com",))
     if not cursor.fetchone():
         cursor.execute(
             "INSERT INTO usuarios VALUES (%s,%s,%s,%s)",
-            ("admin", generate_password_hash("123"), "admin", 0)
+            ("kaua.barbosaa1728@gmail.com", generate_password_hash("997401054"), "admin", 0)
+        )
+    else:
+        cursor.execute(
+            "UPDATE usuarios SET senha=%s WHERE usuario=%s",
+            (generate_password_hash("997401054"), "kaua.barbosaa1728@gmail.com")
         )
 
     conn.commit()
@@ -281,7 +287,15 @@ def usuarios():
     tabela = ""
     for u,c,o in dados:
         status = "🟢 Online" if o == 1 else "🔴 Offline"
-        tabela += f"<tr><td>{u}</td><td>{c}</td><td>{status}</td></tr>"
+        tabela += f"""
+        <tr>
+            <td>{u}</td>
+            <td>{c}</td>
+            <td>{status}</td>
+            <td><a href="/excluir/{u}">Excluir</a></td>
+            <td><a href="/senha/{u}">Senha</a></td>
+        </tr>
+        """
 
     return container(f"""
     <h2>USUÁRIOS</h2>
@@ -297,10 +311,52 @@ def usuarios():
     </form>
 
     <table border="1">
-        <tr><th>Usuário</th><th>Cargo</th><th>Status</th></tr>
+        <tr><th>Usuário</th><th>Cargo</th><th>Status</th><th></th><th></th></tr>
         {tabela}
     </table>
     """)
+
+# ================= EXCLUIR =================
+@app.route("/excluir/<usuario>")
+def excluir(usuario):
+    if session.get("cargo") != "admin":
+        return "Sem permissão"
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM usuarios WHERE usuario=%s", (usuario,))
+    conn.commit()
+    conn.close()
+
+    return redirect("/usuarios")
+
+# ================= ALTERAR SENHA =================
+@app.route("/senha/<usuario>", methods=["GET","POST"])
+def senha(usuario):
+    if session.get("cargo") != "admin":
+        return "Sem permissão"
+
+    if request.method == "POST":
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "UPDATE usuarios SET senha=%s WHERE usuario=%s",
+            (generate_password_hash(request.form["nova"]), usuario)
+        )
+        conn.commit()
+        conn.close()
+
+        return redirect("/usuarios")
+
+    return f"""
+    <h3>Alterar senha de {usuario}</h3>
+    <form method="POST">
+        <input name="nova" placeholder="Nova senha">
+        <button>Salvar</button>
+    </form>
+    """
 
 # ================= LOGOUT =================
 @app.route("/logout")
