@@ -144,14 +144,14 @@ criar_banco()
 # ================= TOPO =================
 def topo():
     return """
-    <div style="background:black;padding:15px;color:#00FF00;font-family:'Share Tech Mono', monospace;border-bottom:2px solid #00FF00;">
+    <div style="background:#020617;padding:15px;color:#38bdf8;font-family:'Share Tech Mono', monospace;border-bottom:2px solid #0ea5e9;">
         <b style="font-size:18px;">⚡ KBSISTEMAS</b> |
         <a href="/painel">Painel</a> |
         <a href="/estoque">Estoque</a> |
         <a href="/transferencia">Transferência</a> |
         <a href="/historico">Histórico</a> |
         <a href="/usuarios">Usuários</a> |
-        <a href="/logout" style="color:red;">Sair</a>
+        <a href="/logout" style="color:#f87171;">Sair</a>
     </div>
     """
 
@@ -164,36 +164,37 @@ def container(c):
     body {{
         margin:0;
         font-family:'Share Tech Mono', monospace;
-        background:black;
-        color:#00FF00;
+        background:#020617;
+        color:#7dd3fc;
     }}
 
     .overlay {{
         padding:20px;
         min-height:100vh;
         background:
-            linear-gradient(rgba(0,0,0,0.82), rgba(0,0,0,0.92)),
+            linear-gradient(rgba(2,6,23,0.84), rgba(2,6,23,0.94)),
             url('/static/hacker.png') no-repeat center center fixed;
         background-size: cover;
     }}
 
     a {{
-        color:#00FF00;
+        color:#38bdf8;
         text-decoration:none;
         margin-right:15px;
     }}
 
     a:hover {{
         text-decoration:underline;
+        color:#7dd3fc;
     }}
 
     input, button, select {{
         padding:10px;
         margin:5px 0;
-        border-radius:6px;
-        border:1px solid #00FF00;
-        background:black;
-        color:#00FF00;
+        border-radius:8px;
+        border:1px solid #0ea5e9;
+        background:#020617;
+        color:#7dd3fc;
         font-family:'Share Tech Mono', monospace;
     }}
 
@@ -203,35 +204,38 @@ def container(c):
     }}
 
     button:hover {{
-        background:#00FF00;
-        color:black;
+        background:#0ea5e9;
+        color:#03111f;
         font-weight:bold;
+        box-shadow:0 0 14px rgba(14,165,233,0.35);
     }}
 
     table {{
         width:100%;
-        background:black;
+        background:rgba(2,6,23,0.86);
         border-collapse:collapse;
         margin-top:15px;
     }}
 
     th, td {{
         padding:10px;
-        border:1px solid #00FF00;
+        border:1px solid #0ea5e9;
         text-align:left;
     }}
 
     th {{
-        background:#001100;
+        background:#0f172a;
+        color:#7dd3fc;
     }}
 
     .card {{
-        background:rgba(0,0,0,0.85);
-        border:1px solid #00FF00;
-        border-radius:10px;
+        background:rgba(2,6,23,0.86);
+        border:1px solid #0ea5e9;
+        border-radius:14px;
         padding:20px;
         margin-bottom:20px;
-        box-shadow:0 0 15px rgba(0,255,0,0.2);
+        box-shadow:0 0 18px rgba(14,165,233,0.18);
+        color:#dbeafe;
     }}
 
     .cards {{
@@ -242,41 +246,43 @@ def container(c):
     }}
 
     .mini-card {{
-        background:rgba(0,0,0,0.85);
-        border:1px solid #00FF00;
-        border-radius:10px;
+        background:rgba(2,6,23,0.86);
+        border:1px solid #0ea5e9;
+        border-radius:14px;
         padding:20px;
-        box-shadow:0 0 10px rgba(0,255,0,0.2);
+        box-shadow:0 0 12px rgba(14,165,233,0.16);
+        color:#dbeafe;
     }}
 
     .mensagem {{
         margin-top:10px;
         font-weight:bold;
+        color:#7dd3fc;
     }}
 
     .erro {{
-        color:#ff6b6b;
+        color:#f87171;
         font-weight:bold;
     }}
 
     .btn-danger {{
-        color:#ff4d4d;
-        border-color:#ff4d4d;
+        color:#f87171;
+        border-color:#f87171;
     }}
 
     .btn-danger:hover {{
-        background:#ff4d4d;
-        color:black;
+        background:#f87171;
+        color:#020617;
     }}
 
     .btn-warning {{
-        color:#ffd000;
-        border-color:#ffd000;
+        color:#facc15;
+        border-color:#facc15;
     }}
 
     .btn-warning:hover {{
-        background:#ffd000;
-        color:black;
+        background:#facc15;
+        color:#020617;
     }}
     </style>
 
@@ -439,13 +445,6 @@ def login():
         min-height: 20px;
         font-size: 14px;
     }}
-
-    .rodape {{
-        margin-top: 18px;
-        text-align: center;
-        font-size: 12px;
-        color: #9afcff;
-    }}
     </style>
 
     <canvas id="matrix"></canvas>
@@ -470,7 +469,6 @@ def login():
             </form>
 
             <div class="erro">{erro}</div>
-            <div class="rodape">Admin padrão: admin / admin123</div>
         </div>
     </div>
 
@@ -550,7 +548,7 @@ def painel():
         <div class="card">
             <h2>🖥️ PAINEL DO SISTEMA</h2>
             <p>Bem-vindo, <b>{session["user"]}</b> | Cargo: <b>{session.get("cargo", "")}</b></p>
-            <p>Sistema interno carregado com visual hacker.</p>
+            <p>Este sistema permite controlar o estoque, registrar transferências, acompanhar o histórico e gerenciar usuários.</p>
         </div>
 
         <div class="cards">
