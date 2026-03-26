@@ -53,6 +53,74 @@ def criar_banco():
         )
         """)
 
+        # garante coluna id em estoque, se a tabela antiga não tiver
+        try:
+            cursor.execute("""
+            ALTER TABLE estoque
+            ADD COLUMN IF NOT EXISTS id SERIAL
+            """)
+        except Exception:
+            conn.rollback()
+            cursor = conn.cursor()
+
+        # tenta criar PK em estoque se ainda não existir
+        try:
+            cursor.execute("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM pg_constraint
+                    WHERE conname = 'estoque_pkey'
+                ) THEN
+                    BEGIN
+                        ALTER TABLE estoque ADD PRIMARY KEY (id);
+                    EXCEPTION
+                        WHEN others THEN
+                            NULL;
+                    END;
+                END IF;
+            END
+            $$;
+            """)
+        except Exception:
+            conn.rollback()
+            cursor = conn.cursor()
+
+        # garante coluna id em transferencias, se a tabela antiga não tiver
+        try:
+            cursor.execute("""
+            ALTER TABLE transferencias
+            ADD COLUMN IF NOT EXISTS id SERIAL
+            """)
+        except Exception:
+            conn.rollback()
+            cursor = conn.cursor()
+
+        # tenta criar PK em transferencias se ainda não existir
+        try:
+            cursor.execute("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM pg_constraint
+                    WHERE conname = 'transferencias_pkey'
+                ) THEN
+                    BEGIN
+                        ALTER TABLE transferencias ADD PRIMARY KEY (id);
+                    EXCEPTION
+                        WHEN others THEN
+                            NULL;
+                    END;
+                END IF;
+            END
+            $$;
+            """)
+        except Exception:
+            conn.rollback()
+            cursor = conn.cursor()
+
         # cria admin padrão se não existir
         cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", ("admin",))
         admin = cursor.fetchone()
@@ -70,6 +138,8 @@ def criar_banco():
         conn.commit()
     except Exception as e:
         print("Erro ao criar banco:", e)
+        if conn:
+            conn.rollback()
     finally:
         if conn:
             conn.close()
