@@ -51,11 +51,11 @@ def criar_banco():
 # ================= TOPO =================
 def topo():
     return """
-    <div style="background:#020617;padding:15px;color:#00FF00;font-family:'Share Tech Mono', monospace;">
+    <div style="background:black;padding:15px;color:#00FF00;font-family:'Share Tech Mono', monospace;">
         <b style="font-size:18px;">⚡ KBSISTEMAS</b> |
-        <a href="/estoque" style="color:#0f0;">Estoque</a> |
-        <a href="/transferencia" style="color:#0f0;">Transferência</a> |
-        <a href="/usuarios" style="color:#0f0;">Usuários</a> |
+        <a href="/estoque">Estoque</a> |
+        <a href="/transferencia">Transferência</a> |
+        <a href="/usuarios">Usuários</a> |
         <a href="/logout" style="color:red;">Sair</a>
     </div>
     """
@@ -64,10 +64,12 @@ def topo():
 def container(c):
     return topo() + f"""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
     body {{
         margin:0;
         font-family:'Share Tech Mono', monospace;
-        background:#000;
+        background:black;
         color:#00FF00;
     }}
 
@@ -75,42 +77,50 @@ def container(c):
         padding:20px;
     }}
 
+    a {{
+        color:#00FF00;
+        text-decoration:none;
+        margin-right:15px;
+    }}
+
+    a:hover {{
+        text-decoration:underline;
+    }}
+
     input, button {{
         padding:10px;
         margin:5px 0;
         border-radius:6px;
-        border:none;
-        background:#111;
-        color:#0f0;
+        border:1px solid #00FF00;
+        background:black;
+        color:#00FF00;
     }}
 
     button {{
-        background:#0f0;
-        color:#000;
         cursor:pointer;
+        transition:0.3s;
+    }}
+
+    button:hover {{
+        background:#00FF00;
+        color:black;
         font-weight:bold;
     }}
 
     table {{
         width:100%;
-        background:#000;
+        background:black;
         border-collapse:collapse;
         margin-top:15px;
-        color:#0f0;
     }}
 
     th, td {{
         padding:10px;
-        border:1px solid #0f0;
-        text-align:left;
+        border:1px solid #00FF00;
     }}
 
     th {{
-        background:#111;
-    }}
-
-    input:focus, button:focus {{
-        outline: 2px solid #0f0;
+        background:#001100;
     }}
     </style>
 
@@ -120,79 +130,87 @@ def container(c):
     """
 
 # ================= LOGIN =================
-@app.route("/", methods=["GET","POST"])
+@app.route("/", methods=["GET", "POST"])
 def login():
     erro = ""
 
     if request.method == "POST":
         conn = conectar()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM usuarios WHERE usuario=%s", (request.form["user"],))
+
+        cursor.execute("SELECT senha, cargo FROM usuarios WHERE usuario=%s",
+                       (request.form["user"],))
         user = cursor.fetchone()
 
-        if user and check_password_hash(user[1], request.form["senha"]):
-            session["user"] = user[0]
-            session["cargo"] = user[2]
-            cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (user[0],))
+        if user and check_password_hash(user[0], request.form["senha"]):
+            session["user"] = request.form["user"]
+            session["cargo"] = user[1]
+
+            cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s",
+                           (request.form["user"],))
             conn.commit()
             conn.close()
+
             return redirect("/estoque")
         else:
-            erro = "Login inválido"
+            erro = "Usuário ou senha inválidos"
 
     return f"""
     <style>
     body {{
         margin:0;
         font-family:'Share Tech Mono', monospace;
-        background:#000 url('/static/login.png') no-repeat center center fixed;
-        background-size:cover;
-        color:#0f0;
+        background: url('/static/login.png') no-repeat center center fixed;
+        background-size: cover;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        height:100vh;
+        color:#00FF00;
     }}
 
     .login-box {{
-        position:absolute;
-        top:50%;
-        left:50%;
-        transform:translate(-50%,-50%);
-        background: rgba(0,0,0,0.85);
-        padding:30px;
+        background: rgba(0,0,0,0.9);
+        padding:40px;
+        border:2px solid #00FF00;
         border-radius:10px;
-        width:350px;
+        width:320px;
         text-align:center;
-        box-shadow: 0 0 20px #0f0;
+        box-shadow:0 0 20px #00FF00;
     }}
 
     input {{
         width:100%;
-        padding:10px;
+        padding:12px;
         margin:10px 0;
-        border:none;
-        border-radius:5px;
-        background:#111;
-        color:#0f0;
+        background:black;
+        border:1px solid #00FF00;
+        color:#00FF00;
     }}
 
     button {{
         width:100%;
-        padding:10px;
-        background:#0f0;
-        color:#000;
-        border:none;
-        border-radius:5px;
-        font-weight:bold;
+        padding:12px;
+        background:black;
+        border:1px solid #00FF00;
+        color:#00FF00;
         cursor:pointer;
+    }}
+
+    button:hover {{
+        background:#00FF00;
+        color:black;
     }}
     </style>
 
     <div class="login-box">
-        <h2>⚡ KBSISTEMAS</h2>
+        <h2>Login</h2>
         <form method="POST">
             <input name="user" placeholder="Usuário">
-            <input name="senha" placeholder="Senha" type="password">
+            <input name="senha" type="password" placeholder="Senha">
             <button>Entrar</button>
         </form>
-        <p style="color:red;">{erro}</p>
+        <p>{erro}</p>
     </div>
     """
 
@@ -201,8 +219,6 @@ def login():
 def estoque():
     if "user" not in session:
         return redirect("/")
-
-    aviso = "<p style='color:#0f0; font-weight:bold;'>⚡ Sistema em implantação. Algumas funções podem não estar disponíveis.</p>"
 
     conn = conectar()
     cursor = conn.cursor()
@@ -226,14 +242,15 @@ def estoque():
         tabela += f"<tr><td>{p}</td><td>{q}</td><td>{c}</td></tr>"
 
     return container(f"""
-    {aviso}
     <h2>📦 ESTOQUE</h2>
+
     <form method="POST">
         <input name="produto" placeholder="Produto">
         <input name="qtd" placeholder="Quantidade">
         <input name="categoria" placeholder="Categoria">
         <button>Adicionar</button>
     </form>
+
     <table>
         <tr><th>Produto</th><th>Qtd</th><th>Categoria</th></tr>
         {tabela}
@@ -245,8 +262,6 @@ def estoque():
 def transferencia():
     if "user" not in session:
         return redirect("/")
-
-    aviso = "<p style='color:#0f0; font-weight:bold;'>⚡ Sistema em implantação. Algumas funções podem não estar disponíveis.</p>"
 
     conn = conectar()
     cursor = conn.cursor()
@@ -264,9 +279,9 @@ def transferencia():
         ))
         conn.commit()
 
-    return container(f"""
-    {aviso}
+    return container("""
     <h2>🔄 TRANSFERÊNCIA</h2>
+
     <form method="POST">
         <input name="produto" placeholder="Produto">
         <input name="qtd" placeholder="Quantidade">
@@ -304,17 +319,16 @@ def usuarios():
         status = "🟢" if o else "🔴"
         tabela += f"<tr><td>{u}</td><td>{c}</td><td>{status}</td></tr>"
 
-    aviso = "<p style='color:#0f0; font-weight:bold;'>⚡ Sistema em implantação. Algumas funções podem não estar disponíveis.</p>"
-
     return container(f"""
-    {aviso}
     <h2>👤 USUÁRIOS</h2>
+
     <form method="POST">
         <input name="user" placeholder="Usuário">
         <input name="senha" placeholder="Senha">
         <input name="cargo" placeholder="Cargo">
         <button>Criar</button>
     </form>
+
     <table>
         <tr><th>Usuário</th><th>Cargo</th><th>Status</th></tr>
         {tabela}
@@ -327,6 +341,7 @@ def logout():
     if "user" in session:
         conn = conectar()
         cursor = conn.cursor()
+
         cursor.execute("UPDATE usuarios SET online=0 WHERE usuario=%s",
                        (session["user"],))
         conn.commit()
