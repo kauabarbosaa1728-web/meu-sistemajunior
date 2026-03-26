@@ -16,6 +16,51 @@ def conectar():
         sslmode="require"
     )
 
+# ================= FUNÇÕES DE PERMISSÃO =================
+def acesso_negado():
+    return container("""
+    <div class="card">
+        <h2 class="erro">⛔ Você não tem autorização para acessar esta área.</h2>
+        <p>Fale com um administrador para liberar esta permissão.</p>
+        <p><a href="/painel">⬅ Voltar para o painel</a></p>
+    </div>
+    """)
+
+def carregar_permissoes(usuario):
+    conn = None
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute("""
+        SELECT cargo,
+               pode_estoque,
+               pode_transferencia,
+               pode_historico,
+               pode_usuarios,
+               pode_editar_estoque,
+               pode_excluir_estoque
+        FROM usuarios
+        WHERE usuario=%s
+        """, (usuario,))
+        dado = cursor.fetchone()
+
+        if dado:
+            session["cargo"] = dado[0]
+            session["pode_estoque"] = bool(dado[1])
+            session["pode_transferencia"] = bool(dado[2])
+            session["pode_historico"] = bool(dado[3])
+            session["pode_usuarios"] = bool(dado[4])
+            session["pode_editar_estoque"] = bool(dado[5])
+            session["pode_excluir_estoque"] = bool(dado[6])
+    finally:
+        if conn:
+            conn.close()
+
+def tem_permissao(nome):
+    if session.get("cargo") == "admin":
+        return True
+    return bool(session.get(nome, False))
+
 # ================= BANCO =================
 def criar_banco():
     conn = None
@@ -28,7 +73,13 @@ def criar_banco():
             usuario TEXT PRIMARY KEY,
             senha TEXT,
             cargo TEXT,
-            online INTEGER DEFAULT 0
+            online INTEGER DEFAULT 0,
+            pode_estoque INTEGER DEFAULT 0,
+            pode_transferencia INTEGER DEFAULT 0,
+            pode_historico INTEGER DEFAULT 0,
+            pode_usuarios INTEGER DEFAULT 0,
+            pode_editar_estoque INTEGER DEFAULT 0,
+            pode_excluir_estoque INTEGER DEFAULT 0
         )
         """)
 
@@ -52,6 +103,23 @@ def criar_banco():
             data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """)
+
+        # garante colunas novas em usuarios
+        colunas_usuarios = [
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_estoque INTEGER DEFAULT 0",
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_transferencia INTEGER DEFAULT 0",
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_historico INTEGER DEFAULT 0",
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_usuarios INTEGER DEFAULT 0",
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_editar_estoque INTEGER DEFAULT 0",
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_excluir_estoque INTEGER DEFAULT 0"
+        ]
+
+        for sql in colunas_usuarios:
+            try:
+                cursor.execute(sql)
+            except Exception:
+                conn.rollback()
+                cursor = conn.cursor()
 
         try:
             cursor.execute("""
@@ -121,14 +189,31 @@ def criar_banco():
         admin = cursor.fetchone()
         if not admin:
             cursor.execute("""
-            INSERT INTO usuarios (usuario, senha, cargo, online)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO usuarios (
+                usuario, senha, cargo, online,
+                pode_estoque, pode_transferencia, pode_historico,
+                pode_usuarios, pode_editar_estoque, pode_excluir_estoque
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 "admin",
                 generate_password_hash("admin123"),
                 "admin",
-                0
+                0,
+                1, 1, 1, 1, 1, 1
             ))
+        else:
+            cursor.execute("""
+            UPDATE usuarios
+            SET cargo='admin',
+                pode_estoque=1,
+                pode_transferencia=1,
+                pode_historico=1,
+                pode_usuarios=1,
+                pode_editar_estoque=1,
+                pode_excluir_estoque=1
+            WHERE usuario='admin'
+            """)
 
         conn.commit()
     except Exception as e:
@@ -198,6 +283,12 @@ def container(c):
         font-family:'Share Tech Mono', monospace;
     }}
 
+    input[type="checkbox"] {{
+        width:auto;
+        transform:scale(1.2);
+        margin-right:8px;
+    }}
+
     button {{
         cursor:pointer;
         transition:0.3s;
@@ -221,6 +312,7 @@ def container(c):
         padding:10px;
         border:1px solid #0ea5e9;
         text-align:left;
+        vertical-align:top;
     }}
 
     th {{
@@ -265,6 +357,11 @@ def container(c):
         font-weight:bold;
     }}
 
+    .sucesso {{
+        color:#4ade80;
+        font-weight:bold;
+    }}
+
     .btn-danger {{
         color:#f87171;
         border-color:#f87171;
@@ -284,6 +381,20 @@ def container(c):
         background:#facc15;
         color:#020617;
     }}
+
+    .permissoes-box {{
+        display:grid;
+        grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+        gap:8px;
+        margin-top:10px;
+    }}
+
+    .perm-item {{
+        background:rgba(15,23,42,0.7);
+        padding:8px;
+        border-radius:8px;
+        border:1px solid #0ea5e9;
+    }}
     </style>
 
     <div class="overlay">
@@ -302,8 +413,11 @@ def login():
             conn = conectar()
             cursor = conn.cursor()
 
-            cursor.execute("SELECT senha, cargo FROM usuarios WHERE usuario=%s",
-                           (request.form["user"],))
+            cursor.execute("""
+            SELECT senha, cargo
+            FROM usuarios
+            WHERE usuario=%s
+            """, (request.form["user"],))
             user = cursor.fetchone()
 
             if user and check_password_hash(user[0], request.form["senha"]):
@@ -314,6 +428,7 @@ def login():
                                (request.form["user"],))
                 conn.commit()
 
+                carregar_permissoes(request.form["user"])
                 return redirect("/painel")
             else:
                 erro = "Usuário ou senha inválidos"
@@ -582,6 +697,9 @@ def estoque():
     if "user" not in session:
         return redirect("/")
 
+    if not tem_permissao("pode_estoque"):
+        return acesso_negado()
+
     conn = None
     try:
         conn = conectar()
@@ -630,16 +748,21 @@ def estoque():
 
         tabela = ""
         for i, p, q, c in dados:
+            acoes = ""
+            if tem_permissao("pode_editar_estoque"):
+                acoes += f'<a href="/editar_estoque/{i}" class="btn-warning">Editar</a>'
+            if tem_permissao("pode_excluir_estoque"):
+                acoes += f'<a href="/excluir_estoque/{i}" class="btn-danger" onclick="return confirm(\'Deseja excluir este item?\')">Excluir</a>'
+            if not acoes:
+                acoes = "Sem permissão"
+
             tabela += f"""
             <tr>
                 <td>{i}</td>
                 <td>{p}</td>
                 <td>{q}</td>
                 <td>{c}</td>
-                <td>
-                    <a href="/editar_estoque/{i}" class="btn-warning">Editar</a>
-                    <a href="/excluir_estoque/{i}" class="btn-danger" onclick="return confirm('Deseja excluir este item?')">Excluir</a>
-                </td>
+                <td>{acoes}</td>
             </tr>
             """
 
@@ -687,6 +810,9 @@ def estoque():
 def editar_estoque(item_id):
     if "user" not in session:
         return redirect("/")
+
+    if not tem_permissao("pode_editar_estoque"):
+        return acesso_negado()
 
     conn = None
     try:
@@ -747,6 +873,9 @@ def excluir_estoque(item_id):
     if "user" not in session:
         return redirect("/")
 
+    if not tem_permissao("pode_excluir_estoque"):
+        return acesso_negado()
+
     conn = None
     try:
         conn = conectar()
@@ -765,6 +894,9 @@ def excluir_estoque(item_id):
 def transferencia():
     if "user" not in session:
         return redirect("/")
+
+    if not tem_permissao("pode_transferencia"):
+        return acesso_negado()
 
     conn = None
     try:
@@ -846,6 +978,9 @@ def historico():
     if "user" not in session:
         return redirect("/")
 
+    if not tem_permissao("pode_historico"):
+        return acesso_negado()
+
     conn = None
     try:
         conn = conectar()
@@ -897,8 +1032,11 @@ def historico():
 # ================= USUÁRIOS =================
 @app.route("/usuarios", methods=["GET", "POST"])
 def usuarios():
-    if session.get("cargo") != "admin":
-        return "Sem permissão"
+    if "user" not in session:
+        return redirect("/")
+
+    if not tem_permissao("pode_usuarios"):
+        return acesso_negado()
 
     conn = None
     try:
@@ -908,13 +1046,42 @@ def usuarios():
 
         if request.method == "POST":
             try:
+                user = request.form["user"].strip()
+                senha = request.form["senha"].strip()
+                cargo = request.form["cargo"].strip()
+
+                if cargo == "admin":
+                    pode_estoque = 1
+                    pode_transferencia = 1
+                    pode_historico = 1
+                    pode_usuarios = 1
+                    pode_editar_estoque = 1
+                    pode_excluir_estoque = 1
+                else:
+                    pode_estoque = 1 if request.form.get("pode_estoque") == "1" else 0
+                    pode_transferencia = 1 if request.form.get("pode_transferencia") == "1" else 0
+                    pode_historico = 1 if request.form.get("pode_historico") == "1" else 0
+                    pode_usuarios = 1 if request.form.get("pode_usuarios") == "1" else 0
+                    pode_editar_estoque = 1 if request.form.get("pode_editar_estoque") == "1" else 0
+                    pode_excluir_estoque = 1 if request.form.get("pode_excluir_estoque") == "1" else 0
+
                 cursor.execute("""
-                INSERT INTO usuarios (usuario, senha, cargo)
-                VALUES (%s,%s,%s)
+                INSERT INTO usuarios (
+                    usuario, senha, cargo,
+                    pode_estoque, pode_transferencia, pode_historico,
+                    pode_usuarios, pode_editar_estoque, pode_excluir_estoque
+                )
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """, (
-                    request.form["user"],
-                    generate_password_hash(request.form["senha"]),
-                    request.form["cargo"]
+                    user,
+                    generate_password_hash(senha),
+                    cargo,
+                    pode_estoque,
+                    pode_transferencia,
+                    pode_historico,
+                    pode_usuarios,
+                    pode_editar_estoque,
+                    pode_excluir_estoque
                 ))
                 conn.commit()
                 mensagem = "Usuário criado com sucesso."
@@ -922,13 +1089,44 @@ def usuarios():
                 conn.rollback()
                 mensagem = "Não foi possível criar o usuário. Talvez ele já exista."
 
-        cursor.execute("SELECT usuario, cargo, online FROM usuarios ORDER BY usuario")
+        cursor.execute("""
+        SELECT usuario, cargo, online,
+               pode_estoque, pode_transferencia, pode_historico,
+               pode_usuarios, pode_editar_estoque, pode_excluir_estoque
+        FROM usuarios
+        ORDER BY usuario
+        """)
         dados = cursor.fetchall()
 
         tabela = ""
-        for u, c, o in dados:
+        for u, c, o, pe, pt, ph, pu, ped, pex in dados:
             status = "🟢 Online" if o else "🔴 Offline"
-            tabela += f"<tr><td>{u}</td><td>{c}</td><td>{status}</td></tr>"
+            permissoes = []
+            if pe: permissoes.append("Estoque")
+            if pt: permissoes.append("Transferência")
+            if ph: permissoes.append("Histórico")
+            if pu: permissoes.append("Usuários")
+            if ped: permissoes.append("Editar estoque")
+            if pex: permissoes.append("Excluir estoque")
+
+            texto_permissoes = ", ".join(permissoes) if permissoes else "Nenhuma"
+
+            acoes = ""
+            if u != "admin":
+                acoes += f'<a href="/alterar_senha/{u}" class="btn-warning">Trocar senha</a>'
+                acoes += f'<a href="/excluir_usuario/{u}" class="btn-danger" onclick="return confirm(\'Deseja excluir este usuário?\')">Excluir</a>'
+            else:
+                acoes = "Protegido"
+
+            tabela += f"""
+            <tr>
+                <td>{u}</td>
+                <td>{c}</td>
+                <td>{status}</td>
+                <td>{texto_permissoes}</td>
+                <td>{acoes}</td>
+            </tr>
+            """
 
         return container(f"""
         <div class="card">
@@ -937,7 +1135,21 @@ def usuarios():
             <form method="POST">
                 <input name="user" placeholder="Usuário" required>
                 <input name="senha" placeholder="Senha" required>
-                <input name="cargo" placeholder="Cargo" required>
+
+                <select name="cargo" required>
+                    <option value="operador">operador</option>
+                    <option value="admin">admin</option>
+                </select>
+
+                <div class="permissoes-box">
+                    <label class="perm-item"><input type="checkbox" name="pode_estoque" value="1">Acessar estoque</label>
+                    <label class="perm-item"><input type="checkbox" name="pode_transferencia" value="1">Acessar transferência</label>
+                    <label class="perm-item"><input type="checkbox" name="pode_historico" value="1">Acessar histórico</label>
+                    <label class="perm-item"><input type="checkbox" name="pode_usuarios" value="1">Acessar usuários</label>
+                    <label class="perm-item"><input type="checkbox" name="pode_editar_estoque" value="1">Editar estoque</label>
+                    <label class="perm-item"><input type="checkbox" name="pode_excluir_estoque" value="1">Excluir estoque</label>
+                </div>
+
                 <button>Criar</button>
             </form>
 
@@ -946,13 +1158,98 @@ def usuarios():
 
         <div class="card">
             <table>
-                <tr><th>Usuário</th><th>Cargo</th><th>Status</th></tr>
+                <tr>
+                    <th>Usuário</th>
+                    <th>Cargo</th>
+                    <th>Status</th>
+                    <th>Permissões</th>
+                    <th>Ações</th>
+                </tr>
                 {tabela}
             </table>
         </div>
         """)
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro nos usuários: {e}</h2></div>')
+    finally:
+        if conn:
+            conn.close()
+
+# ================= ALTERAR SENHA =================
+@app.route("/alterar_senha/<usuario_alvo>", methods=["GET", "POST"])
+def alterar_senha(usuario_alvo):
+    if "user" not in session:
+        return redirect("/")
+
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    conn = None
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+        mensagem = ""
+
+        if request.method == "POST":
+            nova_senha = request.form["nova_senha"].strip()
+
+            if not nova_senha:
+                mensagem = "Digite a nova senha."
+            else:
+                cursor.execute("""
+                UPDATE usuarios
+                SET senha=%s
+                WHERE usuario=%s
+                """, (generate_password_hash(nova_senha), usuario_alvo))
+                conn.commit()
+                mensagem = "Senha alterada com sucesso."
+
+        return container(f"""
+        <div class="card">
+            <h2>🔑 ALTERAR SENHA</h2>
+            <p>Usuário: <b>{usuario_alvo}</b></p>
+
+            <form method="POST">
+                <input name="nova_senha" placeholder="Nova senha" required>
+                <button>Salvar nova senha</button>
+            </form>
+
+            <div class="mensagem">{mensagem}</div>
+            <p><a href="/usuarios">⬅ Voltar</a></p>
+        </div>
+        """)
+    except Exception as e:
+        return container(f'<div class="card"><h2 class="erro">Erro ao alterar senha: {e}</h2></div>')
+    finally:
+        if conn:
+            conn.close()
+
+# ================= EXCLUIR USUÁRIO =================
+@app.route("/excluir_usuario/<usuario_alvo>")
+def excluir_usuario(usuario_alvo):
+    if "user" not in session:
+        return redirect("/")
+
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    if usuario_alvo == "admin":
+        return container("""
+        <div class="card">
+            <h2 class="erro">⛔ O usuário admin não pode ser excluído.</h2>
+            <p><a href="/usuarios">⬅ Voltar</a></p>
+        </div>
+        """)
+
+    conn = None
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM usuarios WHERE usuario=%s", (usuario_alvo,))
+        conn.commit()
+        return redirect("/usuarios")
+    except Exception as e:
+        return container(f'<div class="card"><h2 class="erro">Erro ao excluir usuário: {e}</h2></div>')
     finally:
         if conn:
             conn.close()
