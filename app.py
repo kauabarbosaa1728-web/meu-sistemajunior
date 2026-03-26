@@ -53,7 +53,6 @@ def criar_banco():
         )
         """)
 
-        # garante coluna id em estoque, se a tabela antiga não tiver
         try:
             cursor.execute("""
             ALTER TABLE estoque
@@ -63,7 +62,6 @@ def criar_banco():
             conn.rollback()
             cursor = conn.cursor()
 
-        # tenta criar PK em estoque se ainda não existir
         try:
             cursor.execute("""
             DO $$
@@ -87,7 +85,6 @@ def criar_banco():
             conn.rollback()
             cursor = conn.cursor()
 
-        # garante coluna id em transferencias, se a tabela antiga não tiver
         try:
             cursor.execute("""
             ALTER TABLE transferencias
@@ -97,7 +94,6 @@ def criar_banco():
             conn.rollback()
             cursor = conn.cursor()
 
-        # tenta criar PK em transferencias se ainda não existir
         try:
             cursor.execute("""
             DO $$
@@ -121,7 +117,6 @@ def criar_banco():
             conn.rollback()
             cursor = conn.cursor()
 
-        # cria admin padrão se não existir
         cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", ("admin",))
         admin = cursor.fetchone()
         if not admin:
@@ -144,7 +139,6 @@ def criar_banco():
         if conn:
             conn.close()
 
-# chama ao iniciar o app no Render/gunicorn também
 criar_banco()
 
 # ================= TOPO =================
@@ -325,65 +319,208 @@ def login():
 
     return f"""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Share+Tech+Mono&display=swap');
+
+    * {{
+        box-sizing: border-box;
+    }}
+
     body {{
-        margin:0;
-        font-family:'Share Tech Mono', monospace;
-        background: url('/static/login.png') no-repeat center center fixed;
-        background-size: cover;
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        height:100vh;
-        color:#00FF00;
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+        font-family: 'Share Tech Mono', monospace;
+    }}
+
+    #matrix {{
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        background: #000;
+    }}
+
+    .login-wrapper {{
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
     }}
 
     .login-box {{
-        background: rgba(0,0,0,0.9);
-        padding:40px;
-        border:2px solid #00FF00;
-        border-radius:10px;
-        width:320px;
-        text-align:center;
-        box-shadow:0 0 20px #00FF00;
+        width: 390px;
+        background: rgba(0, 20, 20, 0.30);
+        border: 2px solid rgba(0, 255, 170, 0.7);
+        border-radius: 18px;
+        padding: 35px 30px;
+        box-shadow: 0 0 25px rgba(0, 255, 170, 0.35);
+        backdrop-filter: blur(6px);
     }}
 
-    input {{
-        width:100%;
-        padding:12px;
-        margin:10px 0;
-        background:black;
-        border:1px solid #00FF00;
-        color:#00FF00;
-        box-sizing:border-box;
-        font-family:'Share Tech Mono', monospace;
+    .titulo {{
+        text-align: center;
+        margin-bottom: 10px;
+        font-family: 'Orbitron', sans-serif;
+        font-size: 34px;
+        color: #7df9ff;
+        letter-spacing: 3px;
+        text-shadow: 0 0 12px rgba(0,255,255,0.7);
+    }}
+
+    .subtitulo {{
+        text-align: center;
+        margin-bottom: 24px;
+        color: #9afcff;
+        font-size: 14px;
+    }}
+
+    .campo {{
+        margin-bottom: 16px;
+    }}
+
+    .campo label {{
+        display: block;
+        margin-bottom: 8px;
+        color: #7df9ff;
+        font-size: 14px;
+    }}
+
+    .campo input {{
+        width: 100%;
+        padding: 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(0,255,255,0.65);
+        background: rgba(0,0,0,0.45);
+        color: #dff;
+        outline: none;
+        font-size: 16px;
+        font-family: 'Share Tech Mono', monospace;
+    }}
+
+    .campo input:focus {{
+        box-shadow: 0 0 12px rgba(0,255,255,0.35);
+        border-color: #00ffff;
+    }}
+
+    .campo input::placeholder {{
+        color: #86d9d9;
     }}
 
     button {{
-        width:100%;
-        padding:12px;
-        background:black;
-        border:1px solid #00FF00;
-        color:#00FF00;
-        cursor:pointer;
-        font-family:'Share Tech Mono', monospace;
+        width: 100%;
+        padding: 14px;
+        border: 1px solid rgba(0,255,255,0.8);
+        border-radius: 10px;
+        background: rgba(0, 255, 255, 0.10);
+        color: #7df9ff;
+        font-size: 18px;
+        font-family: 'Orbitron', sans-serif;
+        cursor: pointer;
+        transition: 0.3s;
+        box-shadow: 0 0 10px rgba(0,255,255,0.2);
     }}
 
     button:hover {{
-        background:#00FF00;
-        color:black;
+        background: rgba(0,255,255,0.25);
+        box-shadow: 0 0 20px rgba(0,255,255,0.4);
+        color: white;
+    }}
+
+    .erro {{
+        margin-top: 16px;
+        text-align: center;
+        color: #ff6b6b;
+        min-height: 20px;
+        font-size: 14px;
+    }}
+
+    .rodape {{
+        margin-top: 18px;
+        text-align: center;
+        font-size: 12px;
+        color: #9afcff;
     }}
     </style>
 
-    <div class="login-box">
-        <h2>Login</h2>
-        <form method="POST">
-            <input name="user" placeholder="Usuário" required>
-            <input name="senha" type="password" placeholder="Senha" required>
-            <button>Entrar</button>
-        </form>
-        <p>{erro}</p>
-        <p style="font-size:12px;">Admin padrão: admin / admin123</p>
+    <canvas id="matrix"></canvas>
+
+    <div class="login-wrapper">
+        <div class="login-box">
+            <div class="titulo">KBSISTEMAS</div>
+            <div class="subtitulo">Acesso ao sistema interno</div>
+
+            <form method="POST">
+                <div class="campo">
+                    <label>Usuário</label>
+                    <input name="user" placeholder="Digite seu usuário" required>
+                </div>
+
+                <div class="campo">
+                    <label>Senha</label>
+                    <input name="senha" type="password" placeholder="Digite sua senha" required>
+                </div>
+
+                <button>LOGIN</button>
+            </form>
+
+            <div class="erro">{erro}</div>
+            <div class="rodape">Admin padrão: admin / admin123</div>
+        </div>
     </div>
+
+    <script>
+    const canvas = document.getElementById("matrix");
+    const ctx = canvas.getContext("2d");
+
+    function resizeCanvas() {{
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }}
+
+    resizeCanvas();
+
+    const letters = "01ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&@";
+    const fontSize = 18;
+    let columns = Math.floor(canvas.width / fontSize);
+    let drops = Array(columns).fill(1);
+
+    function resetDrops() {{
+        columns = Math.floor(canvas.width / fontSize);
+        drops = Array(columns).fill(1);
+    }}
+
+    function drawMatrix() {{
+        ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#00d9ff";
+        ctx.font = fontSize + "px monospace";
+
+        for (let i = 0; i < drops.length; i++) {{
+            const text = letters[Math.floor(Math.random() * letters.length)];
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {{
+                drops[i] = 0;
+            }}
+
+            drops[i]++;
+        }}
+    }}
+
+    setInterval(drawMatrix, 38);
+
+    window.addEventListener("resize", () => {{
+        resizeCanvas();
+        resetDrops();
+    }});
+    </script>
     """
 
 # ================= PAINEL =================
