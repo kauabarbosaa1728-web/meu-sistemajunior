@@ -51,11 +51,11 @@ def criar_banco():
 # ================= TOPO =================
 def topo():
     return """
-    <div style="background:#020617;padding:15px;color:white;">
+    <div style="background:black;padding:15px;color:#00FF00;font-family:'Share Tech Mono', monospace;">
         <b style="font-size:18px;">⚡ KBSISTEMAS</b> |
-        <a href="/estoque" style="color:white;">Estoque</a> |
-        <a href="/transferencia" style="color:white;">Transferência</a> |
-        <a href="/usuarios" style="color:white;">Usuários</a> |
+        <a href="/estoque">Estoque</a> |
+        <a href="/transferencia">Transferência</a> |
+        <a href="/usuarios">Usuários</a> |
         <a href="/logout" style="color:red;">Sair</a>
     </div>
     """
@@ -64,40 +64,64 @@ def topo():
 def container(c):
     return topo() + f"""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
     body {{
         margin:0;
-        font-family:Arial;
-        background:#020617;
-        color:white;
+        font-family:'Share Tech Mono', monospace;
+        background-color:#000;
+        color:#00FF00;
     }}
 
     .overlay {{
         padding:20px;
     }}
 
+    a {{
+        color:#00FF00;
+        text-decoration:none;
+        margin-right:15px;
+    }}
+
+    a:hover {{
+        text-decoration:underline;
+    }}
+
     input, button {{
         padding:10px;
         margin:5px 0;
         border-radius:6px;
-        border:none;
+        border:1px solid #00FF00;
+        background:black;
+        color:#00FF00;
+        font-family: 'Share Tech Mono', monospace;
     }}
 
     button {{
-        background:#3b82f6;
-        color:white;
         cursor:pointer;
+        transition:0.3s;
+    }}
+
+    button:hover {{
+        background:#00FF00;
+        color:black;
+        font-weight:bold;
     }}
 
     table {{
         width:100%;
-        background:#020617;
+        background:black;
         border-collapse:collapse;
         margin-top:15px;
     }}
 
     th, td {{
         padding:10px;
-        border:1px solid #1e293b;
+        border:1px solid #00FF00;
+    }}
+
+    th {{
+        background:#001100;
     }}
     </style>
 
@@ -132,41 +156,78 @@ def login():
 
     return f"""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
     body {{
         margin:0;
-        font-family:Arial;
-        background: url('/static/login.png') no-repeat center center fixed;
-        background-size: cover;
+        font-family:'Share Tech Mono', monospace;
+        background-color:#000;
+        color:#00FF00;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        height:100vh;
     }}
 
     .login-box {{
-        position:absolute;
-        top:50%;
-        left:50%;
-        transform:translate(-50%,-50%);
-        background: rgba(0,0,0,0.75);
-        padding:30px;
+        background: rgba(0,0,0,0.9);
+        padding:40px;
+        border:2px solid #00FF00;
         border-radius:10px;
-        color:white;
-        width:300px;
+        box-shadow:0 0 20px #00FF00;
         text-align:center;
+        width:320px;
+        animation: glow 2s infinite alternate;
+    }}
+
+    @keyframes glow {{
+        from {{ box-shadow: 0 0 10px #00FF00; }}
+        to {{ box-shadow: 0 0 30px #00FF00; }}
+    }}
+
+    h2 {{
+        margin-bottom:20px;
+        color:#00FF00;
+        text-shadow:0 0 5px #00FF00;
     }}
 
     input {{
         width:100%;
-        padding:10px;
+        padding:12px;
         margin:10px 0;
-        border:none;
+        background:black;
+        border:1px solid #00FF00;
+        color:#00FF00;
         border-radius:5px;
+        font-family:'Share Tech Mono', monospace;
+    }}
+
+    input::placeholder {{
+        color:#00FF00;
     }}
 
     button {{
         width:100%;
-        padding:10px;
-        background:#3b82f6;
-        color:white;
-        border:none;
+        padding:12px;
+        background:black;
+        border:1px solid #00FF00;
+        color:#00FF00;
         border-radius:5px;
+        cursor:pointer;
+        font-family:'Share Tech Mono', monospace;
+        transition: 0.3s;
+    }}
+
+    button:hover {{
+        background:#00FF00;
+        color:black;
+        font-weight:bold;
+    }}
+
+    p {{
+        color:red;
+        margin-top:10px;
+        font-weight:bold;
     }}
     </style>
 
@@ -179,7 +240,7 @@ def login():
             <button>Entrar</button>
         </form>
 
-        <p style="color:red;">{erro}</p>
+        <p>{erro}</p>
     </div>
     """
 
