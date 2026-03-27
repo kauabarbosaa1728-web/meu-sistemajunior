@@ -51,6 +51,41 @@ def acesso_negado():
     </div>
     """)
 
+def permissoes_por_plano(plano):
+    plano = (plano or "").lower()
+
+    if plano == "premium":
+        return {
+            "pode_estoque": 1,
+            "pode_transferencia": 1,
+            "pode_historico": 1,
+            "pode_usuarios": 0,
+            "pode_editar_estoque": 1,
+            "pode_excluir_estoque": 1,
+            "pode_logs": 0
+        }
+
+    if plano == "profissional":
+        return {
+            "pode_estoque": 1,
+            "pode_transferencia": 1,
+            "pode_historico": 1,
+            "pode_usuarios": 0,
+            "pode_editar_estoque": 1,
+            "pode_excluir_estoque": 0,
+            "pode_logs": 0
+        }
+
+    return {
+        "pode_estoque": 1,
+        "pode_transferencia": 0,
+        "pode_historico": 1,
+        "pode_usuarios": 0,
+        "pode_editar_estoque": 0,
+        "pode_excluir_estoque": 0,
+        "pode_logs": 0
+    }
+
 def carregar_permissoes(usuario):
     conn = None
     try:
@@ -65,7 +100,10 @@ def carregar_permissoes(usuario):
                pode_editar_estoque,
                pode_excluir_estoque,
                pode_logs,
-               ativo
+               ativo,
+               email,
+               plano,
+               nome_empresa
         FROM usuarios
         WHERE usuario=%s
         """, (usuario,))
@@ -81,6 +119,9 @@ def carregar_permissoes(usuario):
             session["pode_excluir_estoque"] = bool(dado[6])
             session["pode_logs"] = bool(dado[7])
             session["ativo"] = bool(dado[8])
+            session["email"] = dado[9] or ""
+            session["plano"] = dado[10] or ""
+            session["nome_empresa"] = dado[11] or ""
     finally:
         devolver_conexao(conn)
 
@@ -160,7 +201,10 @@ def criar_banco():
             pode_usuarios INTEGER DEFAULT 0,
             pode_editar_estoque INTEGER DEFAULT 0,
             pode_excluir_estoque INTEGER DEFAULT 0,
-            pode_logs INTEGER DEFAULT 0
+            pode_logs INTEGER DEFAULT 0,
+            email TEXT,
+            plano TEXT DEFAULT 'basico',
+            nome_empresa TEXT
         )
         """)
 
@@ -203,7 +247,10 @@ def criar_banco():
             "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_usuarios INTEGER DEFAULT 0",
             "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_editar_estoque INTEGER DEFAULT 0",
             "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_excluir_estoque INTEGER DEFAULT 0",
-            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_logs INTEGER DEFAULT 0"
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_logs INTEGER DEFAULT 0",
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email TEXT",
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS plano TEXT DEFAULT 'basico'",
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS nome_empresa TEXT"
         ]
 
         for sql in colunas_usuarios:
@@ -284,16 +331,20 @@ def criar_banco():
             INSERT INTO usuarios (
                 usuario, senha, cargo, online, ativo,
                 pode_estoque, pode_transferencia, pode_historico,
-                pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs
+                pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs,
+                email, plano, nome_empresa
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 "admin",
                 generate_password_hash("admin123"),
                 "admin",
                 0,
                 1,
-                1, 1, 1, 1, 1, 1, 1
+                1, 1, 1, 1, 1, 1, 1,
+                "",
+                "admin",
+                "KBSISTEMAS"
             ))
         else:
             cursor.execute("""
@@ -869,7 +920,7 @@ def login():
 
     body {{
         margin: 0;
-        overflow: hidden;
+        overflow-y: auto;
         background: #000;
         font-family: 'Share Tech Mono', monospace;
     }}
@@ -892,16 +943,17 @@ def login():
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: 20px;
+        padding: 30px 20px;
     }}
 
     .login-box {{
-        width: 390px;
-        background: rgba(18, 18, 18, 0.78);
+        width: 460px;
+        background: rgba(18, 18, 18, 0.88);
         border: 1px solid #2f2f2f;
         border-radius: 18px;
         padding: 35px 30px;
         backdrop-filter: blur(6px);
+        color: #e5e7eb;
     }}
 
     .titulo {{
@@ -951,7 +1003,7 @@ def login():
         color: #9ca3af;
     }}
 
-    button {{
+    .btn-login {{
         width: 100%;
         padding: 14px;
         border: 1px solid #4a4a4a;
@@ -964,7 +1016,7 @@ def login():
         transition: 0.2s;
     }}
 
-    button:hover {{
+    .btn-login:hover {{
         background: #1f1f1f;
         color: white;
     }}
@@ -976,6 +1028,71 @@ def login():
         min-height: 20px;
         font-size: 14px;
     }}
+
+    .cadastro-link {{
+        margin-top: 18px;
+        text-align: center;
+    }}
+
+    .cadastro-link a {{
+        color: #d1d5db;
+        text-decoration: none;
+        font-size: 14px;
+    }}
+
+    .cadastro-link a:hover {{
+        color: #ffffff;
+        text-decoration: underline;
+    }}
+
+    .planos {{
+        margin-top: 28px;
+    }}
+
+    .planos h3 {{
+        text-align: center;
+        margin-bottom: 16px;
+        font-size: 18px;
+        color: #f3f4f6;
+    }}
+
+    .planos-grid {{
+        display: grid;
+        gap: 12px;
+    }}
+
+    .plano {{
+        background: linear-gradient(180deg, #141414 0%, #0c0c0c 100%);
+        border: 1px solid #2f2f2f;
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }}
+
+    .plano strong {{
+        display: block;
+        color: #ffffff;
+        margin-bottom: 6px;
+        font-size: 16px;
+    }}
+
+    .plano span {{
+        color: #c4c4c4;
+        font-size: 13px;
+        display: block;
+        margin-bottom: 6px;
+    }}
+
+    .plano .preco {{
+        color: #86efac;
+        font-size: 18px;
+        font-weight: bold;
+    }}
+
+    .plano small {{
+        color: #8f8f8f;
+        font-size: 12px;
+    }}
     </style>
 
     <canvas id="matrix"></canvas>
@@ -983,7 +1100,7 @@ def login():
     <div class="login-wrapper">
         <div class="login-box">
             <div class="titulo">KBSISTEMAS</div>
-            <div class="subtitulo">Acesso ao sistema interno</div>
+            <div class="subtitulo">Entre na sua conta ou crie seu cadastro</div>
 
             <form method="POST">
                 <div class="campo">
@@ -996,10 +1113,41 @@ def login():
                     <input name="senha" type="password" placeholder="Digite sua senha" required>
                 </div>
 
-                <button>LOGIN</button>
+                <button class="btn-login">ENTRAR NA CONTA</button>
             </form>
 
             <div class="erro">{erro}</div>
+
+            <div class="cadastro-link">
+                <a href="/cadastro">Criar cadastro</a>
+            </div>
+
+            <div class="planos">
+                <h3>Planos mensais</h3>
+
+                <div class="planos-grid">
+                    <div class="plano">
+                        <strong>Básico</strong>
+                        <span>Estoque + Histórico</span>
+                        <div class="preco">R$ 39,90/mês</div>
+                        <small>Ideal para quem quer começar</small>
+                    </div>
+
+                    <div class="plano">
+                        <strong>Profissional</strong>
+                        <span>Estoque + Transferência + Histórico + Edição</span>
+                        <div class="preco">R$ 79,90/mês</div>
+                        <small>Mais controle para a operação diária</small>
+                    </div>
+
+                    <div class="plano">
+                        <strong>Premium</strong>
+                        <span>Todos os recursos do operador liberados</span>
+                        <div class="preco">R$ 129,90/mês</div>
+                        <small>Plano completo para gestão avançada</small>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1050,6 +1198,300 @@ def login():
         resetDrops();
     }});
     </script>
+    """
+
+# ================= CADASTRO =================
+@app.route("/cadastro", methods=["GET", "POST"])
+def cadastro():
+    mensagem = ""
+    sucesso = False
+
+    if request.method == "POST":
+        conn = None
+        try:
+            conn = conectar()
+            cursor = conn.cursor()
+
+            usuario = request.form["user"].strip()
+            senha = request.form["senha"].strip()
+            email = request.form["email"].strip()
+            nome_empresa = request.form["nome_empresa"].strip()
+            plano = request.form["plano"].strip().lower()
+
+            if not usuario or not senha or not email or not nome_empresa or not plano:
+                mensagem = "Preencha todos os campos."
+            else:
+                cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", (usuario,))
+                existe_usuario = cursor.fetchone()
+
+                cursor.execute("SELECT usuario FROM usuarios WHERE email=%s", (email,))
+                existe_email = cursor.fetchone()
+
+                if existe_usuario:
+                    mensagem = "Esse usuário já existe."
+                elif existe_email:
+                    mensagem = "Esse e-mail já está cadastrado."
+                else:
+                    permissoes = permissoes_por_plano(plano)
+
+                    cursor.execute("""
+                    INSERT INTO usuarios (
+                        usuario, senha, cargo, online, ativo, email, plano, nome_empresa,
+                        pode_estoque, pode_transferencia, pode_historico,
+                        pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        usuario,
+                        generate_password_hash(senha),
+                        "operador",
+                        0,
+                        1,
+                        email,
+                        plano,
+                        nome_empresa,
+                        permissoes["pode_estoque"],
+                        permissoes["pode_transferencia"],
+                        permissoes["pode_historico"],
+                        permissoes["pode_usuarios"],
+                        permissoes["pode_editar_estoque"],
+                        permissoes["pode_excluir_estoque"],
+                        permissoes["pode_logs"]
+                    ))
+
+                    conn.commit()
+                    registrar_log(usuario, "cadastro", f"Novo cadastro criado | Plano: {plano} | Empresa: {nome_empresa}")
+                    mensagem = "Cadastro realizado com sucesso. Agora você já pode entrar na sua conta."
+                    sucesso = True
+
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            mensagem = f"Erro ao cadastrar: {e}"
+        finally:
+            devolver_conexao(conn)
+
+    classe_msg = "sucesso" if sucesso else "erro"
+
+    return f"""
+    <head>
+        <title>KBSISTEMAS - Cadastro</title>
+        <link rel="icon" type="image/png" href="/static/logo.png">
+        <link rel="shortcut icon" href="/static/logo.png">
+    </head>
+
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Share+Tech+Mono&display=swap');
+
+    * {{
+        box-sizing: border-box;
+    }}
+
+    body {{
+        margin: 0;
+        background: #000;
+        font-family: 'Share Tech Mono', monospace;
+        color: #e5e7eb;
+        min-height: 100vh;
+        padding: 30px 20px;
+    }}
+
+    .cadastro-box {{
+        width: 100%;
+        max-width: 560px;
+        margin: 0 auto;
+        background: rgba(18, 18, 18, 0.92);
+        border: 1px solid #2f2f2f;
+        border-radius: 18px;
+        padding: 35px 30px;
+    }}
+
+    .titulo {{
+        text-align: center;
+        margin-bottom: 10px;
+        font-family: 'Orbitron', sans-serif;
+        font-size: 30px;
+        color: #e5e7eb;
+        letter-spacing: 2px;
+    }}
+
+    .subtitulo {{
+        text-align: center;
+        margin-bottom: 24px;
+        color: #bdbdbd;
+        font-size: 14px;
+    }}
+
+    .campo {{
+        margin-bottom: 16px;
+    }}
+
+    .campo label {{
+        display: block;
+        margin-bottom: 8px;
+        color: #d1d5db;
+        font-size: 14px;
+    }}
+
+    .campo input,
+    .campo select {{
+        width: 100%;
+        padding: 14px;
+        border-radius: 10px;
+        border: 1px solid #3a3a3a;
+        background: rgba(0,0,0,0.55);
+        color: #f3f4f6;
+        outline: none;
+        font-size: 15px;
+        font-family: 'Share Tech Mono', monospace;
+    }}
+
+    .campo input:focus,
+    .campo select:focus {{
+        border-color: #777777;
+    }}
+
+    .btn-cadastrar {{
+        width: 100%;
+        padding: 14px;
+        border: 1px solid #4a4a4a;
+        border-radius: 10px;
+        background: #121212;
+        color: #e5e7eb;
+        font-size: 17px;
+        font-family: 'Orbitron', sans-serif;
+        cursor: pointer;
+        transition: 0.2s;
+        margin-top: 8px;
+    }}
+
+    .btn-cadastrar:hover {{
+        background: #1f1f1f;
+        color: white;
+    }}
+
+    .erro {{
+        margin-top: 16px;
+        text-align: center;
+        color: #ff6b6b;
+        font-size: 14px;
+    }}
+
+    .sucesso {{
+        margin-top: 16px;
+        text-align: center;
+        color: #86efac;
+        font-size: 14px;
+    }}
+
+    .voltar {{
+        margin-top: 20px;
+        text-align: center;
+    }}
+
+    .voltar a {{
+        color: #d1d5db;
+        text-decoration: none;
+    }}
+
+    .voltar a:hover {{
+        color: #ffffff;
+        text-decoration: underline;
+    }}
+
+    .planos-box {{
+        margin-top: 18px;
+        display: grid;
+        gap: 10px;
+    }}
+
+    .plano {{
+        background: linear-gradient(180deg, #141414 0%, #0c0c0c 100%);
+        border: 1px solid #2f2f2f;
+        border-radius: 12px;
+        padding: 12px;
+    }}
+
+    .plano strong {{
+        display: block;
+        color: #ffffff;
+        margin-bottom: 4px;
+    }}
+
+    .plano .preco {{
+        color: #86efac;
+        font-weight: bold;
+        margin-top: 6px;
+    }}
+
+    .plano small {{
+        color: #9ca3af;
+    }}
+    </style>
+
+    <div class="cadastro-box">
+        <div class="titulo">CRIAR CADASTRO</div>
+        <div class="subtitulo">Preencha os dados para criar sua conta</div>
+
+        <form method="POST">
+            <div class="campo">
+                <label>Usuário</label>
+                <input name="user" placeholder="Escolha seu usuário" required>
+            </div>
+
+            <div class="campo">
+                <label>Senha</label>
+                <input name="senha" type="password" placeholder="Crie sua senha" required>
+            </div>
+
+            <div class="campo">
+                <label>E-mail</label>
+                <input name="email" type="email" placeholder="Seu e-mail" required>
+            </div>
+
+            <div class="campo">
+                <label>Nome da empresa</label>
+                <input name="nome_empresa" placeholder="Nome da sua empresa" required>
+            </div>
+
+            <div class="campo">
+                <label>Plano</label>
+                <select name="plano" required>
+                    <option value="basico">Básico - R$ 39,90/mês</option>
+                    <option value="profissional">Profissional - R$ 79,90/mês</option>
+                    <option value="premium">Premium - R$ 129,90/mês</option>
+                </select>
+            </div>
+
+            <div class="planos-box">
+                <div class="plano">
+                    <strong>Básico</strong>
+                    Estoque + Histórico
+                    <div class="preco">R$ 39,90/mês</div>
+                </div>
+
+                <div class="plano">
+                    <strong>Profissional</strong>
+                    Estoque + Transferência + Histórico + Edição
+                    <div class="preco">R$ 79,90/mês</div>
+                </div>
+
+                <div class="plano">
+                    <strong>Premium</strong>
+                    Todos os recursos do operador liberados
+                    <div class="preco">R$ 129,90/mês</div>
+                </div>
+            </div>
+
+            <button class="btn-cadastrar">CRIAR CADASTRO</button>
+        </form>
+
+        <div class="{classe_msg}">{mensagem}</div>
+
+        <div class="voltar">
+            <a href="/">Voltar para login</a>
+        </div>
+    </div>
     """
 
 # ================= PAINEL =================
@@ -1242,7 +1684,7 @@ def estoque():
             if tem_permissao("pode_editar_estoque"):
                 acoes += f'<a href="/editar_estoque/{i}" class="btn-warning">Editar</a>'
             if tem_permissao("pode_excluir_estoque"):
-                acoes += f'<a href="/excluir_estoque/{i}" class="btn-danger" onclick="return confirm(\'Deseja excluir este item?\')">Excluir</a>'
+                acoes += f'<a href="/excluir_estoque/{i}" class="btn-danger" onclick="return confirm(\\'Deseja excluir este item?\\')">Excluir</a>'
             if not acoes:
                 acoes = "Sem permissão"
 
@@ -1604,6 +2046,9 @@ def usuarios():
                 user = request.form["user"].strip()
                 senha = request.form["senha"].strip()
                 cargo = request.form["cargo"].strip()
+                email = request.form.get("email", "").strip()
+                nome_empresa = request.form.get("nome_empresa", "").strip()
+                plano = request.form.get("plano", "basico").strip().lower()
 
                 if cargo == "admin":
                     ativo = 1
@@ -1614,6 +2059,7 @@ def usuarios():
                     pode_editar_estoque = 1
                     pode_excluir_estoque = 1
                     pode_logs = 1
+                    plano = "admin"
                 else:
                     ativo = 1 if request.form.get("ativo") == "1" else 0
                     pode_estoque = 1 if request.form.get("pode_estoque") == "1" else 0
@@ -1626,16 +2072,19 @@ def usuarios():
 
                 cursor.execute("""
                 INSERT INTO usuarios (
-                    usuario, senha, cargo, ativo,
+                    usuario, senha, cargo, ativo, email, plano, nome_empresa,
                     pode_estoque, pode_transferencia, pode_historico,
                     pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs
                 )
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """, (
                     user,
                     generate_password_hash(senha),
                     cargo,
                     ativo,
+                    email,
+                    plano,
+                    nome_empresa,
                     pode_estoque,
                     pode_transferencia,
                     pode_historico,
@@ -1646,13 +2095,13 @@ def usuarios():
                 ))
                 conn.commit()
                 mensagem = "Usuário criado com sucesso."
-                registrar_log(session["user"], "criar_usuario", f"Usuário criado: {user} | Cargo: {cargo}")
+                registrar_log(session["user"], "criar_usuario", f"Usuário criado: {user} | Cargo: {cargo} | Plano: {plano}")
             except Exception:
                 conn.rollback()
                 mensagem = "Não foi possível criar o usuário. Talvez ele já exista."
 
         cursor.execute("""
-        SELECT usuario, cargo, online, ativo,
+        SELECT usuario, cargo, online, ativo, email, plano, nome_empresa,
                pode_estoque, pode_transferencia, pode_historico,
                pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs
         FROM usuarios
@@ -1661,7 +2110,7 @@ def usuarios():
         dados = cursor.fetchall()
 
         tabela = ""
-        for u, c, o, ativo, pe, pt, ph, pu, ped, pex, pl in dados:
+        for u, c, o, ativo, email, plano, nome_empresa, pe, pt, ph, pu, ped, pex, pl in dados:
             status_online = "🟢 Online" if o else "🔴 Offline"
             status_ativo = "✅ Ativo" if ativo else "⛔ Inativo"
 
@@ -1680,7 +2129,8 @@ def usuarios():
             if u != "admin":
                 acoes += f'<a href="/editar_usuario/{u}" class="btn-edit">Editar</a>'
                 acoes += f'<a href="/alterar_senha/{u}" class="btn-warning">Trocar senha</a>'
-                acoes += f'<a href="/excluir_usuario/{u}" class="btn-danger" onclick="return confirm(\'Deseja excluir este usuário?\')">Excluir</a>'
+                acoes += f'<a href="/mudar_plano/{u}" class="btn-edit">Mudar plano</a>'
+                acoes += f'<a href="/excluir_usuario/{u}" class="btn-danger" onclick="return confirm(\\'Deseja excluir este usuário?\\')">Excluir</a>'
             else:
                 acoes = "Protegido"
 
@@ -1688,6 +2138,9 @@ def usuarios():
             <tr>
                 <td>{u}</td>
                 <td>{c}</td>
+                <td>{email or '-'}</td>
+                <td>{nome_empresa or '-'}</td>
+                <td>{plano or '-'}</td>
                 <td>{status_online}<br>{status_ativo}</td>
                 <td>{texto_permissoes}</td>
                 <td>{acoes}</td>
@@ -1701,10 +2154,18 @@ def usuarios():
             <form method="POST">
                 <input name="user" placeholder="Usuário" required>
                 <input name="senha" placeholder="Senha" required>
+                <input name="email" placeholder="E-mail">
+                <input name="nome_empresa" placeholder="Empresa">
 
                 <select name="cargo" required>
                     <option value="operador">operador</option>
                     <option value="admin">admin</option>
+                </select>
+
+                <select name="plano">
+                    <option value="basico">basico</option>
+                    <option value="profissional">profissional</option>
+                    <option value="premium">premium</option>
                 </select>
 
                 <div class="permissoes-box">
@@ -1729,6 +2190,9 @@ def usuarios():
                 <tr>
                     <th>Usuário</th>
                     <th>Cargo</th>
+                    <th>E-mail</th>
+                    <th>Empresa</th>
+                    <th>Plano</th>
                     <th>Status</th>
                     <th>Permissões</th>
                     <th>Ações</th>
@@ -1935,6 +2399,102 @@ def alterar_senha(usuario_alvo):
         """)
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro ao alterar senha: {e}</h2></div>')
+    finally:
+        devolver_conexao(conn)
+
+# ================= MUDAR PLANO =================
+@app.route("/mudar_plano/<usuario_alvo>", methods=["GET", "POST"])
+def mudar_plano(usuario_alvo):
+    if "user" not in session:
+        return redirect("/")
+
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    if usuario_alvo == "admin":
+        return container("""
+        <div class="card">
+            <h2 class="erro">⛔ O plano do admin não pode ser alterado aqui.</h2>
+            <p><a href="/usuarios">⬅ Voltar</a></p>
+        </div>
+        """)
+
+    conn = None
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+        mensagem = ""
+
+        cursor.execute("""
+        SELECT usuario, plano
+        FROM usuarios
+        WHERE usuario=%s
+        """, (usuario_alvo,))
+        dado = cursor.fetchone()
+
+        if not dado:
+            return container("<div class='card'><h2>Usuário não encontrado.</h2></div>")
+
+        usuario_nome, plano_atual = dado
+
+        if request.method == "POST":
+            novo_plano = request.form["plano"].strip().lower()
+            permissoes = permissoes_por_plano(novo_plano)
+
+            cursor.execute("""
+            UPDATE usuarios
+            SET plano=%s,
+                pode_estoque=%s,
+                pode_transferencia=%s,
+                pode_historico=%s,
+                pode_usuarios=%s,
+                pode_editar_estoque=%s,
+                pode_excluir_estoque=%s,
+                pode_logs=%s
+            WHERE usuario=%s
+            """, (
+                novo_plano,
+                permissoes["pode_estoque"],
+                permissoes["pode_transferencia"],
+                permissoes["pode_historico"],
+                permissoes["pode_usuarios"],
+                permissoes["pode_editar_estoque"],
+                permissoes["pode_excluir_estoque"],
+                permissoes["pode_logs"],
+                usuario_alvo
+            ))
+            conn.commit()
+
+            registrar_log(session["user"], "mudar_plano", f"Usuário: {usuario_alvo} | Plano: {plano_atual} -> {novo_plano}")
+            mensagem = "Plano alterado com sucesso."
+            plano_atual = novo_plano
+
+        selected_basico = "selected" if plano_atual == "basico" else ""
+        selected_profissional = "selected" if plano_atual == "profissional" else ""
+        selected_premium = "selected" if plano_atual == "premium" else ""
+
+        return container(f"""
+        <div class="card">
+            <h2>💳 MUDAR PLANO</h2>
+            <p>Usuário: <b>{usuario_nome}</b></p>
+            <p>Plano atual: <b>{plano_atual}</b></p>
+
+            <form method="POST">
+                <select name="plano" required>
+                    <option value="basico" {selected_basico}>basico - R$ 39,90/mês</option>
+                    <option value="profissional" {selected_profissional}>profissional - R$ 79,90/mês</option>
+                    <option value="premium" {selected_premium}>premium - R$ 129,90/mês</option>
+                </select>
+
+                <button>Salvar plano</button>
+            </form>
+
+            <div class="mensagem">{mensagem}</div>
+            <p><a href="/usuarios">⬅ Voltar</a></p>
+        </div>
+        """)
+    except Exception as e:
+        return container(f'<div class="card"><h2 class="erro">Erro ao mudar plano: {e}</h2></div>')
     finally:
         devolver_conexao(conn)
 
