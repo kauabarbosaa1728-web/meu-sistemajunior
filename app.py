@@ -89,6 +89,57 @@ def tem_permissao(nome):
         return True
     return bool(session.get(nome, False))
 
+# ================= HELPERS DASHBOARD =================
+def gerar_barras_3d(dados, altura_max=220, modo="quantidade"):
+    if not dados:
+        return '<div class="sem-dados">Sem dados para exibir.</div>'
+
+    maiores = []
+    for item in dados:
+        valor = item[1]
+        try:
+            valor = int(valor or 0)
+        except:
+            valor = 0
+        maiores.append(valor)
+
+    max_valor = max(maiores) if maiores else 1
+    if max_valor <= 0:
+        max_valor = 1
+
+    barras = ""
+    for nome, valor in dados:
+        try:
+            valor = int(valor or 0)
+        except:
+            valor = 0
+
+        altura = int((valor / max_valor) * altura_max)
+        if valor > 0 and altura < 18:
+            altura = 18
+
+        if modo == "transferencia":
+            cor_frente = "#8b8b8b"
+            cor_lado = "#5d5d5d"
+            cor_topo = "#bfbfbf"
+        else:
+            cor_frente = "#a3a3a3"
+            cor_lado = "#737373"
+            cor_topo = "#d4d4d4"
+
+        barras += f"""
+        <div class="bar-3d-item">
+            <div class="bar-value">{valor}</div>
+            <div class="bar-3d-wrap" style="height:{altura}px;">
+                <div class="bar-3d-front" style="height:{altura}px; background:{cor_frente};"></div>
+                <div class="bar-3d-side" style="height:{altura}px; background:{cor_lado};"></div>
+                <div class="bar-3d-top" style="background:{cor_topo};"></div>
+            </div>
+            <div class="bar-label">{nome}</div>
+        </div>
+        """
+    return barras
+
 # ================= BANCO =================
 def criar_banco():
     conn = None
@@ -466,11 +517,12 @@ def container(c):
     }}
 
     .mini-card {{
-        background: #0b0b0b;
-        border: 1px solid #2c2c2c;
+        background: linear-gradient(180deg, #121212 0%, #070707 100%);
+        border: 1px solid #3a3a3a;
         border-radius: 14px;
         padding: 20px;
         color: #e5e7eb;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
     }}
 
     .mensagem {{
@@ -546,6 +598,124 @@ def container(c):
         background: linear-gradient(90deg, #888888, #ffffff);
         z-index: 9999;
         transition: width 0.2s ease;
+    }}
+
+    .dashboard-grid {{
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 20px;
+    }}
+
+    .chart-3d-card {{
+        background: linear-gradient(180deg, #101010 0%, #060606 100%);
+        border: 1px solid #2d2d2d;
+        border-radius: 14px;
+        padding: 20px;
+    }}
+
+    .chart-title {{
+        font-size: 18px;
+        font-weight: bold;
+        color: #f3f4f6;
+        margin-bottom: 20px;
+    }}
+
+    .chart-3d-area {{
+        height: 320px;
+        display: flex;
+        align-items: flex-end;
+        gap: 18px;
+        padding: 15px 10px 5px 10px;
+        border-left: 1px solid #303030;
+        border-bottom: 1px solid #303030;
+        background:
+            repeating-linear-gradient(
+                to top,
+                rgba(255,255,255,0.03) 0px,
+                rgba(255,255,255,0.03) 1px,
+                transparent 1px,
+                transparent 52px
+            );
+        overflow-x: auto;
+        overflow-y: hidden;
+    }}
+
+    .bar-3d-item {{
+        min-width: 72px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+    }}
+
+    .bar-value {{
+        font-size: 12px;
+        color: #f3f4f6;
+        font-weight: bold;
+    }}
+
+    .bar-3d-wrap {{
+        position: relative;
+        width: 34px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+    }}
+
+    .bar-3d-front {{
+        width: 34px;
+        position: relative;
+        border-radius: 3px 3px 0 0;
+        box-shadow: inset -4px 0 0 rgba(0,0,0,0.15);
+    }}
+
+    .bar-3d-side {{
+        position: absolute;
+        right: -10px;
+        bottom: 0;
+        width: 10px;
+        transform: skewY(45deg);
+        transform-origin: left bottom;
+        border-radius: 0 3px 0 0;
+        opacity: 0.95;
+    }}
+
+    .bar-3d-top {{
+        position: absolute;
+        top: -10px;
+        left: 0;
+        width: 34px;
+        height: 10px;
+        transform: skewX(45deg);
+        transform-origin: left bottom;
+        border-radius: 3px 3px 0 0;
+        opacity: 0.95;
+    }}
+
+    .bar-label {{
+        font-size: 11px;
+        color: #d1d5db;
+        text-align: center;
+        max-width: 85px;
+        line-height: 1.25;
+        word-break: break-word;
+    }}
+
+    .sem-dados {{
+        color: #9ca3af;
+        padding: 20px 0;
+    }}
+
+    .ranking-table td, .ranking-table th {{
+        font-size: 13px;
+    }}
+
+    @media (max-width: 1100px) {{
+        .dashboard-grid {{
+            grid-template-columns: 1fr;
+        }}
     }}
 
     @media (max-width: 900px) {{
@@ -905,6 +1075,52 @@ def painel():
         cursor.execute("SELECT COUNT(*) FROM usuarios WHERE online=1")
         usuarios_online = cursor.fetchone()[0]
 
+        cursor.execute("""
+        SELECT COALESCE(categoria, 'Sem categoria') AS categoria, COALESCE(SUM(quantidade), 0) AS total
+        FROM estoque
+        GROUP BY categoria
+        ORDER BY total DESC, categoria ASC
+        LIMIT 8
+        """)
+        categorias = cursor.fetchall()
+
+        cursor.execute("""
+        SELECT COALESCE(produto, 'Sem nome') AS produto, COALESCE(SUM(quantidade), 0) AS total
+        FROM transferencias
+        GROUP BY produto
+        ORDER BY total DESC, produto ASC
+        LIMIT 8
+        """)
+        transferencias_produto = cursor.fetchall()
+
+        cursor.execute("""
+        SELECT produto, quantidade, categoria
+        FROM estoque
+        ORDER BY quantidade DESC, produto ASC
+        LIMIT 5
+        """)
+        top_produtos = cursor.fetchall()
+
+        barras_categoria = gerar_barras_3d(categorias, 220, "categoria")
+        barras_transferencia = gerar_barras_3d(transferencias_produto, 220, "transferencia")
+
+        tabela_top = ""
+        for produto, quantidade, categoria in top_produtos:
+            tabela_top += f"""
+            <tr>
+                <td>{produto}</td>
+                <td>{quantidade}</td>
+                <td>{categoria}</td>
+            </tr>
+            """
+
+        if not tabela_top:
+            tabela_top = """
+            <tr>
+                <td colspan="3">Sem produtos cadastrados.</td>
+            </tr>
+            """
+
         return container(f"""
         <div class="card">
             <h2>🖥️ PAINEL DO SISTEMA</h2>
@@ -915,20 +1131,48 @@ def painel():
         <div class="cards">
             <div class="mini-card">
                 <h3>📦 Produtos cadastrados</h3>
-                <p style="font-size:28px;">{total_produtos}</p>
+                <p style="font-size:32px;">{total_produtos}</p>
             </div>
             <div class="mini-card">
                 <h3>🔢 Quantidade total</h3>
-                <p style="font-size:28px;">{total_qtd}</p>
+                <p style="font-size:32px;">{total_qtd}</p>
             </div>
             <div class="mini-card">
                 <h3>🔄 Transferências</h3>
-                <p style="font-size:28px;">{total_transferencias}</p>
+                <p style="font-size:32px;">{total_transferencias}</p>
             </div>
             <div class="mini-card">
                 <h3>🟢 Usuários online</h3>
-                <p style="font-size:28px;">{usuarios_online}</p>
+                <p style="font-size:32px;">{usuarios_online}</p>
             </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="chart-3d-card">
+                <div class="chart-title">📊 Produtos por categoria</div>
+                <div class="chart-3d-area">
+                    {barras_categoria}
+                </div>
+            </div>
+
+            <div class="chart-3d-card">
+                <div class="chart-title">📈 Transferências por produto</div>
+                <div class="chart-3d-area">
+                    {barras_transferencia}
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🏆 Top 5 produtos com maior quantidade</h2>
+            <table class="ranking-table">
+                <tr>
+                    <th>Produto</th>
+                    <th>Quantidade</th>
+                    <th>Categoria</th>
+                </tr>
+                {tabela_top}
+            </table>
         </div>
         """)
     except Exception as e:
