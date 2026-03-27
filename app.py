@@ -38,7 +38,8 @@ def carregar_permissoes(usuario):
                pode_historico,
                pode_usuarios,
                pode_editar_estoque,
-               pode_excluir_estoque
+               pode_excluir_estoque,
+               ativo
         FROM usuarios
         WHERE usuario=%s
         """, (usuario,))
@@ -52,6 +53,7 @@ def carregar_permissoes(usuario):
             session["pode_usuarios"] = bool(dado[4])
             session["pode_editar_estoque"] = bool(dado[5])
             session["pode_excluir_estoque"] = bool(dado[6])
+            session["ativo"] = bool(dado[7])
     finally:
         if conn:
             conn.close()
@@ -74,6 +76,7 @@ def criar_banco():
             senha TEXT,
             cargo TEXT,
             online INTEGER DEFAULT 0,
+            ativo INTEGER DEFAULT 1,
             pode_estoque INTEGER DEFAULT 0,
             pode_transferencia INTEGER DEFAULT 0,
             pode_historico INTEGER DEFAULT 0,
@@ -104,8 +107,8 @@ def criar_banco():
         )
         """)
 
-        # garante colunas novas em usuarios
         colunas_usuarios = [
+            "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ativo INTEGER DEFAULT 1",
             "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_estoque INTEGER DEFAULT 0",
             "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_transferencia INTEGER DEFAULT 0",
             "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS pode_historico INTEGER DEFAULT 0",
@@ -190,22 +193,24 @@ def criar_banco():
         if not admin:
             cursor.execute("""
             INSERT INTO usuarios (
-                usuario, senha, cargo, online,
+                usuario, senha, cargo, online, ativo,
                 pode_estoque, pode_transferencia, pode_historico,
                 pode_usuarios, pode_editar_estoque, pode_excluir_estoque
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 "admin",
                 generate_password_hash("admin123"),
                 "admin",
                 0,
+                1,
                 1, 1, 1, 1, 1, 1
             ))
         else:
             cursor.execute("""
             UPDATE usuarios
             SET cargo='admin',
+                ativo=1,
                 pode_estoque=1,
                 pode_transferencia=1,
                 pode_historico=1,
@@ -382,6 +387,19 @@ def container(c):
         color:#020617;
     }}
 
+    .btn-edit {{
+        color:#7dd3fc;
+        border:1px solid #7dd3fc;
+        padding:6px 10px;
+        border-radius:8px;
+        display:inline-block;
+    }}
+
+    .btn-edit:hover {{
+        background:#7dd3fc;
+        color:#020617;
+    }}
+
     .permissoes-box {{
         display:grid;
         grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
@@ -414,22 +432,27 @@ def login():
             cursor = conn.cursor()
 
             cursor.execute("""
-            SELECT senha, cargo
+            SELECT senha, cargo, ativo
             FROM usuarios
             WHERE usuario=%s
             """, (request.form["user"],))
             user = cursor.fetchone()
 
-            if user and check_password_hash(user[0], request.form["senha"]):
-                session["user"] = request.form["user"]
-                session["cargo"] = user[1]
+            if user:
+                if not user[2]:
+                    erro = "Este usuário está inativo. Fale com o administrador."
+                elif check_password_hash(user[0], request.form["senha"]):
+                    session["user"] = request.form["user"]
+                    session["cargo"] = user[1]
 
-                cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s",
-                               (request.form["user"],))
-                conn.commit()
+                    cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s",
+                                   (request.form["user"],))
+                    conn.commit()
 
-                carregar_permissoes(request.form["user"])
-                return redirect("/painel")
+                    carregar_permissoes(request.form["user"])
+                    return redirect("/painel")
+                else:
+                    erro = "Usuário ou senha inválidos"
             else:
                 erro = "Usuário ou senha inválidos"
         except Exception as e:
@@ -1051,6 +1074,7 @@ def usuarios():
                 cargo = request.form["cargo"].strip()
 
                 if cargo == "admin":
+                    ativo = 1
                     pode_estoque = 1
                     pode_transferencia = 1
                     pode_historico = 1
@@ -1058,6 +1082,7 @@ def usuarios():
                     pode_editar_estoque = 1
                     pode_excluir_estoque = 1
                 else:
+                    ativo = 1 if request.form.get("ativo") == "1" else 0
                     pode_estoque = 1 if request.form.get("pode_estoque") == "1" else 0
                     pode_transferencia = 1 if request.form.get("pode_transferencia") == "1" else 0
                     pode_historico = 1 if request.form.get("pode_historico") == "1" else 0
@@ -1067,15 +1092,16 @@ def usuarios():
 
                 cursor.execute("""
                 INSERT INTO usuarios (
-                    usuario, senha, cargo,
+                    usuario, senha, cargo, ativo,
                     pode_estoque, pode_transferencia, pode_historico,
                     pode_usuarios, pode_editar_estoque, pode_excluir_estoque
                 )
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """, (
                     user,
                     generate_password_hash(senha),
                     cargo,
+                    ativo,
                     pode_estoque,
                     pode_transferencia,
                     pode_historico,
@@ -1090,7 +1116,7 @@ def usuarios():
                 mensagem = "Não foi possível criar o usuário. Talvez ele já exista."
 
         cursor.execute("""
-        SELECT usuario, cargo, online,
+        SELECT usuario, cargo, online, ativo,
                pode_estoque, pode_transferencia, pode_historico,
                pode_usuarios, pode_editar_estoque, pode_excluir_estoque
         FROM usuarios
@@ -1099,8 +1125,10 @@ def usuarios():
         dados = cursor.fetchall()
 
         tabela = ""
-        for u, c, o, pe, pt, ph, pu, ped, pex in dados:
-            status = "🟢 Online" if o else "🔴 Offline"
+        for u, c, o, ativo, pe, pt, ph, pu, ped, pex in dados:
+            status_online = "🟢 Online" if o else "🔴 Offline"
+            status_ativo = "✅ Ativo" if ativo else "⛔ Inativo"
+
             permissoes = []
             if pe: permissoes.append("Estoque")
             if pt: permissoes.append("Transferência")
@@ -1113,6 +1141,7 @@ def usuarios():
 
             acoes = ""
             if u != "admin":
+                acoes += f'<a href="/editar_usuario/{u}" class="btn-edit">Editar</a>'
                 acoes += f'<a href="/alterar_senha/{u}" class="btn-warning">Trocar senha</a>'
                 acoes += f'<a href="/excluir_usuario/{u}" class="btn-danger" onclick="return confirm(\'Deseja excluir este usuário?\')">Excluir</a>'
             else:
@@ -1122,7 +1151,7 @@ def usuarios():
             <tr>
                 <td>{u}</td>
                 <td>{c}</td>
-                <td>{status}</td>
+                <td>{status_online}<br>{status_ativo}</td>
                 <td>{texto_permissoes}</td>
                 <td>{acoes}</td>
             </tr>
@@ -1142,6 +1171,7 @@ def usuarios():
                 </select>
 
                 <div class="permissoes-box">
+                    <label class="perm-item"><input type="checkbox" name="ativo" value="1" checked>Usuário ativo</label>
                     <label class="perm-item"><input type="checkbox" name="pode_estoque" value="1">Acessar estoque</label>
                     <label class="perm-item"><input type="checkbox" name="pode_transferencia" value="1">Acessar transferência</label>
                     <label class="perm-item"><input type="checkbox" name="pode_historico" value="1">Acessar histórico</label>
@@ -1171,6 +1201,133 @@ def usuarios():
         """)
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro nos usuários: {e}</h2></div>')
+    finally:
+        if conn:
+            conn.close()
+
+# ================= EDITAR USUÁRIO =================
+@app.route("/editar_usuario/<usuario_alvo>", methods=["GET", "POST"])
+def editar_usuario(usuario_alvo):
+    if "user" not in session:
+        return redirect("/")
+
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    if usuario_alvo == "admin":
+        return container("""
+        <div class="card">
+            <h2 class="erro">⛔ O usuário admin não pode ser editado por esta tela.</h2>
+            <p><a href="/usuarios">⬅ Voltar</a></p>
+        </div>
+        """)
+
+    conn = None
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+        mensagem = ""
+
+        if request.method == "POST":
+            cargo = request.form["cargo"].strip()
+
+            if cargo == "admin":
+                ativo = 1
+                pode_estoque = 1
+                pode_transferencia = 1
+                pode_historico = 1
+                pode_usuarios = 1
+                pode_editar_estoque = 1
+                pode_excluir_estoque = 1
+            else:
+                ativo = 1 if request.form.get("ativo") == "1" else 0
+                pode_estoque = 1 if request.form.get("pode_estoque") == "1" else 0
+                pode_transferencia = 1 if request.form.get("pode_transferencia") == "1" else 0
+                pode_historico = 1 if request.form.get("pode_historico") == "1" else 0
+                pode_usuarios = 1 if request.form.get("pode_usuarios") == "1" else 0
+                pode_editar_estoque = 1 if request.form.get("pode_editar_estoque") == "1" else 0
+                pode_excluir_estoque = 1 if request.form.get("pode_excluir_estoque") == "1" else 0
+
+            cursor.execute("""
+            UPDATE usuarios
+            SET cargo=%s,
+                ativo=%s,
+                pode_estoque=%s,
+                pode_transferencia=%s,
+                pode_historico=%s,
+                pode_usuarios=%s,
+                pode_editar_estoque=%s,
+                pode_excluir_estoque=%s
+            WHERE usuario=%s
+            """, (
+                cargo,
+                ativo,
+                pode_estoque,
+                pode_transferencia,
+                pode_historico,
+                pode_usuarios,
+                pode_editar_estoque,
+                pode_excluir_estoque,
+                usuario_alvo
+            ))
+            conn.commit()
+            mensagem = "Usuário atualizado com sucesso."
+
+        cursor.execute("""
+        SELECT usuario, cargo, ativo,
+               pode_estoque, pode_transferencia, pode_historico,
+               pode_usuarios, pode_editar_estoque, pode_excluir_estoque
+        FROM usuarios
+        WHERE usuario=%s
+        """, (usuario_alvo,))
+        dado = cursor.fetchone()
+
+        if not dado:
+            return container("<div class='card'><h2>Usuário não encontrado.</h2></div>")
+
+        u, c, ativo, pe, pt, ph, pu, ped, pex = dado
+
+        checked_ativo = "checked" if ativo else ""
+        checked_pe = "checked" if pe else ""
+        checked_pt = "checked" if pt else ""
+        checked_ph = "checked" if ph else ""
+        checked_pu = "checked" if pu else ""
+        checked_ped = "checked" if ped else ""
+        checked_pex = "checked" if pex else ""
+
+        selected_admin = "selected" if c == "admin" else ""
+        selected_operador = "selected" if c == "operador" else ""
+
+        return container(f"""
+        <div class="card">
+            <h2>🛠️ EDITAR USUÁRIO</h2>
+            <p>Usuário: <b>{u}</b></p>
+
+            <form method="POST">
+                <select name="cargo" required>
+                    <option value="operador" {selected_operador}>operador</option>
+                    <option value="admin" {selected_admin}>admin</option>
+                </select>
+
+                <div class="permissoes-box">
+                    <label class="perm-item"><input type="checkbox" name="ativo" value="1" {checked_ativo}>Usuário ativo</label>
+                    <label class="perm-item"><input type="checkbox" name="pode_estoque" value="1" {checked_pe}>Acessar estoque</label>
+                    <label class="perm-item"><input type="checkbox" name="pode_transferencia" value="1" {checked_pt}>Acessar transferência</label>
+                    <label class="perm-item"><input type="checkbox" name="pode_historico" value="1" {checked_ph}>Acessar histórico</label>
+                    <label class="perm-item"><input type="checkbox" name="pode_usuarios" value="1" {checked_pu}>Acessar usuários</label>
+                    <label class="perm-item"><input type="checkbox" name="pode_editar_estoque" value="1" {checked_ped}>Editar estoque</label>
+                    <label class="perm-item"><input type="checkbox" name="pode_excluir_estoque" value="1" {checked_pex}>Excluir estoque</label>
+                </div>
+
+                <button>Salvar alterações</button>
+            </form>
+
+            <div class="mensagem">{mensagem}</div>
+            <p><a href="/usuarios">⬅ Voltar</a></p>
+        </div>
+        """)
+    except Exception as e:
+        return container(f'<div class="card"><h2 class="erro">Erro ao editar usuário: {e}</h2></div>')
     finally:
         if conn:
             conn.close()
