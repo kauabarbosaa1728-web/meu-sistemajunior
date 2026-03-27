@@ -1684,7 +1684,7 @@ def estoque():
             if tem_permissao("pode_editar_estoque"):
                 acoes += f'<a href="/editar_estoque/{i}" class="btn-warning">Editar</a>'
             if tem_permissao("pode_excluir_estoque"):
-                acoes += f'<a href="/excluir_estoque/{i}" class="btn-danger" onclick="return confirm(\\'Deseja excluir este item?\\')">Excluir</a>'
+                acoes += f'<a href="/excluir_estoque/{i}" class="btn-danger" onclick="return confirm(\'Deseja excluir este item?\')">Excluir</a>'
             if not acoes:
                 acoes = "Sem permissão"
 
@@ -2130,7 +2130,7 @@ def usuarios():
                 acoes += f'<a href="/editar_usuario/{u}" class="btn-edit">Editar</a>'
                 acoes += f'<a href="/alterar_senha/{u}" class="btn-warning">Trocar senha</a>'
                 acoes += f'<a href="/mudar_plano/{u}" class="btn-edit">Mudar plano</a>'
-                acoes += f'<a href="/excluir_usuario/{u}" class="btn-danger" onclick="return confirm(\\'Deseja excluir este usuário?\\')">Excluir</a>'
+                acoes += f'<a href="/excluir_usuario/{u}" class="btn-danger" onclick="return confirm(\'Deseja excluir este usuário?\')">Excluir</a>'
             else:
                 acoes = "Protegido"
 
