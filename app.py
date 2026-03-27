@@ -280,7 +280,13 @@ def topo():
 
 # ================= CONTAINER =================
 def container(c):
-    return topo() + f"""
+    return f"""
+    <head>
+        <title>KBSISTEMAS</title>
+        <link rel="icon" type="image/png" href="/static/logo.png">
+        <link rel="shortcut icon" href="/static/logo.png">
+    </head>
+    """ + topo() + f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
@@ -503,6 +509,12 @@ def login():
                 conn.close()
 
     return f"""
+    <head>
+        <title>KBSISTEMAS</title>
+        <link rel="icon" type="image/png" href="/static/logo.png">
+        <link rel="shortcut icon" href="/static/logo.png">
+    </head>
+
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Share+Tech+Mono&display=swap');
 
