@@ -266,15 +266,21 @@ criar_banco()
 # ================= TOPO =================
 def topo():
     return """
-    <div style="background:#020617;padding:15px;color:#38bdf8;font-family:'Share Tech Mono', monospace;border-bottom:2px solid #0ea5e9;">
-        <b style="font-size:18px;">⚡ KBSISTEMAS</b> |
-        <a href="/painel">Painel</a> |
-        <a href="/estoque">Estoque</a> |
-        <a href="/transferencia">Transferência</a> |
-        <a href="/historico">Histórico</a> |
-        <a href="/usuarios">Usuários</a> |
-        <a href="/logs">Logs</a> |
-        <a href="/logout" style="color:#f87171;">Sair</a>
+    <div class="navbar">
+        <div class="logo-area">
+            <img src="/static/logo.png" class="logo" alt="Logo KBSISTEMAS">
+            <span class="logo-text">KBSISTEMAS</span>
+        </div>
+
+        <div class="menu">
+            <a href="/painel">Painel</a>
+            <a href="/estoque">Estoque</a>
+            <a href="/transferencia">Transferência</a>
+            <a href="/historico">Histórico</a>
+            <a href="/usuarios">Usuários</a>
+            <a href="/logs">Logs</a>
+            <a href="/logout" class="logout">Sair</a>
+        </div>
     </div>
     """
 
@@ -295,6 +301,74 @@ def container(c):
         font-family:'Share Tech Mono', monospace;
         background:#020617;
         color:#7dd3fc;
+    }}
+
+    .navbar {{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:20px;
+        padding:12px 20px;
+        background:rgba(2, 6, 23, 0.96);
+        border-bottom:2px solid #0ea5e9;
+        position:sticky;
+        top:0;
+        z-index:999;
+        backdrop-filter:blur(6px);
+        box-shadow:0 0 18px rgba(14,165,233,0.15);
+    }}
+
+    .logo-area {{
+        display:flex;
+        align-items:center;
+        gap:12px;
+    }}
+
+    .logo {{
+        width:38px;
+        height:38px;
+        border-radius:10px;
+        box-shadow:0 0 12px rgba(14,165,233,0.35);
+        object-fit:cover;
+    }}
+
+    .logo-text {{
+        font-size:18px;
+        color:#38bdf8;
+        font-weight:bold;
+        letter-spacing:1px;
+    }}
+
+    .menu {{
+        display:flex;
+        align-items:center;
+        flex-wrap:wrap;
+        gap:8px;
+    }}
+
+    .menu a {{
+        margin-right:0;
+        padding:8px 12px;
+        border-radius:10px;
+        transition:0.3s;
+        border:1px solid transparent;
+    }}
+
+    .menu a:hover {{
+        background:#0ea5e9;
+        color:#020617;
+        text-decoration:none;
+        box-shadow:0 0 12px rgba(14,165,233,0.28);
+    }}
+
+    .logout {{
+        color:#f87171 !important;
+        border-color:rgba(248,113,113,0.35) !important;
+    }}
+
+    .logout:hover {{
+        background:#f87171 !important;
+        color:#020617 !important;
     }}
 
     .overlay {{
@@ -456,6 +530,17 @@ def container(c):
         padding:8px;
         border-radius:8px;
         border:1px solid #0ea5e9;
+    }}
+
+    @media (max-width: 900px) {{
+        .navbar {{
+            flex-direction:column;
+            align-items:flex-start;
+        }}
+
+        .menu {{
+            width:100%;
+        }}
     }}
     </style>
 
