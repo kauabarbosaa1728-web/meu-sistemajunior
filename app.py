@@ -1,20 +1,29 @@
 from flask import Flask, request, redirect, session
 from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
+from psycopg2 import pool
 
 app = Flask(__name__)
 app.secret_key = "segredo123"
 
+# ================= POOL DE CONEXÃO =================
+db_pool = pool.SimpleConnectionPool(
+    1, 10,
+    host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
+    database="neondb",
+    user="neondb_owner",
+    password="npg_zGebRqQWoB06",
+    port="5432",
+    sslmode="require"
+)
+
 # ================= CONEXÃO =================
 def conectar():
-    return psycopg2.connect(
-        host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
-        database="neondb",
-        user="neondb_owner",
-        password="npg_zGebRqQWoB06",
-        port="5432",
-        sslmode="require"
-    )
+    return db_pool.getconn()
+
+def devolver_conexao(conn):
+    if conn:
+        db_pool.putconn(conn)
 
 # ================= LOGS =================
 def registrar_log(usuario, acao, detalhes=""):
@@ -30,8 +39,7 @@ def registrar_log(usuario, acao, detalhes=""):
     except Exception as e:
         print("Erro ao registrar log:", e)
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 # ================= FUNÇÕES DE PERMISSÃO =================
 def acesso_negado():
@@ -74,8 +82,7 @@ def carregar_permissoes(usuario):
             session["pode_logs"] = bool(dado[7])
             session["ativo"] = bool(dado[8])
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 def tem_permissao(nome):
     if session.get("cargo") == "admin":
@@ -258,8 +265,7 @@ def criar_banco():
         if conn:
             conn.rollback()
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 criar_banco()
 
@@ -273,12 +279,12 @@ def topo():
         </div>
 
         <div class="menu">
-            <a href="/painel">Painel</a>
-            <a href="/estoque">Estoque</a>
-            <a href="/transferencia">Transferência</a>
-            <a href="/historico">Histórico</a>
-            <a href="/usuarios">Usuários</a>
-            <a href="/logs">Logs</a>
+            <a href="/painel" data-nav="true">Painel</a>
+            <a href="/estoque" data-nav="true">Estoque</a>
+            <a href="/transferencia" data-nav="true">Transferência</a>
+            <a href="/historico" data-nav="true">Histórico</a>
+            <a href="/usuarios" data-nav="true">Usuários</a>
+            <a href="/logs" data-nav="true">Logs</a>
             <a href="/logout" class="logout">Sair</a>
         </div>
     </div>
@@ -291,262 +297,347 @@ def container(c):
         <title>KBSISTEMAS</title>
         <link rel="icon" type="image/png" href="/static/logo.png">
         <link rel="shortcut icon" href="/static/logo.png">
+        <meta http-equiv="Cache-Control" content="public, max-age=300">
     </head>
     """ + topo() + f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
     body {{
-        margin:0;
-        font-family:'Share Tech Mono', monospace;
-        background:#020617;
-        color:#7dd3fc;
+        margin: 0;
+        font-family: 'Share Tech Mono', monospace;
+        background: #000000;
+        color: #d1d5db;
     }}
 
     .navbar {{
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        gap:20px;
-        padding:12px 20px;
-        background:rgba(2, 6, 23, 0.96);
-        border-bottom:2px solid #0ea5e9;
-        position:sticky;
-        top:0;
-        z-index:999;
-        backdrop-filter:blur(6px);
-        box-shadow:0 0 18px rgba(14,165,233,0.15);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding: 12px 20px;
+        background: #0a0a0a;
+        border-bottom: 1px solid #2a2a2a;
+        position: sticky;
+        top: 0;
+        z-index: 999;
     }}
 
     .logo-area {{
-        display:flex;
-        align-items:center;
-        gap:12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }}
 
     .logo {{
-        width:38px;
-        height:38px;
-        border-radius:10px;
-        box-shadow:0 0 12px rgba(14,165,233,0.35);
-        object-fit:cover;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        object-fit: cover;
+        border: 1px solid #2f2f2f;
+        background: #111111;
     }}
 
     .logo-text {{
-        font-size:18px;
-        color:#38bdf8;
-        font-weight:bold;
-        letter-spacing:1px;
+        font-size: 18px;
+        color: #e5e7eb;
+        font-weight: bold;
+        letter-spacing: 1px;
     }}
 
     .menu {{
-        display:flex;
-        align-items:center;
-        flex-wrap:wrap;
-        gap:8px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
     }}
 
     .menu a {{
-        margin-right:0;
-        padding:8px 12px;
-        border-radius:10px;
-        transition:0.3s;
-        border:1px solid transparent;
+        margin-right: 0;
+        padding: 8px 12px;
+        border-radius: 10px;
+        transition: 0.2s;
+        border: 1px solid transparent;
+        color: #cfcfcf;
     }}
 
     .menu a:hover {{
-        background:#0ea5e9;
-        color:#020617;
-        text-decoration:none;
-        box-shadow:0 0 12px rgba(14,165,233,0.28);
+        background: #1a1a1a;
+        color: #ffffff;
+        text-decoration: none;
+        border-color: #3a3a3a;
     }}
 
     .logout {{
-        color:#f87171 !important;
-        border-color:rgba(248,113,113,0.35) !important;
+        color: #f87171 !important;
+        border: 1px solid #4a2020 !important;
     }}
 
     .logout:hover {{
-        background:#f87171 !important;
-        color:#020617 !important;
+        background: #2a1111 !important;
+        color: #ffb4b4 !important;
+        border-color: #6a2a2a !important;
     }}
 
     .overlay {{
-        padding:20px;
-        min-height:100vh;
-        background:
-            linear-gradient(rgba(2,6,23,0.84), rgba(2,6,23,0.94)),
-            url('/static/hacker.png') no-repeat center center fixed;
-        background-size: cover;
+        padding: 20px;
+        min-height: 100vh;
+        background: #000000;
     }}
 
     a {{
-        color:#38bdf8;
-        text-decoration:none;
-        margin-right:15px;
+        color: #d1d5db;
+        text-decoration: none;
+        margin-right: 15px;
     }}
 
     a:hover {{
-        text-decoration:underline;
-        color:#7dd3fc;
+        color: #ffffff;
+        text-decoration: underline;
     }}
 
     input, button, select, textarea {{
-        padding:10px;
-        margin:5px 0;
-        border-radius:8px;
-        border:1px solid #0ea5e9;
-        background:#020617;
-        color:#7dd3fc;
-        font-family:'Share Tech Mono', monospace;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 8px;
+        border: 1px solid #3a3a3a;
+        background: #111111;
+        color: #e5e7eb;
+        font-family: 'Share Tech Mono', monospace;
     }}
 
     textarea {{
-        width:100%;
-        min-height:80px;
+        width: 100%;
+        min-height: 80px;
     }}
 
     input[type="checkbox"] {{
-        width:auto;
-        transform:scale(1.2);
-        margin-right:8px;
+        width: auto;
+        transform: scale(1.1);
+        margin-right: 8px;
     }}
 
     button {{
-        cursor:pointer;
-        transition:0.3s;
+        cursor: pointer;
+        transition: 0.2s;
+        background: #161616;
     }}
 
     button:hover {{
-        background:#0ea5e9;
-        color:#03111f;
-        font-weight:bold;
-        box-shadow:0 0 14px rgba(14,165,233,0.35);
+        background: #2a2a2a;
+        color: #ffffff;
+        border-color: #5a5a5a;
+        font-weight: bold;
     }}
 
     table {{
-        width:100%;
-        background:rgba(2,6,23,0.86);
-        border-collapse:collapse;
-        margin-top:15px;
+        width: 100%;
+        background: #0d0d0d;
+        border-collapse: collapse;
+        margin-top: 15px;
     }}
 
     th, td {{
-        padding:10px;
-        border:1px solid #0ea5e9;
-        text-align:left;
-        vertical-align:top;
+        padding: 10px;
+        border: 1px solid #2f2f2f;
+        text-align: left;
+        vertical-align: top;
     }}
 
     th {{
-        background:#0f172a;
-        color:#7dd3fc;
+        background: #151515;
+        color: #f3f4f6;
     }}
 
     .card {{
-        background:rgba(2,6,23,0.86);
-        border:1px solid #0ea5e9;
-        border-radius:14px;
-        padding:20px;
-        margin-bottom:20px;
-        box-shadow:0 0 18px rgba(14,165,233,0.18);
-        color:#dbeafe;
+        background: #0b0b0b;
+        border: 1px solid #2c2c2c;
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 20px;
+        color: #e5e7eb;
     }}
 
     .cards {{
-        display:grid;
-        grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
-        gap:15px;
-        margin-top:20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
     }}
 
     .mini-card {{
-        background:rgba(2,6,23,0.86);
-        border:1px solid #0ea5e9;
-        border-radius:14px;
-        padding:20px;
-        box-shadow:0 0 12px rgba(14,165,233,0.16);
-        color:#dbeafe;
+        background: #0b0b0b;
+        border: 1px solid #2c2c2c;
+        border-radius: 14px;
+        padding: 20px;
+        color: #e5e7eb;
     }}
 
     .mensagem {{
-        margin-top:10px;
-        font-weight:bold;
-        color:#7dd3fc;
+        margin-top: 10px;
+        font-weight: bold;
+        color: #d1d5db;
     }}
 
     .erro {{
-        color:#f87171;
-        font-weight:bold;
+        color: #f87171;
+        font-weight: bold;
     }}
 
     .sucesso {{
-        color:#4ade80;
-        font-weight:bold;
+        color: #86efac;
+        font-weight: bold;
     }}
 
     .btn-danger {{
-        color:#f87171;
-        border-color:#f87171;
+        color: #f87171;
+        border-color: #7f1d1d;
     }}
 
     .btn-danger:hover {{
-        background:#f87171;
-        color:#020617;
+        background: #2a1111;
+        color: #ffffff;
     }}
 
     .btn-warning {{
-        color:#facc15;
-        border-color:#facc15;
+        color: #facc15;
+        border-color: #5a4a12;
     }}
 
     .btn-warning:hover {{
-        background:#facc15;
-        color:#020617;
+        background: #2a2410;
+        color: #ffffff;
     }}
 
     .btn-edit {{
-        color:#7dd3fc;
-        border:1px solid #7dd3fc;
-        padding:6px 10px;
-        border-radius:8px;
-        display:inline-block;
+        color: #d1d5db;
+        border: 1px solid #4a4a4a;
+        padding: 6px 10px;
+        border-radius: 8px;
+        display: inline-block;
     }}
 
     .btn-edit:hover {{
-        background:#7dd3fc;
-        color:#020617;
+        background: #1f1f1f;
+        color: #ffffff;
+        text-decoration: none;
     }}
 
     .permissoes-box {{
-        display:grid;
-        grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
-        gap:8px;
-        margin-top:10px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 8px;
+        margin-top: 10px;
     }}
 
     .perm-item {{
-        background:rgba(15,23,42,0.7);
-        padding:8px;
-        border-radius:8px;
-        border:1px solid #0ea5e9;
+        background: #111111;
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid #2f2f2f;
+    }}
+
+    .page-loader {{
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 2px;
+        width: 0%;
+        background: linear-gradient(90deg, #888888, #ffffff);
+        z-index: 9999;
+        transition: width 0.2s ease;
     }}
 
     @media (max-width: 900px) {{
         .navbar {{
-            flex-direction:column;
-            align-items:flex-start;
+            flex-direction: column;
+            align-items: flex-start;
         }}
 
         .menu {{
-            width:100%;
+            width: 100%;
         }}
     }}
     </style>
 
-    <div class="overlay">
+    <div class="page-loader" id="pageLoader"></div>
+
+    <div class="overlay" id="mainContent">
         {c}
     </div>
+
+    <script>
+    (function() {{
+        const loader = document.getElementById("pageLoader");
+
+        function startLoader() {{
+            if (loader) {{
+                loader.style.width = "35%";
+            }}
+        }}
+
+        function finishLoader() {{
+            if (loader) {{
+                loader.style.width = "100%";
+                setTimeout(() => {{
+                    loader.style.width = "0%";
+                }}, 180);
+            }}
+        }}
+
+        async function navegar(url, salvarHistorico = true) {{
+            try {{
+                startLoader();
+                const resposta = await fetch(url, {{
+                    headers: {{
+                        "X-Requested-With": "fetch"
+                    }}
+                }});
+
+                const html = await resposta.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, "text/html");
+
+                const novoConteudo = doc.querySelector("#mainContent");
+                const novoTitulo = doc.querySelector("title");
+
+                if (novoConteudo) {{
+                    document.querySelector("#mainContent").innerHTML = novoConteudo.innerHTML;
+                }} else {{
+                    window.location.href = url;
+                    return;
+                }}
+
+                if (novoTitulo) {{
+                    document.title = novoTitulo.innerText;
+                }}
+
+                if (salvarHistorico) {{
+                    history.pushState({{ url: url }}, "", url);
+                }}
+
+                finishLoader();
+            }} catch (e) {{
+                window.location.href = url;
+            }}
+        }}
+
+        document.addEventListener("click", function(e) {{
+            const link = e.target.closest('a[data-nav="true"]');
+            if (!link) return;
+
+            const href = link.getAttribute("href");
+            if (!href || href.startsWith("http") || href.startsWith("#")) return;
+
+            e.preventDefault();
+            navegar(href, true);
+        }});
+
+        window.addEventListener("popstate", function() {{
+            navegar(location.pathname, false);
+        }});
+    }})();
+    </script>
     """
 
 # ================= LOGIN =================
@@ -590,8 +681,7 @@ def login():
         except Exception as e:
             erro = f"Erro ao fazer login: {e}"
         finally:
-            if conn:
-                conn.close()
+            devolver_conexao(conn)
 
     return f"""
     <head>
@@ -637,11 +727,10 @@ def login():
 
     .login-box {{
         width: 390px;
-        background: rgba(0, 20, 20, 0.30);
-        border: 2px solid rgba(0, 255, 170, 0.7);
+        background: rgba(18, 18, 18, 0.78);
+        border: 1px solid #2f2f2f;
         border-radius: 18px;
         padding: 35px 30px;
-        box-shadow: 0 0 25px rgba(0, 255, 170, 0.35);
         backdrop-filter: blur(6px);
     }}
 
@@ -650,15 +739,14 @@ def login():
         margin-bottom: 10px;
         font-family: 'Orbitron', sans-serif;
         font-size: 34px;
-        color: #7df9ff;
+        color: #e5e7eb;
         letter-spacing: 3px;
-        text-shadow: 0 0 12px rgba(0,255,255,0.7);
     }}
 
     .subtitulo {{
         text-align: center;
         margin-bottom: 24px;
-        color: #9afcff;
+        color: #bdbdbd;
         font-size: 14px;
     }}
 
@@ -669,7 +757,7 @@ def login():
     .campo label {{
         display: block;
         margin-bottom: 8px;
-        color: #7df9ff;
+        color: #d1d5db;
         font-size: 14px;
     }}
 
@@ -677,40 +765,37 @@ def login():
         width: 100%;
         padding: 14px;
         border-radius: 10px;
-        border: 1px solid rgba(0,255,255,0.65);
-        background: rgba(0,0,0,0.45);
-        color: #dff;
+        border: 1px solid #3a3a3a;
+        background: rgba(0,0,0,0.55);
+        color: #f3f4f6;
         outline: none;
         font-size: 16px;
         font-family: 'Share Tech Mono', monospace;
     }}
 
     .campo input:focus {{
-        box-shadow: 0 0 12px rgba(0,255,255,0.35);
-        border-color: #00ffff;
+        border-color: #777777;
     }}
 
     .campo input::placeholder {{
-        color: #86d9d9;
+        color: #9ca3af;
     }}
 
     button {{
         width: 100%;
         padding: 14px;
-        border: 1px solid rgba(0,255,255,0.8);
+        border: 1px solid #4a4a4a;
         border-radius: 10px;
-        background: rgba(0, 255, 255, 0.10);
-        color: #7df9ff;
+        background: #121212;
+        color: #e5e7eb;
         font-size: 18px;
         font-family: 'Orbitron', sans-serif;
         cursor: pointer;
-        transition: 0.3s;
-        box-shadow: 0 0 10px rgba(0,255,255,0.2);
+        transition: 0.2s;
     }}
 
     button:hover {{
-        background: rgba(0,255,255,0.25);
-        box-shadow: 0 0 20px rgba(0,255,255,0.4);
+        background: #1f1f1f;
         color: white;
     }}
 
@@ -773,7 +858,7 @@ def login():
         ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = "#00d9ff";
+        ctx.fillStyle = "#7a7a7a";
         ctx.font = fontSize + "px monospace";
 
         for (let i = 0; i < drops.length; i++) {{
@@ -849,8 +934,7 @@ def painel():
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro no painel: {e}</h2></div>')
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 # ================= ESTOQUE =================
 @app.route("/estoque", methods=["GET", "POST"])
@@ -964,8 +1048,7 @@ def estoque():
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro no estoque: {e}</h2></div>')
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 # ================= EDITAR ESTOQUE =================
 @app.route("/editar_estoque/<int:item_id>", methods=["GET", "POST"])
@@ -1031,8 +1114,7 @@ def editar_estoque(item_id):
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro ao editar estoque: {e}</h2></div>')
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 # ================= EXCLUIR ESTOQUE =================
 @app.route("/excluir_estoque/<int:item_id>")
@@ -1061,8 +1143,7 @@ def excluir_estoque(item_id):
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro ao excluir item: {e}</h2></div>')
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 # ================= TRANSFERÊNCIA =================
 @app.route("/transferencia", methods=["GET", "POST"])
@@ -1145,8 +1226,7 @@ def transferencia():
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro na transferência: {e}</h2></div>')
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 # ================= HISTÓRICO =================
 @app.route("/historico")
@@ -1202,8 +1282,7 @@ def historico():
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro no histórico: {e}</h2></div>')
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 # ================= LOGS =================
 @app.route("/logs")
@@ -1259,8 +1338,7 @@ def logs():
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro nos logs: {e}</h2></div>')
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 # ================= USUÁRIOS =================
 @app.route("/usuarios", methods=["GET", "POST"])
@@ -1418,8 +1496,7 @@ def usuarios():
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro nos usuários: {e}</h2></div>')
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 # ================= EDITAR USUÁRIO =================
 @app.route("/editar_usuario/<usuario_alvo>", methods=["GET", "POST"])
@@ -1566,8 +1643,7 @@ def editar_usuario(usuario_alvo):
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro ao editar usuário: {e}</h2></div>')
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 # ================= ALTERAR SENHA =================
 @app.route("/alterar_senha/<usuario_alvo>", methods=["GET", "POST"])
@@ -1616,8 +1692,7 @@ def alterar_senha(usuario_alvo):
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro ao alterar senha: {e}</h2></div>')
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 # ================= EXCLUIR USUÁRIO =================
 @app.route("/excluir_usuario/<usuario_alvo>")
@@ -1647,8 +1722,7 @@ def excluir_usuario(usuario_alvo):
     except Exception as e:
         return container(f'<div class="card"><h2 class="erro">Erro ao excluir usuário: {e}</h2></div>')
     finally:
-        if conn:
-            conn.close()
+        devolver_conexao(conn)
 
 # ================= LOGOUT =================
 @app.route("/logout")
@@ -1660,15 +1734,13 @@ def logout():
         try:
             conn = conectar()
             cursor = conn.cursor()
-
             cursor.execute("UPDATE usuarios SET online=0 WHERE usuario=%s",
                            (session["user"],))
             conn.commit()
         except Exception as e:
             print("Erro no logout:", e)
         finally:
-            if conn:
-                conn.close()
+            devolver_conexao(conn)
 
     if usuario:
         registrar_log(usuario, "logout", "Usuário saiu do sistema")
