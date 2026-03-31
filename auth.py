@@ -206,6 +206,117 @@ def cadastro():
         conn = None
         try:
             conn = conectar()
+           from flask import Blueprint, request, redirect, session
+from werkzeug.security import generate_password_hash, check_password_hash
+from banco import conectar, devolver_conexao, registrar_log, permissoes_por_plano
+from layout import carregar_permissoes
+
+auth_bp = Blueprint("auth_bp", __name__)
+
+# ================= LOGIN =================
+@auth_bp.route("/", methods=["GET", "POST"])
+def login():
+    erro = ""
+
+    if request.method == "POST":
+        conn = None
+        try:
+            conn = conectar()
+            cursor = conn.cursor()
+
+            cursor.execute("""
+            SELECT senha, cargo, ativo
+            FROM usuarios
+            WHERE usuario=%s
+            """, (request.form["user"],))
+            user = cursor.fetchone()
+
+            if user:
+                if not user[2]:
+                    erro = "Este usuário está inativo."
+                elif check_password_hash(user[0], request.form["senha"]):
+                    session["user"] = request.form["user"]
+                    session["cargo"] = user[1]
+
+                    cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
+                    conn.commit()
+
+                    carregar_permissoes(request.form["user"])
+                    registrar_log(request.form["user"], "login", "Usuário entrou no sistema")
+                    return redirect("/painel")
+                else:
+                    erro = "Usuário ou senha inválidos"
+            else:
+                erro = "Usuário ou senha inválidos"
+
+        except Exception as e:
+            erro = f"Erro ao fazer login: {e}"
+        finally:
+            devolver_conexao(conn)
+
+    return f"""
+    <head>
+        <title>KBSISTEMAS</title>
+        <link rel="icon" href="/static/logo.png">
+    </head>
+
+    <style>
+    body {{
+        margin: 0;
+        background: #000;
+        font-family: monospace;
+        color: white;
+    }}
+
+    .login-box {{
+        width: 460px;
+        margin: auto;
+        margin-top: 100px;
+        background: #111;
+        padding: 30px;
+        border-radius: 12px;
+    }}
+
+    input, button {{
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+    }}
+
+    .erro {{
+        color: red;
+        text-align: center;
+    }}
+    </style>
+
+    <div class="login-box">
+        <h2>KBSISTEMAS</h2>
+
+        <form method="POST">
+            <input name="user" placeholder="Usuário" required>
+            <input name="senha" type="password" placeholder="Senha" required>
+            <button>Entrar</button>
+        </form>
+
+        <div class="erro">{erro}</div>
+
+        <div style="text-align:center;">
+            <a href="/cadastro">Criar conta</a>
+        </div>
+    </div>
+    """
+
+
+# ================= CADASTRO =================
+@auth_bp.route("/cadastro", methods=["GET", "POST"])
+def cadastro():
+    mensagem = ""
+    sucesso = False
+
+    if request.method == "POST":
+        conn = None
+        try:
+            conn = conectar()
             cursor = conn.cursor()
 
             usuario = request.form["user"].strip()
@@ -228,9 +339,6 @@ def cadastro():
                 elif existe_email:
                     mensagem = "Esse e-mail já está cadastrado."
                 else:
-                    permissoes = permissoes_por_plano(plano)
-
-                    # 🔥 REDIRECIONA PRO PAGAMENTO (CORRETO)
                     return f"""
                     <form id="auto" action="/criar_pagamento" method="POST">
                         <input type="hidden" name="user" value="{usuario}">
@@ -253,150 +361,37 @@ def cadastro():
             devolver_conexao(conn)
 
     classe_msg = "sucesso" if sucesso else "erro"
-    }}
 
-    .erro {{
-        margin-top: 16px;
-        text-align: center;
-        color: #ff6b6b;
-        font-size: 14px;
-    }}
-
-    .sucesso {{
-        margin-top: 16px;
-        text-align: center;
-        color: #86efac;
-        font-size: 14px;
-    }}
-
-    .voltar {{
-        margin-top: 20px;
-        text-align: center;
-    }}
-
-    .voltar a {{
-        color: #d1d5db;
-        text-decoration: none;
-    }}
-
-    .voltar a:hover {{
-        color: #ffffff;
-        text-decoration: underline;
-    }}
-
-    .planos-box {{
-        margin-top: 18px;
-        display: grid;
-        gap: 10px;
-    }}
-
-    .plano {{
-        background: linear-gradient(180deg, #141414 0%, #0c0c0c 100%);
-        border: 1px solid #2f2f2f;
-        border-radius: 12px;
-        padding: 12px;
-    }}
-
-    .plano strong {{
-        display: block;
-        color: #ffffff;
-        margin-bottom: 4px;
-    }}
-
-    .plano .preco {{
-        color: #86efac;
-        font-weight: bold;
-        margin-top: 6px;
-    }}
-
-    .plano small {{
-        color: #9ca3af;
-    }}
-    </style>
-
-    <div class="cadastro-box">
-        <div class="titulo">CRIAR CADASTRO</div>
-        <div class="subtitulo">Preencha os dados para criar sua conta</div>
+    return f"""
+    <div style="width:460px;margin:auto;margin-top:100px;background:#111;padding:30px;border-radius:12px;">
+        <h2>CRIAR CADASTRO</h2>
 
         <form method="POST">
-            <div class="campo">
-                <label>Usuário</label>
-                <input name="user" placeholder="Escolha seu usuário" required>
-            </div>
+            <input name="user" placeholder="Usuário" required>
+            <input name="senha" type="password" placeholder="Senha" required>
+            <input name="email" placeholder="Email" required>
+            <input name="nome_empresa" placeholder="Empresa" required>
 
-            <div class="campo">
-                <label>Senha</label>
-                <input name="senha" type="password" placeholder="Crie sua senha" required>
-            </div>
+            <select name="plano">
+                <option value="basico">Básico</option>
+                <option value="profissional">Profissional</option>
+                <option value="premium">Premium</option>
+            </select>
 
-            <div class="campo">
-                <label>E-mail</label>
-                <input name="email" type="email" placeholder="Seu e-mail" required>
-            </div>
-
-            <div class="campo">
-                <label>Nome da empresa</label>
-                <input name="nome_empresa" placeholder="Nome da sua empresa" required>
-            </div>
-
-            <div class="campo">
-                <label>Plano</label>
-                <select name="plano" required>
-                    <option value="basico">Básico - R$ 39,90/mês</option>
-                    <option value="profissional">Profissional - R$ 79,90/mês</option>
-                    <option value="premium">Premium - R$ 129,90/mês</option>
-                </select>
-            </div>
-
-            <div class="planos-box">
-                <div class="plano">
-                    <strong>Básico</strong>
-                    Estoque + Histórico
-                    <div class="preco">R$ 39,90/mês</div>
-                </div>
-
-                <div class="plano">
-                    <strong>Profissional</strong>
-                    Estoque + Transferência + Histórico + Edição
-                    <div class="preco">R$ 79,90/mês</div>
-                </div>
-
-                <div class="plano">
-                    <strong>Premium</strong>
-                    Todos os recursos do operador liberados
-                    <div class="preco">R$ 129,90/mês</div>
-                </div>
-            </div>
-
-            <button class="btn-cadastrar">CRIAR CADASTRO</button>
+            <button>Cadastrar</button>
         </form>
 
-        <div class="{classe_msg}">{mensagem}</div>
+        <p style="color:red;text-align:center;">{mensagem}</p>
 
-        <div class="voltar">
-            <a href="/">Voltar para login</a>
+        <div style="text-align:center;">
+            <a href="/">Voltar</a>
         </div>
     </div>
     """
 
+
+# ================= LOGOUT =================
 @auth_bp.route("/logout")
 def logout():
-    usuario = session.get("user")
-
-    if "user" in session:
-        conn = None
-        try:
-            conn = conectar()
-            cursor = conn.cursor()
-            cursor.execute("UPDATE usuarios SET online=0 WHERE usuario=%s", (session["user"],))
-            conn.commit()
-        except Exception as e:
-            print("Erro no logout:", e)
-        finally:
-            devolver_conexao(conn)
-
-    if usuario:
-        registrar_log(usuario, "logout", "Usuário saiu do sistema")
-
     session.clear()
     return redirect("/")
