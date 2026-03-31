@@ -25,8 +25,7 @@ def login():
 
             if user:
                 if not user[2]:
-                    erro = "Este usuário está inativo. Fale com o administrador."
-                    registrar_log(request.form["user"], "tentativa_login_bloqueada", "Usuário inativo tentou entrar")
+                    erro = "Usuário inativo"
                 elif check_password_hash(user[0], request.form["senha"]):
                     session["user"] = request.form["user"]
                     session["cargo"] = user[1]
@@ -35,159 +34,92 @@ def login():
                     conn.commit()
 
                     carregar_permissoes(request.form["user"])
-                    registrar_log(request.form["user"], "login", "Usuário entrou no sistema")
+                    registrar_log(request.form["user"], "login", "Login realizado")
                     return redirect("/painel")
                 else:
-                    erro = "Usuário ou senha inválidos"
-                    registrar_log(request.form["user"], "tentativa_login_falhou", "Senha inválida")
+                    erro = "Senha inválida"
             else:
-                erro = "Usuário ou senha inválidos"
+                erro = "Usuário não encontrado"
 
         except Exception as e:
-            erro = f"Erro ao fazer login: {e}"
+            erro = f"Erro: {e}"
         finally:
             devolver_conexao(conn)
 
     return f"""
     <head>
         <title>KBSISTEMAS</title>
-        <link rel="icon" type="image/png" href="/static/logo.png">
-        <link rel="shortcut icon" href="/static/logo.png">
+        <link rel="icon" href="/static/logo.png">
     </head>
 
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Share+Tech+Mono&display=swap');
-
-    * {{ box-sizing: border-box; }}
-
     body {{
-        margin: 0;
-        background: #000;
-        font-family: 'Share Tech Mono', monospace;
+        margin:0;
+        background:black;
+        font-family: monospace;
+        color:#00ff00;
     }}
 
-    #matrix {{
-        position: fixed;
-        width: 100%;
-        height: 100%;
-        z-index: 0;
+    canvas {{
+        position:fixed;
+        top:0;
+        left:0;
+        z-index:0;
     }}
 
-    .login-wrapper {{
-        position: relative;
-        z-index: 2;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
+    .box {{
+        position:relative;
+        z-index:2;
+        width:420px;
+        margin:auto;
+        margin-top:100px;
+        padding:30px;
+        background:rgba(0,0,0,0.8);
+        border:1px solid #00ff00;
+        border-radius:10px;
+        box-shadow:0 0 20px #00ff00;
     }}
 
-    .login-box {{
-        width: 460px;
-        background: rgba(18,18,18,0.9);
-        padding: 35px;
-        border-radius: 18px;
-        border: 1px solid #2f2f2f;
-        color: #e5e7eb;
+    input, button {{
+        width:100%;
+        padding:12px;
+        margin-top:10px;
+        background:black;
+        border:1px solid #00ff00;
+        color:#00ff00;
     }}
 
-    .titulo {{
-        text-align: center;
-        font-size: 34px;
-        font-family: 'Orbitron';
-        letter-spacing: 3px;
-    }}
-
-    .subtitulo {{
-        text-align: center;
-        margin-bottom: 20px;
-        color: #aaa;
-    }}
-
-    .campo input {{
-        width: 100%;
-        padding: 12px;
-        margin-top: 10px;
-        background: #000;
-        border: 1px solid #333;
-        color: white;
-    }}
-
-    .btn-login {{
-        width: 100%;
-        padding: 12px;
-        margin-top: 15px;
-        background: #111;
-        border: 1px solid #444;
-        color: white;
-        cursor: pointer;
+    button:hover {{
+        background:#00ff00;
+        color:black;
     }}
 
     .erro {{
-        color: red;
-        text-align: center;
-        margin-top: 10px;
+        text-align:center;
+        color:red;
+        margin-top:10px;
     }}
 
-    .planos {{
-        margin-top: 25px;
-    }}
-
-    .plano {{
-        border: 1px solid #333;
-        padding: 10px;
-        margin-top: 10px;
-        border-radius: 10px;
-    }}
-
-    .preco {{
-        color: #00ff88;
-        font-weight: bold;
+    a {{
+        color:#00ff00;
     }}
     </style>
 
     <canvas id="matrix"></canvas>
 
-    <div class="login-wrapper">
-        <div class="login-box">
+    <div class="box">
+        <h2 style="text-align:center;">KBSISTEMAS</h2>
 
-            <div class="titulo">KBSISTEMAS</div>
-            <div class="subtitulo">Entre na sua conta ou crie seu cadastro</div>
+        <form method="POST">
+            <input name="user" placeholder="Usuário" required>
+            <input name="senha" type="password" placeholder="Senha" required>
+            <button>ENTRAR</button>
+        </form>
 
-            <form method="POST">
-                <div class="campo">
-                    <input name="user" placeholder="Usuário" required>
-                </div>
+        <div class="erro">{erro}</div>
 
-                <div class="campo">
-                    <input name="senha" type="password" placeholder="Senha" required>
-                </div>
-
-                <button class="btn-login">ENTRAR NA CONTA</button>
-            </form>
-
-            <div class="erro">{erro}</div>
-
-            <div style="text-align:center;margin-top:15px;">
-                <a href="/cadastro" style="color:#ccc;">Criar cadastro</a>
-            </div>
-
-            <div class="planos">
-                <h3>Planos mensais</h3>
-
-                <div class="plano">
-                    <strong>Básico</strong><br>
-                    Estoque + Histórico<br>
-                    <span class="preco">R$ 39,90/mês</span>
-                </div>
-
-                <div class="plano">
-                    <strong>Profissional</strong><br>
-                    Estoque + Transferência + Histórico<br>
-                    <span class="preco">R$ 79,90/mês</span>
-                </div>
-            </div>
-
+        <div style="text-align:center;margin-top:15px;">
+            <a href="/cadastro">Criar conta</a>
         </div>
     </div>
 
@@ -199,7 +131,7 @@ def login():
     canvas.height = window.innerHeight;
 
     const letters = "01ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const fontSize = 16;
+    const fontSize = 14;
     const columns = canvas.width / fontSize;
     const drops = Array(Math.floor(columns)).fill(1);
 
@@ -261,7 +193,7 @@ def cadastro():
             devolver_conexao(conn)
 
     return f"""
-    <div style="background:#000;color:white;text-align:center;padding-top:100px;">
+    <body style="background:black;color:#00ff00;text-align:center;padding-top:100px;">
         <h1>Cadastro</h1>
 
         <form method="POST">
@@ -282,8 +214,14 @@ def cadastro():
         <p style="color:red;">{mensagem}</p>
 
         <a href="/">Voltar</a>
-    </div>
+    </body>
     """
+
+
+# ================= PAGAMENTO =================
+@auth_bp.route("/criar_pagamento", methods=["POST"])
+def criar_pagamento():
+    return "<h1 style='color:#00ff00;background:black;text-align:center;padding:100px;'>INTEGRAÇÃO COM MERCADO PAGO AQUI</h1>"
 
 
 # ================= LOGOUT =================
