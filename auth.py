@@ -2,8 +2,12 @@ from flask import Blueprint, request, redirect, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from banco import conectar, devolver_conexao, registrar_log, permissoes_por_plano
 from layout import carregar_permissoes
+import requests
 
 auth_bp = Blueprint("auth_bp", __name__)
+
+# 🔐 TOKEN MERCADO PAGO
+ACCESS_TOKEN = "APP_USR-6569039713831543-033108-32073b03704b3b93eac080da1fe1d0f7-1249023990"
 
 # ================= LOGIN =================
 @auth_bp.route("/", methods=["GET", "POST"])
@@ -42,119 +46,25 @@ def login():
                 erro = "Usuário não encontrado"
 
         except Exception as e:
-            erro = f"Erro: {e}"
+            erro = str(e)
         finally:
             devolver_conexao(conn)
 
     return f"""
-    <head>
-        <title>KBSISTEMAS</title>
-        <link rel="icon" href="/static/logo.png">
-    </head>
-
-    <style>
-    body {{
-        margin:0;
-        background:black;
-        font-family: monospace;
-        color:#00ff00;
-    }}
-
-    canvas {{
-        position:fixed;
-        top:0;
-        left:0;
-        z-index:0;
-    }}
-
-    .box {{
-        position:relative;
-        z-index:2;
-        width:420px;
-        margin:auto;
-        margin-top:100px;
-        padding:30px;
-        background:rgba(0,0,0,0.8);
-        border:1px solid #00ff00;
-        border-radius:10px;
-        box-shadow:0 0 20px #00ff00;
-    }}
-
-    input, button {{
-        width:100%;
-        padding:12px;
-        margin-top:10px;
-        background:black;
-        border:1px solid #00ff00;
-        color:#00ff00;
-    }}
-
-    button:hover {{
-        background:#00ff00;
-        color:black;
-    }}
-
-    .erro {{
-        text-align:center;
-        color:red;
-        margin-top:10px;
-    }}
-
-    a {{
-        color:#00ff00;
-    }}
-    </style>
-
-    <canvas id="matrix"></canvas>
-
-    <div class="box">
-        <h2 style="text-align:center;">KBSISTEMAS</h2>
+    <body style="background:black;color:#00ff00;text-align:center;padding-top:100px;">
+        <h1>KBSISTEMAS</h1>
 
         <form method="POST">
-            <input name="user" placeholder="Usuário" required>
-            <input name="senha" type="password" placeholder="Senha" required>
+            <input name="user" placeholder="Usuário"><br><br>
+            <input name="senha" type="password" placeholder="Senha"><br><br>
             <button>ENTRAR</button>
         </form>
 
-        <div class="erro">{erro}</div>
+        <p style="color:red;">{erro}</p>
 
-        <div style="text-align:center;margin-top:15px;">
-            <a href="/cadastro">Criar conta</a>
-        </div>
-    </div>
-
-    <script>
-    const canvas = document.getElementById("matrix");
-    const ctx = canvas.getContext("2d");
-
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const letters = "01ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const fontSize = 14;
-    const columns = canvas.width / fontSize;
-    const drops = Array(Math.floor(columns)).fill(1);
-
-    function draw() {{
-        ctx.fillStyle = "rgba(0,0,0,0.05)";
-        ctx.fillRect(0,0,canvas.width,canvas.height);
-
-        ctx.fillStyle = "#0f0";
-        ctx.font = fontSize + "px monospace";
-
-        for(let i=0;i<drops.length;i++) {{
-            const text = letters[Math.floor(Math.random()*letters.length)];
-            ctx.fillText(text,i*fontSize,drops[i]*fontSize);
-
-            if(drops[i]*fontSize > canvas.height) drops[i]=0;
-            drops[i]++;
-        }}
-    }}
-
-    setInterval(draw, 33);
-    </script>
+        <a href="/cadastro">Criar conta</a>
+    </body>
     """
-
 
 # ================= CADASTRO =================
 @auth_bp.route("/cadastro", methods=["GET", "POST"])
@@ -203,9 +113,9 @@ def cadastro():
             <input name="nome_empresa" placeholder="Empresa"><br><br>
 
             <select name="plano">
-                <option value="basico">Básico</option>
-                <option value="profissional">Profissional</option>
-                <option value="premium">Premium</option>
+                <option value="basico">Básico - R$39,90</option>
+                <option value="profissional">Profissional - R$79,90</option>
+                <option value="premium">Premium - R$129,90</option>
             </select><br><br>
 
             <button>Cadastrar</button>
@@ -217,12 +127,92 @@ def cadastro():
     </body>
     """
 
-
 # ================= PAGAMENTO =================
 @auth_bp.route("/criar_pagamento", methods=["POST"])
 def criar_pagamento():
-    return "<h1 style='color:#00ff00;background:black;text-align:center;padding:100px;'>INTEGRAÇÃO COM MERCADO PAGO AQUI</h1>"
+    user = request.form["user"]
+    senha = request.form["senha"]
+    email = request.form["email"]
+    empresa = request.form["nome_empresa"]
+    plano = request.form["plano"]
 
+    valores = {
+        "basico": 39.90,
+        "profissional": 79.90,
+        "premium": 129.90
+    }
+
+    valor = valores.get(plano, 39.90)
+
+    pagamento = {
+        "items": [{
+            "title": f"Plano {plano}",
+            "quantity": 1,
+            "currency_id": "BRL",
+            "unit_price": valor
+        }],
+        "payer": {"email": email},
+        "back_urls": {
+            "success": f"https://meu-sistemajunior.onrender.com/sucesso?user={user}&senha={senha}&email={email}&empresa={empresa}&plano={plano}"
+        },
+        "auto_return": "approved"
+    }
+
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    r = requests.post(
+        "https://api.mercadopago.com/checkout/preferences",
+        json=pagamento,
+        headers=headers
+    )
+
+    link = r.json()["init_point"]
+    return redirect(link)
+
+# ================= SUCESSO =================
+@auth_bp.route("/sucesso")
+def sucesso():
+    user = request.args.get("user")
+    senha = request.args.get("senha")
+    email = request.args.get("email")
+    empresa = request.args.get("empresa")
+    plano = request.args.get("plano")
+
+    conn = None
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+
+        permissoes = permissoes_por_plano(plano)
+
+        cursor.execute("""
+        INSERT INTO usuarios (
+            usuario, senha, cargo, online, ativo, email, plano, nome_empresa,
+            pode_estoque, pode_transferencia, pode_historico,
+            pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            user, senha, "operador", 0, 1,
+            email, plano, empresa,
+            permissoes["pode_estoque"],
+            permissoes["pode_transferencia"],
+            permissoes["pode_historico"],
+            permissoes["pode_usuarios"],
+            permissoes["pode_editar_estoque"],
+            permissoes["pode_excluir_estoque"],
+            permissoes["pode_logs"]
+        ))
+
+        conn.commit()
+
+        return "<h1 style='color:#0f0;background:black;text-align:center;padding:100px;'>PAGAMENTO APROVADO ✅</h1>"
+
+    finally:
+        devolver_conexao(conn)
 
 # ================= LOGOUT =================
 @auth_bp.route("/logout")
