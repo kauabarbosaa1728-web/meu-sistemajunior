@@ -1,6 +1,7 @@
 from werkzeug.security import generate_password_hash
 from psycopg2 import pool
 
+# 🔌 CONEXÃO COM NEON
 db_pool = pool.SimpleConnectionPool(
     1, 10,
     host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
@@ -11,44 +12,77 @@ db_pool = pool.SimpleConnectionPool(
     sslmode="require"
 )
 
+# ================= CONECTAR =================
 def conectar():
     return db_pool.getconn()
 
+# ================= DEVOLVER CONEXÃO =================
 def devolver_conexao(conn):
     if conn:
         db_pool.putconn(conn)
 
+# ================= LOG =================
 def registrar_log(usuario, acao, detalhes=""):
     conn = None
     try:
         conn = conectar()
         cursor = conn.cursor()
+
         cursor.execute("""
         INSERT INTO logs (usuario, acao, detalhes)
         VALUES (%s, %s, %s)
         """, (usuario, acao, detalhes))
+
         conn.commit()
     except Exception as e:
         print("Erro ao registrar log:", e)
     finally:
         devolver_conexao(conn)
 
+# ================= PERMISSÕES =================
 def permissoes_por_plano(plano):
     plano = (plano or "").lower()
 
     if plano == "premium":
-        return {"pode_estoque":1,"pode_transferencia":1,"pode_historico":1,"pode_usuarios":0,"pode_editar_estoque":1,"pode_excluir_estoque":1,"pode_logs":0}
+        return {
+            "pode_estoque": 1,
+            "pode_transferencia": 1,
+            "pode_historico": 1,
+            "pode_usuarios": 0,
+            "pode_editar_estoque": 1,
+            "pode_excluir_estoque": 1,
+            "pode_logs": 0
+        }
+
     if plano == "profissional":
-        return {"pode_estoque":1,"pode_transferencia":1,"pode_historico":1,"pode_usuarios":0,"pode_editar_estoque":1,"pode_excluir_estoque":0,"pode_logs":0}
+        return {
+            "pode_estoque": 1,
+            "pode_transferencia": 1,
+            "pode_historico": 1,
+            "pode_usuarios": 0,
+            "pode_editar_estoque": 1,
+            "pode_excluir_estoque": 0,
+            "pode_logs": 0
+        }
 
-    return {"pode_estoque":1,"pode_transferencia":0,"pode_historico":1,"pode_usuarios":0,"pode_editar_estoque":0,"pode_excluir_estoque":0,"pode_logs":0}
+    return {
+        "pode_estoque": 1,
+        "pode_transferencia": 0,
+        "pode_historico": 1,
+        "pode_usuarios": 0,
+        "pode_editar_estoque": 0,
+        "pode_excluir_estoque": 0,
+        "pode_logs": 0
+    }
 
+# ================= CRIAR BANCO =================
 def criar_banco():
     conn = None
     try:
         conn = conectar()
         cursor = conn.cursor()
 
+        # 🔹 USUÁRIOS
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS usuarios (
             usuario TEXT PRIMARY KEY,
@@ -69,6 +103,7 @@ def criar_banco():
         )
         """)
 
+        # 🔹 LOGS
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS logs (
             id SERIAL PRIMARY KEY,
@@ -79,6 +114,7 @@ def criar_banco():
         )
         """)
 
+        # 🔹 PAGAMENTOS (PIX)
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS pagamentos (
             id SERIAL PRIMARY KEY,
@@ -92,18 +128,22 @@ def criar_banco():
         )
         """)
 
+        # 🔹 ADMIN PADRÃO
         cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", ("admin",))
-        if not cursor.fetchone():
+        admin = cursor.fetchone()
+
+        if not admin:
             cursor.execute("""
             INSERT INTO usuarios (usuario, senha, cargo, ativo)
-            VALUES (%s,%s,'admin',1)
+            VALUES (%s, %s, 'admin', 1)
             """, ("admin", generate_password_hash("admin123")))
 
         conn.commit()
 
     except Exception as e:
-        print("Erro:", e)
+        print("Erro ao criar banco:", e)
         if conn:
             conn.rollback()
+
     finally:
         devolver_conexao(conn)
