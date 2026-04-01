@@ -182,6 +182,64 @@ def transferencia():
 # ================= HISTÓRICO =================
 @estoque_bp.route("/historico")
 def historico():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT produto, quantidade, origem, destino, usuario, data 
+    FROM transferencias 
+    ORDER BY data DESC
+    """)
+    dados = cursor.fetchall()
+
+    tabela = ""
+
+    for produto, qtd, origem, destino, user, data in dados:
+        tabela += f"""
+        <tr>
+            <td>{produto}</td>
+            <td>{qtd}</td>
+            <td>{origem}</td>
+            <td>{destino}</td>
+            <td>{user}</td>
+            <td>{data}</td>
+        </tr>
+        """
+
+    if not tabela:
+        tabela = """
+        <tr>
+            <td colspan="6">Nenhum registro encontrado</td>
+        </tr>
+        """
+
+    devolver_conexao(conn)
+
+    return container(f"""
+    <div class="card">
+        <h2>📊 HISTÓRICO DE MOVIMENTAÇÕES</h2>
+
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <a href="/exportar_pdf" style="background:#333;padding:8px 15px;border-radius:5px;">📄 Exportar PDF</a>
+            <a href="/exportar_excel" style="background:#555;padding:8px 15px;border-radius:5px;">📊 Exportar Excel</a>
+        </div>
+
+        <table style="width:100%; border-collapse: collapse;">
+            <tr style="background:#222;">
+                <th style="padding:10px;">Produto</th>
+                <th>Qtd</th>
+                <th>Origem</th>
+                <th>Destino</th>
+                <th>Usuário</th>
+                <th>Data</th>
+            </tr>
+            {tabela}
+        </table>
+    </div>
+    """)
     conn = conectar()
     cursor = conn.cursor()
 
