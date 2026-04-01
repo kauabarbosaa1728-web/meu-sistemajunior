@@ -217,42 +217,123 @@ def entrada():
     </div>
     """)
 
-# ================= TRANSFERENCIA =================
+# ================= TRANSFERENCIA (MELHORADA) =================
 @estoque_bp.route("/transferencia", methods=["GET","POST"])
 def transferencia():
+    if "user" not in session:
+        return redirect("/")
+
     conn = conectar()
     cursor = conn.cursor()
     msg=""
 
+    cursor.execute("SELECT produto FROM estoque")
+    produtos = [p[0] for p in cursor.fetchall()]
+
+    try:
+        cursor.execute("SELECT usuario FROM usuarios WHERE ativo=true")
+        usuarios = [u[0] for u in cursor.fetchall()]
+    except:
+        usuarios = []
+
     if request.method == "POST":
         produto = request.form["produto"]
         qtd = int(request.form["qtd"])
+        destino = request.form.get("destino")
 
         cursor.execute("SELECT quantidade FROM estoque WHERE produto=%s",(produto,))
         dado = cursor.fetchone()
 
         if dado and dado[0] >= qtd:
-            cursor.execute("UPDATE estoque SET quantidade=%s WHERE produto=%s",(dado[0]-qtd,produto))
-            cursor.execute("""
-            INSERT INTO transferencias (produto,quantidade,origem,destino,usuario)
-            VALUES (%s,%s,%s,%s,%s)
-            """,(produto,qtd,"estoque","saida",session["user"]))
-            conn.commit()
-            msg="✅ Transferido"
+            try:
+                cursor.execute(
+                    "UPDATE estoque SET quantidade=%s WHERE produto=%s",
+                    (dado[0] - qtd, produto)
+                )
+
+                cursor.execute("""
+                INSERT INTO transferencias (produto,quantidade,origem,destino,usuario)
+                VALUES (%s,%s,%s,%s,%s)
+                """, (produto, qtd, "estoque", destino or "saida", session["user"]))
+
+                conn.commit()
+                registrar_log(session["user"], "transferencia", f"{produto} -> {destino}")
+
+                msg="✅ Transferência realizada"
+            except Exception as e:
+                conn.rollback()
+                msg=f"❌ Erro: {e}"
         else:
-            msg="❌ Sem estoque"
+            msg="❌ Estoque insuficiente"
+
+    cursor.execute("""
+    SELECT produto, quantidade, destino, usuario, data 
+    FROM transferencias ORDER BY data DESC LIMIT 5
+    """)
+    historico = cursor.fetchall()
+
+    lista_produtos = "".join([f"<option value='{p}'>{p}</option>" for p in produtos])
+    lista_usuarios = "".join([f"<option value='{u}'>{u}</option>" for u in usuarios])
+
+    tabela = ""
+    for p,q,d,u,data in historico:
+        tabela += f"""
+        <tr>
+        <td>{p}</td>
+        <td>{q}</td>
+        <td>{d}</td>
+        <td>{u}</td>
+        <td>{data}</td>
+        </tr>
+        """
 
     devolver_conexao(conn)
 
     return container(f"""
     <div class="card">
-    <h2>Transferência</h2>
-    <form method="POST">
-    <input name="produto">
-    <input name="qtd">
-    <button>Enviar</button>
+    <h2>🔁 TRANSFERÊNCIA</h2>
+
+    <form method="POST" style="display:flex; gap:10px; flex-wrap:wrap;">
+    
+        <div>
+        <label>📦 Produto</label><br>
+        <select name="produto" required>
+        {lista_produtos}
+        </select>
+        </div>
+
+        <div>
+        <label>🔢 Quantidade</label><br>
+        <input name="qtd" type="number" required>
+        </div>
+
+        <div>
+        <label>👤 Destino</label><br>
+        <select name="destino">
+        <option value="">Saída</option>
+        {lista_usuarios}
+        </select>
+        </div>
+
+        <div style="align-self:end;">
+        <button>🚀 Transferir</button>
+        </div>
+
     </form>
+
     <p>{msg}</p>
+
+    <hr>
+
+    <h3>📊 Últimas Transferências</h3>
+
+    <table>
+    <tr>
+    <th>Produto</th><th>Qtd</th><th>Destino</th><th>Usuário</th><th>Data</th>
+    </tr>
+    {tabela}
+    </table>
+
     </div>
     """)
 
