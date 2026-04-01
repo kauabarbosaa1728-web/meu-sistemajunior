@@ -282,3 +282,56 @@ def logs():
         </table>
     </div>
     """)
+    # ================= HISTÓRICO =================
+@estoque_bp.route("/historico")
+def historico():
+    if not tem_permissao("pode_historico"):
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT produto, quantidade, origem, destino, usuario, data
+    FROM transferencias
+    ORDER BY id DESC
+    LIMIT 100
+    """)
+
+    dados = cursor.fetchall()
+
+    tabela = ""
+    for p, q, o, d, u, dt in dados:
+        tabela += f"""
+        <tr>
+            <td>{p}</td>
+            <td>{q}</td>
+            <td>{o}</td>
+            <td>{d}</td>
+            <td>{u}</td>
+            <td>{dt}</td>
+        </tr>
+        """
+
+    if not tabela:
+        tabela = "<tr><td colspan='6'>Sem histórico ainda</td></tr>"
+
+    devolver_conexao(conn)
+
+    return container(f"""
+    <div class="card">
+        <h2>📜 HISTÓRICO DE TRANSFERÊNCIAS</h2>
+
+        <table>
+            <tr>
+                <th>Produto</th>
+                <th>Qtd</th>
+                <th>Origem</th>
+                <th>Destino</th>
+                <th>Usuário</th>
+                <th>Data</th>
+            </tr>
+            {tabela}
+        </table>
+    </div>
+    """)
