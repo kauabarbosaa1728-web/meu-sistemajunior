@@ -1,31 +1,49 @@
 from werkzeug.security import generate_password_hash
 from psycopg2 import pool
 
-# 🔌 CONEXÃO COM NEON
-db_pool = pool.SimpleConnectionPool(
-    1, 10,
-    host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
-    database="neondb",
-    user="neondb_owner",
-    password="npg_zGebRqQWoB06",
-    port="5432",
-    sslmode="require"
-)
+# ================= POOL DE CONEXÃO =================
+try:
+    db_pool = pool.SimpleConnectionPool(
+        1, 10,
+        host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
+        database="neondb",
+        user="neondb_owner",
+        password="npg_zGebRqQWoB06",
+        port="5432",
+        sslmode="require"
+    )
+except Exception as e:
+    print("❌ ERRO AO CRIAR POOL:", e)
+    db_pool = None
 
-# ================= CONECTAR =================
+
+# ================= CONEXÃO =================
 def conectar():
-    return db_pool.getconn()
+    try:
+        if db_pool:
+            return db_pool.getconn()
+    except Exception as e:
+        print("Erro ao conectar:", e)
+    return None
 
-# ================= DEVOLVER CONEXÃO =================
+
 def devolver_conexao(conn):
-    if conn:
-        db_pool.putconn(conn)
+    try:
+        if conn and db_pool:
+            db_pool.putconn(conn)
+    except Exception as e:
+        print("Erro ao devolver conexão:", e)
 
-# ================= LOG =================
+
+# ================= LOGS =================
 def registrar_log(usuario, acao, detalhes=""):
     conn = None
+    cursor = None
     try:
         conn = conectar()
+        if not conn:
+            return
+
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -34,10 +52,16 @@ def registrar_log(usuario, acao, detalhes=""):
         """, (usuario, acao, detalhes))
 
         conn.commit()
+
     except Exception as e:
         print("Erro ao registrar log:", e)
+        if conn:
+            conn.rollback()
     finally:
+        if cursor:
+            cursor.close()
         devolver_conexao(conn)
+
 
 # ================= PERMISSÕES =================
 def permissoes_por_plano(plano):
@@ -75,14 +99,20 @@ def permissoes_por_plano(plano):
         "pode_logs": 0
     }
 
+
 # ================= CRIAR BANCO =================
 def criar_banco():
     conn = None
+    cursor = None
     try:
         conn = conectar()
+        if not conn:
+            print("❌ Sem conexão com banco")
+            return
+
         cursor = conn.cursor()
 
-        # 🔹 USUÁRIOS
+        # ================= USUARIOS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS usuarios (
             usuario TEXT PRIMARY KEY,
@@ -103,7 +133,45 @@ def criar_banco():
         )
         """)
 
-        # 🔹 LOGS
+        # ================= PAGAMENTOS =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pagamentos (
+            id SERIAL PRIMARY KEY,
+            usuario TEXT,
+            email TEXT,
+            senha TEXT,
+            nome_empresa TEXT,
+            plano TEXT,
+            status TEXT,
+            pagamento_id TEXT,
+            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # ================= ESTOQUE =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS estoque (
+            id SERIAL PRIMARY KEY,
+            produto TEXT,
+            quantidade INTEGER,
+            categoria TEXT
+        )
+        """)
+
+        # ================= TRANSFERENCIAS =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS transferencias (
+            id SERIAL PRIMARY KEY,
+            produto TEXT,
+            quantidade INTEGER,
+            origem TEXT,
+            destino TEXT,
+            usuario TEXT,
+            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # ================= LOGS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS logs (
             id SERIAL PRIMARY KEY,
@@ -114,36 +182,39 @@ def criar_banco():
         )
         """)
 
-        # 🔹 PAGAMENTOS (PIX)
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS pagamentos (
-            id SERIAL PRIMARY KEY,
-            usuario TEXT,
-            email TEXT,
-            senha TEXT,
-            nome_empresa TEXT,
-            plano TEXT,
-            status TEXT DEFAULT 'pendente',
-            pagamento_id TEXT
-        )
-        """)
-
-        # 🔹 ADMIN PADRÃO
+        # ================= ADMIN =================
         cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", ("admin",))
         admin = cursor.fetchone()
 
         if not admin:
             cursor.execute("""
-            INSERT INTO usuarios (usuario, senha, cargo, ativo)
-            VALUES (%s, %s, 'admin', 1)
-            """, ("admin", generate_password_hash("admin123")))
+            INSERT INTO usuarios (
+                usuario, senha, cargo, online, ativo,
+                pode_estoque, pode_transferencia, pode_historico,
+                pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs,
+                email, plano, nome_empresa
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                "admin",
+                generate_password_hash("admin123"),
+                "admin",
+                0,
+                1,
+                1,1,1,1,1,1,1,
+                "",
+                "admin",
+                "KBSISTEMAS"
+            ))
 
         conn.commit()
+        print("✅ BANCO OK")
 
     except Exception as e:
-        print("Erro ao criar banco:", e)
+        print("❌ Erro ao criar banco:", e)
         if conn:
             conn.rollback()
-
     finally:
+        if cursor:
+            cursor.close()
         devolver_conexao(conn)
