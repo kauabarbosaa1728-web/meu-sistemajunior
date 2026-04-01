@@ -14,6 +14,7 @@ def painel():
         conn = conectar()
         cursor = conn.cursor()
 
+        # ===== DADOS =====
         cursor.execute("SELECT COUNT(*) FROM estoque")
         total_produtos = cursor.fetchone()[0]
 
@@ -26,34 +27,36 @@ def painel():
         cursor.execute("SELECT COUNT(*) FROM usuarios WHERE online=1")
         usuarios_online = cursor.fetchone()[0]
 
+        # ===== GRÁFICOS =====
         cursor.execute("""
-        SELECT COALESCE(categoria, 'Sem categoria') AS categoria, COALESCE(SUM(quantidade), 0) AS total
+        SELECT COALESCE(categoria, 'Sem categoria'), COALESCE(SUM(quantidade), 0)
         FROM estoque
         GROUP BY categoria
-        ORDER BY total DESC, categoria ASC
+        ORDER BY SUM(quantidade) DESC
         LIMIT 8
         """)
         categorias = cursor.fetchall()
 
         cursor.execute("""
-        SELECT COALESCE(produto, 'Sem nome') AS produto, COALESCE(SUM(quantidade), 0) AS total
+        SELECT COALESCE(produto, 'Sem nome'), COALESCE(SUM(quantidade), 0)
         FROM transferencias
         GROUP BY produto
-        ORDER BY total DESC, produto ASC
+        ORDER BY SUM(quantidade) DESC
         LIMIT 8
         """)
         transferencias_produto = cursor.fetchall()
 
+        barras_categoria = gerar_barras_3d(categorias, 220, "categoria")
+        barras_transferencia = gerar_barras_3d(transferencias_produto, 220, "transferencia")
+
+        # ===== TOP PRODUTOS =====
         cursor.execute("""
         SELECT produto, quantidade, categoria
         FROM estoque
-        ORDER BY quantidade DESC, produto ASC
+        ORDER BY quantidade DESC
         LIMIT 5
         """)
         top_produtos = cursor.fetchall()
-
-        barras_categoria = gerar_barras_3d(categorias, 220, "categoria")
-        barras_transferencia = gerar_barras_3d(transferencias_produto, 220, "transferencia")
 
         tabela_top = ""
         for produto, quantidade, categoria in top_produtos:
@@ -66,58 +69,61 @@ def painel():
             """
 
         if not tabela_top:
-            tabela_top = """
-            <tr>
-                <td colspan="3">Sem produtos cadastrados.</td>
-            </tr>
-            """
+            tabela_top = "<tr><td colspan='3'>Sem dados</td></tr>"
 
+        # ===== HTML =====
         return container(f"""
-        <div class="card">
-            <h2>🖥️ PAINEL DO SISTEMA</h2>
-            <p>Bem-vindo, <b>{session["user"]}</b> | Cargo: <b>{session.get("cargo", "")}</b></p>
-            <p>Este sistema permite controlar o estoque, registrar transferências, acompanhar o histórico, gerenciar usuários e auditar ações com logs.</p>
+
+        <div style="background:#111;padding:20px;border-radius:10px;margin-bottom:20px;">
+            <h2 style="color:#fff;">🖥️ PAINEL DO SISTEMA</h2>
+            <p style="color:#aaa;">Bem-vindo, <b>{session["user"]}</b> | Cargo: <b>{session.get("cargo","")}</b></p>
         </div>
 
-        <div class="cards">
-            <div class="mini-card">
-                <h3>📦 Produtos cadastrados</h3>
-                <p style="font-size:32px;">{total_produtos}</p>
+        <!-- CARDS -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:25px;">
+
+            <div style="background:#1f1f1f;padding:20px;border-radius:10px;text-align:center;">
+                <h3>📦 Produtos</h3>
+                <h1>{total_produtos}</h1>
             </div>
-            <div class="mini-card">
-                <h3>🔢 Quantidade total</h3>
-                <p style="font-size:32px;">{total_qtd}</p>
+
+            <div style="background:#1f1f1f;padding:20px;border-radius:10px;text-align:center;">
+                <h3>🔢 Quantidade</h3>
+                <h1>{total_qtd}</h1>
             </div>
-            <div class="mini-card">
-                <h3>🔄 Transferências</h3>
-                <p style="font-size:32px;">{total_transferencias}</p>
+
+            <div style="background:#1f1f1f;padding:20px;border-radius:10px;text-align:center;">
+                <h3>🔄 Movimentações</h3>
+                <h1>{total_transferencias}</h1>
             </div>
-            <div class="mini-card">
-                <h3>🟢 Usuários online</h3>
-                <p style="font-size:32px;">{usuarios_online}</p>
+
+            <div style="background:#1f1f1f;padding:20px;border-radius:10px;text-align:center;">
+                <h3>🟢 Online</h3>
+                <h1>{usuarios_online}</h1>
             </div>
+
         </div>
 
-        <div class="dashboard-grid">
-            <div class="chart-3d-card">
-                <div class="chart-title">📊 Produtos por categoria</div>
-                <div class="chart-3d-area">
-                    {barras_categoria}
-                </div>
+        <!-- GRÁFICOS -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:25px;">
+
+            <div style="background:#1f1f1f;padding:20px;border-radius:10px;">
+                <h3>📊 Produtos por categoria</h3>
+                {barras_categoria}
             </div>
 
-            <div class="chart-3d-card">
-                <div class="chart-title">📈 Transferências por produto</div>
-                <div class="chart-3d-area">
-                    {barras_transferencia}
-                </div>
+            <div style="background:#1f1f1f;padding:20px;border-radius:10px;">
+                <h3>📈 Transferências</h3>
+                {barras_transferencia}
             </div>
+
         </div>
 
-        <div class="card">
-            <h2>🏆 Top 5 produtos com maior quantidade</h2>
-            <table class="ranking-table">
-                <tr>
+        <!-- TABELA -->
+        <div style="background:#1f1f1f;padding:20px;border-radius:10px;">
+            <h2>🏆 Top produtos</h2>
+            <table style="width:100%;border-collapse:collapse;">
+                <tr style="background:#333;">
                     <th>Produto</th>
                     <th>Quantidade</th>
                     <th>Categoria</th>
@@ -125,8 +131,11 @@ def painel():
                 {tabela_top}
             </table>
         </div>
+
         """)
+
     except Exception as e:
-        return container(f'<div class="card"><h2 class="erro">Erro no painel: {e}</h2></div>')
+        return container(f"<div style='color:red;'>Erro: {e}</div>")
+
     finally:
         devolver_conexao(conn)
