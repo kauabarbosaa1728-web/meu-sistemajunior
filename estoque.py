@@ -216,3 +216,72 @@ def excel():
 
     devolver_conexao(conn)
     return redirect("/historico")
+    # ================= ENTRADA DE PRODUTOS =================
+@estoque_bp.route("/entrada", methods=["GET", "POST"])
+def entrada():
+    if "user" not in session:
+        return redirect("/")
+
+    if not tem_permissao("pode_estoque"):
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+    msg = ""
+
+    if request.method == "POST":
+        produto = request.form.get("produto")
+        qtd = request.form.get("qtd")
+        valor = request.form.get("valor")
+        fornecedor = request.form.get("fornecedor")
+
+        try:
+            qtd = int(qtd)
+            valor = float(valor)
+
+            # verifica se já existe no estoque
+            cursor.execute("SELECT quantidade FROM estoque WHERE produto=%s", (produto,))
+            dado = cursor.fetchone()
+
+            if dado:
+                nova_qtd = dado[0] + qtd
+                cursor.execute("UPDATE estoque SET quantidade=%s WHERE produto=%s", (nova_qtd, produto))
+            else:
+                cursor.execute("""
+                INSERT INTO estoque (produto, quantidade, categoria)
+                VALUES (%s, %s, %s)
+                """, (produto, qtd, "entrada"))
+
+            # salva histórico da entrada
+            cursor.execute("""
+            INSERT INTO entradas (produto, quantidade, valor, fornecedor, usuario)
+            VALUES (%s, %s, %s, %s, %s)
+            """, (produto, qtd, valor, fornecedor, session["user"]))
+
+            conn.commit()
+
+            registrar_log(session["user"], "entrada_produto", f"{produto} +{qtd}")
+
+            msg = "✅ Entrada registrada com sucesso"
+
+        except Exception as e:
+            conn.rollback()
+            msg = f"❌ Erro: {str(e)}"
+
+    devolver_conexao(conn)
+
+    return container(f"""
+    <div class="card">
+        <h2>📥 ENTRADA DE PRODUTOS</h2>
+
+        <form method="POST">
+            <input name="produto" placeholder="Produto" required>
+            <input name="qtd" placeholder="Quantidade" required>
+            <input name="valor" placeholder="Valor unitário (R$)" required>
+            <input name="fornecedor" placeholder="Fornecedor / Loja" required>
+            <button>Registrar Entrada</button>
+        </form>
+
+        <p>{msg}</p>
+    </div>
+    """)
