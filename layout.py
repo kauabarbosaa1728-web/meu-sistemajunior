@@ -46,7 +46,210 @@ def tem_permissao(nome):
     return bool(session.get(nome, False))
 
 def acesso_negado():
-    return container("""
+    return def container(c):
+    return f"""
+    <head>
+        <title>KBSISTEMAS</title>
+        <link rel="icon" type="image/png" href="/static/logo.png">
+        <meta http-equiv="Cache-Control" content="public, max-age=300">
+        <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    </head>
+    """ + topo() + f"""
+    <style>
+
+    body {{
+        margin: 0;
+        font-family: 'Share Tech Mono', monospace;
+        background: radial-gradient(circle at center, #050505, #000000);
+        color: #d1d5db;
+    }}
+
+    /* NAVBAR */
+    .navbar {{
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 20px;
+        background: #050505;
+        border-bottom: 1px solid #1f1f1f;
+        box-shadow: 0 0 10px #00ff0020;
+    }}
+
+    .logo-text {{
+        color: #00ff00;
+        font-weight: bold;
+        letter-spacing: 1px;
+    }}
+
+    .menu a {{
+        padding: 8px 12px;
+        border-radius: 8px;
+        color: #aaa;
+        transition: 0.2s;
+    }}
+
+    .menu a:hover {{
+        color: #00ff00;
+        background: #0f0f0f;
+        box-shadow: 0 0 5px #00ff0050;
+    }}
+
+    .logout {{
+        color: #ff4d4d !important;
+    }}
+
+    /* CONTAINER */
+    .overlay {{
+        padding: 20px;
+    }}
+
+    /* CARD */
+    .card {{
+        background: #0a0a0a;
+        border: 1px solid #1f1f1f;
+        border-radius: 14px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 0 15px #00ff0010;
+    }}
+
+    h1, h2 {{
+        color: #00ff00;
+        text-align: center;
+    }}
+
+    /* INPUTS */
+    input, select {{
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        background: #111;
+        border: 1px solid #2a2a2a;
+        color: #00ff00;
+        border-radius: 6px;
+    }}
+
+    input:focus {{
+        outline: none;
+        border-color: #00ff00;
+        box-shadow: 0 0 5px #00ff00;
+    }}
+
+    /* BUTTON */
+    button {{
+        width: 100%;
+        padding: 10px;
+        margin-top: 15px;
+        background: #0f0f0f;
+        border: 1px solid #00ff00;
+        color: #00ff00;
+        cursor: pointer;
+        transition: 0.3s;
+    }}
+
+    button:hover {{
+        background: #00ff00;
+        color: black;
+        box-shadow: 0 0 10px #00ff00;
+    }}
+
+    /* TABLE */
+    table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }}
+
+    th, td {{
+        padding: 10px;
+        border: 1px solid #1f1f1f;
+    }}
+
+    th {{
+        background: #0f0f0f;
+        color: #00ff00;
+    }}
+
+    /* TEXTO */
+    a {{
+        color: #00ff00;
+        text-decoration: none;
+    }}
+
+    a:hover {{
+        text-shadow: 0 0 5px #00ff00;
+    }}
+
+    .erro {{
+        color: #ff4d4d;
+    }}
+
+    .sucesso {{
+        color: #00ff00;
+    }}
+
+    /* LOADER */
+    .page-loader {{
+        position: fixed;
+        top: 0;
+        height: 2px;
+        width: 0%;
+        background: linear-gradient(90deg, #00ff00, #ffffff);
+        z-index: 9999;
+    }}
+
+    </style>
+
+    <div class="page-loader" id="pageLoader"></div>
+
+    <div class="overlay" id="mainContent">
+        {c}
+    </div>
+
+    <script>
+    (function() {{
+        const loader = document.getElementById("pageLoader");
+
+        function startLoader() {{
+            loader.style.width = "40%";
+        }}
+
+        function finishLoader() {{
+            loader.style.width = "100%";
+            setTimeout(() => loader.style.width = "0%", 200);
+        }}
+
+        async function navegar(url, salvar = true) {{
+            try {{
+                startLoader();
+                const res = await fetch(url);
+                const html = await res.text();
+
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, "text/html");
+
+                const novo = doc.querySelector("#mainContent");
+                document.querySelector("#mainContent").innerHTML = novo.innerHTML;
+
+                if (salvar) history.pushState({{url}}, "", url);
+
+                finishLoader();
+            }} catch {{
+                window.location.href = url;
+            }}
+        }}
+
+        document.addEventListener("click", function(e) {{
+            const link = e.target.closest('a[data-nav="true"]');
+            if (!link) return;
+
+            e.preventDefault();
+            navegar(link.href);
+        }});
+
+        window.addEventListener("popstate", () => navegar(location.pathname, false));
+    }})();
+    </script>
+    """("""
     <div class="card">
         <h2 class="erro">⛔ Você não tem autorização para acessar esta área.</h2>
         <p>Fale com um administrador para liberar esta permissão.</p>
