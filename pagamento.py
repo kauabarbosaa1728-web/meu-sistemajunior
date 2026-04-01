@@ -1,220 +1,159 @@
+from flask import Blueprint, request, session
+import mercadopago
+from banco import conectar, devolver_conexao
 from werkzeug.security import generate_password_hash
-from psycopg2 import pool
 
-# ================= POOL DE CONEXÃO =================
+pagamento_routes = Blueprint("pagamento", **name**)
+
+# 🔐 TOKEN
+
+sdk = mercadopago.SDK("APP_USR-6569039713831543-033108-32073b03704b3b93eac080da1fe1d0f7-1249023990")
+
+# ================= VALOR DOS PLANOS =================
+
+def valor_plano(plano):
+return {
+"basico": 39.90,
+"profissional": 79.90,
+"premium": 129.90
+}.get(plano, 39.90)
+
+# ================= CRIAR PAGAMENTO PIX =================
+
+@pagamento_routes.route("/criar_pagamento", methods=["POST"])
+def criar_pagamento():
 try:
-    db_pool = pool.SimpleConnectionPool(
-        1, 10,
-        host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
-        database="neondb",
-        user="neondb_owner",
-        password="npg_zGebRqQWoB06",
-        port="5432",
-        sslmode="require"
-    )
-except Exception as e:
-    print("❌ ERRO AO CRIAR POOL:", e)
-    db_pool = None
+usuario = request.form.get("user")
+senha_raw = request.form.get("senha")
+email = request.form.get("email")
+empresa = request.form.get("nome_empresa")
+plano = request.form.get("plano")
 
+```
+    if not all([usuario, senha_raw, email, empresa, plano]):
+        return "❌ Dados incompletos"
 
-# ================= CONEXÃO =================
-def conectar():
-    try:
-        if db_pool:
-            return db_pool.getconn()
-    except Exception as e:
-        print("Erro ao conectar:", e)
-    return None
+    senha = generate_password_hash(senha_raw)
+    valor = valor_plano(plano)
 
-
-def devolver_conexao(conn):
-    try:
-        if conn and db_pool:
-            db_pool.putconn(conn)
-    except Exception as e:
-        print("Erro ao devolver conexão:", e)
-
-
-# ================= LOGS =================
-def registrar_log(usuario, acao, detalhes=""):
-    conn = None
-    cursor = None
-    try:
-        conn = conectar()
-        if not conn:
-            return
-
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        INSERT INTO logs (usuario, acao, detalhes)
-        VALUES (%s, %s, %s)
-        """, (usuario, acao, detalhes))
-
-        conn.commit()
-
-    except Exception as e:
-        print("Erro ao registrar log:", e)
-        if conn:
-            conn.rollback()
-    finally:
-        if cursor:
-            cursor.close()
-        devolver_conexao(conn)
-
-
-# ================= PERMISSÕES =================
-def permissoes_por_plano(plano):
-    plano = (plano or "").lower()
-
-    if plano == "premium":
-        return {
-            "pode_estoque": 1,
-            "pode_transferencia": 1,
-            "pode_historico": 1,
-            "pode_usuarios": 0,
-            "pode_editar_estoque": 1,
-            "pode_excluir_estoque": 1,
-            "pode_logs": 0
+    payment_data = {
+        "transaction_amount": float(valor),
+        "description": f"Plano {plano}",
+        "payment_method_id": "pix",
+        "payer": {
+            "email": email,
+            "first_name": usuario
         }
-
-    if plano == "profissional":
-        return {
-            "pode_estoque": 1,
-            "pode_transferencia": 1,
-            "pode_historico": 1,
-            "pode_usuarios": 0,
-            "pode_editar_estoque": 1,
-            "pode_excluir_estoque": 0,
-            "pode_logs": 0
-        }
-
-    return {
-        "pode_estoque": 1,
-        "pode_transferencia": 0,
-        "pode_historico": 1,
-        "pode_usuarios": 0,
-        "pode_editar_estoque": 0,
-        "pode_excluir_estoque": 0,
-        "pode_logs": 0
     }
 
+    pagamento = sdk.payment().create(payment_data)
 
-# ================= CRIAR BANCO =================
-def criar_banco():
-    conn = None
-    cursor = None
-    try:
+    resposta = pagamento.get("response", {})
+
+    # 🔥 CORREÇÃO DO ERRO 'id'
+    if "id" not in resposta:
+        return f"""
+        <h2>❌ ERRO NO MERCADO PAGO</h2>
+        <pre>{resposta}</pre>
+        """
+
+    pagamento_id = resposta["id"]
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT INTO pagamentos (usuario, email, senha, nome_empresa, plano, status, pagamento_id)
+    VALUES (%s,%s,%s,%s,%s,'pendente',%s)
+    """, (usuario, email, senha, empresa, plano, pagamento_id))
+
+    conn.commit()
+    devolver_conexao(conn)
+
+    session["pagamento_id"] = pagamento_id
+
+    qr = resposta.get("point_of_interaction", {}).get("transaction_data", {})
+
+    return f"""
+    <body style="background:black;color:#00ff00;text-align:center;padding-top:50px;">
+    <h2>💰 PAGAMENTO PIX</h2>
+    <p>Plano: {plano}</p>
+    <p>Valor: R$ {valor}</p>
+
+    <p>Copie o código:</p>
+    <textarea rows=5 cols=60>{qr.get("qr_code", "erro")}</textarea><br><br>
+
+    <img src="data:image/png;base64,{qr.get("qr_code_base64", "")}"><br><br>
+
+    <a href="/verificar_pagamento">Já paguei</a>
+    </body>
+    """
+
+except Exception as e:
+    return f"❌ ERRO: {str(e)}"
+```
+
+# ================= VERIFICAR PAGAMENTO =================
+
+@pagamento_routes.route("/verificar_pagamento")
+def verificar_pagamento():
+try:
+pagamento_id = session.get("pagamento_id")
+
+```
+    if not pagamento_id:
+        return "❌ Pagamento não encontrado"
+
+    pagamento = sdk.payment().get(pagamento_id)
+    status = pagamento["response"]["status"]
+
+    if status == "approved":
         conn = conectar()
-        if not conn:
-            print("❌ Sem conexão com banco")
-            return
-
         cursor = conn.cursor()
 
-        # ================= USUARIOS =================
         cursor.execute("""
-        CREATE TABLE IF NOT EXISTS usuarios (
-            usuario TEXT PRIMARY KEY,
-            senha TEXT,
-            cargo TEXT,
-            online INTEGER DEFAULT 0,
-            ativo INTEGER DEFAULT 1,
-            pode_estoque INTEGER DEFAULT 0,
-            pode_transferencia INTEGER DEFAULT 0,
-            pode_historico INTEGER DEFAULT 0,
-            pode_usuarios INTEGER DEFAULT 0,
-            pode_editar_estoque INTEGER DEFAULT 0,
-            pode_excluir_estoque INTEGER DEFAULT 0,
-            pode_logs INTEGER DEFAULT 0,
-            email TEXT,
-            plano TEXT DEFAULT 'basico',
-            nome_empresa TEXT
-        )
-        """)
+        SELECT usuario, senha, email, nome_empresa, plano
+        FROM pagamentos
+        WHERE pagamento_id=%s AND status='pendente'
+        """, (pagamento_id,))
 
-        # ================= PAGAMENTOS =================
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS pagamentos (
-            id SERIAL PRIMARY KEY,
-            usuario TEXT,
-            email TEXT,
-            senha TEXT,
-            nome_empresa TEXT,
-            plano TEXT,
-            status TEXT,
-            pagamento_id TEXT,
-            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
+        user = cursor.fetchone()
 
-        # ================= ESTOQUE =================
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS estoque (
-            id SERIAL PRIMARY KEY,
-            produto TEXT,
-            quantidade INTEGER,
-            categoria TEXT
-        )
-        """)
+        if user:
+            usuario, senha, email, empresa, plano = user
 
-        # ================= TRANSFERENCIAS =================
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS transferencias (
-            id SERIAL PRIMARY KEY,
-            produto TEXT,
-            quantidade INTEGER,
-            origem TEXT,
-            destino TEXT,
-            usuario TEXT,
-            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
-
-        # ================= LOGS =================
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS logs (
-            id SERIAL PRIMARY KEY,
-            usuario TEXT,
-            acao TEXT,
-            detalhes TEXT,
-            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
-
-        # ================= ADMIN =================
-        cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", ("admin",))
-        admin = cursor.fetchone()
-
-        if not admin:
             cursor.execute("""
             INSERT INTO usuarios (
-                usuario, senha, cargo, online, ativo,
-                pode_estoque, pode_transferencia, pode_historico,
-                pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs,
-                email, plano, nome_empresa
+                usuario, senha, cargo, online, ativo, email, plano, nome_empresa,
+                pode_estoque, pode_transferencia, pode_historico
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                "admin",
-                generate_password_hash("admin123"),
-                "admin",
-                0,
-                1,
-                1,1,1,1,1,1,1,
-                "",
-                "admin",
-                "KBSISTEMAS"
-            ))
+            VALUES (%s,%s,'operador',0,1,%s,%s,%s,1,1,1)
+            """, (usuario, senha, email, plano, empresa))
 
-        conn.commit()
-        print("✅ BANCO OK")
+            cursor.execute("""
+            UPDATE pagamentos SET status='pago'
+            WHERE pagamento_id=%s
+            """, (pagamento_id,))
 
-    except Exception as e:
-        print("❌ Erro ao criar banco:", e)
-        if conn:
-            conn.rollback()
-    finally:
-        if cursor:
-            cursor.close()
+            conn.commit()
+
         devolver_conexao(conn)
+
+        return """
+        <body style="background:black;color:#00ff00;text-align:center;padding-top:100px;">
+        <h2>✅ PAGAMENTO APROVADO!</h2>
+        <a href="/">Fazer login</a>
+        </body>
+        """
+
+    return f"""
+    <body style="background:black;color:#00ff00;text-align:center;padding-top:100px;">
+    <h2>⏳ Aguardando pagamento...</h2>
+    <p>Status: {status}</p>
+    <a href="/verificar_pagamento">Atualizar</a>
+    </body>
+    """
+
+except Exception as e:
+    return f"❌ ERRO AO VERIFICAR: {str(e)}"
+```
