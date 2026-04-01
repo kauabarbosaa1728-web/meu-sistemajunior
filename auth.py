@@ -2,12 +2,8 @@ from flask import Blueprint, request, redirect, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from banco import conectar, devolver_conexao, registrar_log, permissoes_por_plano
 from layout import carregar_permissoes
-import requests
 
 auth_bp = Blueprint("auth_bp", __name__)
-
-# 🔐 TOKEN MERCADO PAGO
-ACCESS_TOKEN = "APP_USR-6569039713831543-033108-32073b03704b3b93eac080da1fe1d0f7-1249023990"
 
 # ================= LOGIN =================
 @auth_bp.route("/", methods=["GET", "POST"])
@@ -29,7 +25,7 @@ def login():
 
             if user:
                 if not user[2]:
-                    erro = "Usuário inativo"
+                    erro = "Você precisa pagar o plano primeiro!"
                 elif check_password_hash(user[0], request.form["senha"]):
                     session["user"] = request.form["user"]
                     session["cargo"] = user[1]
@@ -66,6 +62,7 @@ def login():
     </body>
     """
 
+
 # ================= CADASTRO =================
 @auth_bp.route("/cadastro", methods=["GET", "POST"])
 def cadastro():
@@ -87,10 +84,11 @@ def cadastro():
             if cursor.fetchone():
                 mensagem = "Usuário já existe"
             else:
+                # 🔥 ENVIA DIRETO PRO PIX
                 return f"""
 <form id="auto" action="/criar_pagamento" method="POST">
 <input type="hidden" name="user" value="{usuario}">
-<input type="hidden" name="senha" value="{generate_password_hash(senha)}">
+<input type="hidden" name="senha" value="{senha}">
 <input type="hidden" name="email" value="{email}">
 <input type="hidden" name="nome_empresa" value="{nome_empresa}">
 <input type="hidden" name="plano" value="{plano}">
@@ -127,92 +125,6 @@ def cadastro():
     </body>
     """
 
-# ================= PAGAMENTO =================
-@auth_bp.route("/criar_pagamento", methods=["POST"])
-def criar_pagamento():
-    user = request.form["user"]
-    senha = request.form["senha"]
-    email = request.form["email"]
-    empresa = request.form["nome_empresa"]
-    plano = request.form["plano"]
-
-    valores = {
-        "basico": 39.90,
-        "profissional": 79.90,
-        "premium": 129.90
-    }
-
-    valor = valores.get(plano, 39.90)
-
-    pagamento = {
-        "items": [{
-            "title": f"Plano {plano}",
-            "quantity": 1,
-            "currency_id": "BRL",
-            "unit_price": valor
-        }],
-        "payer": {"email": email},
-        "back_urls": {
-            "success": f"https://meu-sistemajunior.onrender.com/sucesso?user={user}&senha={senha}&email={email}&empresa={empresa}&plano={plano}"
-        },
-        "auto_return": "approved"
-    }
-
-    headers = {
-        "Authorization": f"Bearer {ACCESS_TOKEN}",
-        "Content-Type": "application/json"
-    }
-
-    r = requests.post(
-        "https://api.mercadopago.com/checkout/preferences",
-        json=pagamento,
-        headers=headers
-    )
-
-    link = r.json()["init_point"]
-    return redirect(link)
-
-# ================= SUCESSO =================
-@auth_bp.route("/sucesso")
-def sucesso():
-    user = request.args.get("user")
-    senha = request.args.get("senha")
-    email = request.args.get("email")
-    empresa = request.args.get("empresa")
-    plano = request.args.get("plano")
-
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-
-        permissoes = permissoes_por_plano(plano)
-
-        cursor.execute("""
-        INSERT INTO usuarios (
-            usuario, senha, cargo, online, ativo, email, plano, nome_empresa,
-            pode_estoque, pode_transferencia, pode_historico,
-            pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            user, senha, "operador", 0, 1,
-            email, plano, empresa,
-            permissoes["pode_estoque"],
-            permissoes["pode_transferencia"],
-            permissoes["pode_historico"],
-            permissoes["pode_usuarios"],
-            permissoes["pode_editar_estoque"],
-            permissoes["pode_excluir_estoque"],
-            permissoes["pode_logs"]
-        ))
-
-        conn.commit()
-
-        return "<h1 style='color:#0f0;background:black;text-align:center;padding:100px;'>PAGAMENTO APROVADO ✅</h1>"
-
-    finally:
-        devolver_conexao(conn)
 
 # ================= LOGOUT =================
 @auth_bp.route("/logout")
