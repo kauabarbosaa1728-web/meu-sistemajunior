@@ -182,6 +182,19 @@ def criar_banco():
         )
         """)
 
+        # ================= ENTRADAS (NOVO) =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS entradas (
+            id SERIAL PRIMARY KEY,
+            produto TEXT,
+            quantidade INTEGER,
+            valor REAL,
+            fornecedor TEXT,
+            usuario TEXT,
+            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
         # ================= ADMIN =================
         cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", ("admin",))
         admin = cursor.fetchone()
