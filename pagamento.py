@@ -2,37 +2,48 @@ from werkzeug.security import generate_password_hash
 from psycopg2 import pool
 
 # ================= POOL DE CONEXÃO =================
-db_pool = pool.SimpleConnectionPool(
-    1, 10,
-    host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
-    database="neondb",
-    user="neondb_owner",
-    password="npg_zGebRqQWoB06",
-    port="5432",
-    sslmode="require"
-)
+try:
+    db_pool = pool.SimpleConnectionPool(
+        1, 10,
+        host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
+        database="neondb",
+        user="neondb_owner",
+        password="npg_zGebRqQWoB06",
+        port="5432",
+        sslmode="require"
+    )
+except Exception as e:
+    print("❌ ERRO AO CRIAR POOL:", e)
+    db_pool = None
+
 
 # ================= CONEXÃO =================
 def conectar():
     try:
-        return db_pool.getconn()
+        if db_pool:
+            return db_pool.getconn()
     except Exception as e:
         print("Erro ao conectar:", e)
-        return None
+    return None
+
 
 def devolver_conexao(conn):
     try:
-        if conn:
+        if conn and db_pool:
             db_pool.putconn(conn)
-    except:
-        pass
+    except Exception as e:
+        print("Erro ao devolver conexão:", e)
 
 
 # ================= LOGS =================
 def registrar_log(usuario, acao, detalhes=""):
     conn = None
+    cursor = None
     try:
         conn = conectar()
+        if not conn:
+            return
+
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -47,6 +58,8 @@ def registrar_log(usuario, acao, detalhes=""):
         if conn:
             conn.rollback()
     finally:
+        if cursor:
+            cursor.close()
         devolver_conexao(conn)
 
 
@@ -90,8 +103,13 @@ def permissoes_por_plano(plano):
 # ================= CRIAR BANCO =================
 def criar_banco():
     conn = None
+    cursor = None
     try:
         conn = conectar()
+        if not conn:
+            print("❌ Sem conexão com banco")
+            return
+
         cursor = conn.cursor()
 
         # ================= USUARIOS =================
@@ -115,7 +133,7 @@ def criar_banco():
         )
         """)
 
-        # ================= PAGAMENTOS (IMPORTANTE 🔥) =================
+        # ================= PAGAMENTOS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS pagamentos (
             id SERIAL PRIMARY KEY,
@@ -190,10 +208,13 @@ def criar_banco():
             ))
 
         conn.commit()
+        print("✅ BANCO OK")
 
     except Exception as e:
-        print("Erro ao criar banco:", e)
+        print("❌ Erro ao criar banco:", e)
         if conn:
             conn.rollback()
     finally:
+        if cursor:
+            cursor.close()
         devolver_conexao(conn)
