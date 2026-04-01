@@ -5,11 +5,9 @@ from werkzeug.security import generate_password_hash
 
 pagamento_routes = Blueprint("pagamento", __name__)
 
-# 🔐 SEU TOKEN (já está correto)
 sdk = mercadopago.SDK("APP_USR-6569039713831543-033108-32073b03704b3b93eac080da1fe1d0f7-1249023990")
 
 
-# ================= VALORES =================
 def valor_plano(plano):
     if plano == "basico":
         return 39.90
@@ -20,7 +18,6 @@ def valor_plano(plano):
     return 0
 
 
-# ================= CRIAR PAGAMENTO PIX =================
 @pagamento_routes.route("/criar_pagamento", methods=["POST"])
 def criar_pagamento():
     usuario = request.form["user"]
@@ -46,7 +43,6 @@ def criar_pagamento():
 
     pagamento_id = resposta["id"]
 
-    # salva no banco
     conn = conectar()
     cursor = conn.cursor()
 
@@ -58,9 +54,7 @@ def criar_pagamento():
     conn.commit()
     devolver_conexao(conn)
 
-    # salva na sessão
     session["pagamento_id"] = pagamento_id
-    session["usuario_temp"] = usuario
 
     qr_code = resposta["point_of_interaction"]["transaction_data"]["qr_code"]
     qr_base64 = resposta["point_of_interaction"]["transaction_data"]["qr_code_base64"]
@@ -70,7 +64,6 @@ def criar_pagamento():
     <p>Plano: {plano}</p>
     <p>Valor: R$ {valor}</p>
 
-    <p>Copie o código:</p>
     <textarea rows=5 cols=60>{qr_code}</textarea>
 
     <br><br>
@@ -81,7 +74,6 @@ def criar_pagamento():
     """
 
 
-# ================= VERIFICAR PAGAMENTO =================
 @pagamento_routes.route("/verificar_pagamento")
 def verificar_pagamento():
     pagamento_id = session.get("pagamento_id")
@@ -96,11 +88,10 @@ def verificar_pagamento():
         conn = conectar()
         cursor = conn.cursor()
 
-        # pega dados do pagamento correto
         cursor.execute("""
         SELECT usuario, senha, email, nome_empresa, plano
         FROM pagamentos
-        WHERE pagamento_id=%s
+        WHERE pagamento_id=%s AND status='pendente'
         """, (pagamento_id,))
 
         user = cursor.fetchone()
@@ -131,9 +122,8 @@ def verificar_pagamento():
         <a href="/">Fazer login</a>
         """
 
-    else:
-        return f"""
-        <h2>⏳ Aguardando pagamento...</h2>
-        <p>Status: {status}</p>
-        <a href="/verificar_pagamento">Atualizar</a>
-        """
+    return f"""
+    <h2>⏳ Aguardando pagamento...</h2>
+    <p>Status: {status}</p>
+    <a href="/verificar_pagamento">Atualizar</a>
+    """
