@@ -54,10 +54,10 @@ def estoque():
         <td>{p}</td>
         <td>{q}</td>
         <td>{c}</td>
-        <td>R$ {float(v):,.2f}</td>
+        <td>R$ {float(v or 0):,.2f}</td>
         <td>
-        <a href='/editar_estoque/{i}'>Editar</a>
-        <a href='/excluir_estoque/{i}'>Excluir</a>
+        <a href='/editar_estoque/{i}'>✏️ Editar</a> |
+        <a href='/excluir_estoque/{i}' onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
         </td>
         </tr>
         """
@@ -93,6 +93,71 @@ def estoque():
     </div>
     """)
 
+# ================= EDITAR =================
+@estoque_bp.route("/editar_estoque/<int:id>", methods=["GET", "POST"])
+def editar_estoque(id):
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        produto = request.form.get("produto")
+        qtd = int(request.form.get("qtd"))
+        categoria = request.form.get("categoria")
+
+        cursor.execute("""
+        UPDATE estoque SET produto=%s, quantidade=%s, categoria=%s
+        WHERE id=%s
+        """, (produto, qtd, categoria, id))
+
+        conn.commit()
+        registrar_log(session["user"], "editar_estoque", produto)
+        devolver_conexao(conn)
+        return redirect("/estoque")
+
+    cursor.execute("SELECT produto, quantidade, categoria FROM estoque WHERE id=%s", (id,))
+    dado = cursor.fetchone()
+
+    devolver_conexao(conn)
+
+    return container(f"""
+    <div class="card">
+    <h2>✏️ EDITAR PRODUTO</h2>
+
+    <form method="POST">
+    <input name="produto" value="{dado[0]}">
+    <input name="qtd" value="{dado[1]}">
+    <input name="categoria" value="{dado[2]}">
+    <button>Salvar</button>
+    </form>
+    </div>
+    """)
+
+# ================= EXCLUIR =================
+@estoque_bp.route("/excluir_estoque/<int:id>")
+def excluir_estoque(id):
+    if "user" not in session:
+        return redirect("/")
+
+    if not tem_permissao("pode_excluir_estoque"):
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("DELETE FROM estoque WHERE id=%s", (id,))
+        conn.commit()
+        registrar_log(session["user"], "excluir_estoque", str(id))
+    except Exception as e:
+        conn.rollback()
+        print("Erro ao excluir:", e)
+
+    devolver_conexao(conn)
+    return redirect("/estoque")
+
 # ================= ENTRADA =================
 @estoque_bp.route("/entrada", methods=["GET", "POST"])
 def entrada():
@@ -104,23 +169,18 @@ def entrada():
     msg = ""
 
     if request.method == "POST":
-        produto = request.form.get("produto")
-        qtd = request.form.get("qtd")
-        valor = request.form.get("valor")
-        fornecedor = request.form.get("fornecedor")
-
         try:
-            qtd = int(qtd)
-            valor = valor.replace("R$", "").replace(",", ".").strip()
-            valor = float(valor)
+            produto = request.form.get("produto")
+            qtd = int(request.form.get("qtd"))
+            valor = float(request.form.get("valor").replace(",", "."))
+            fornecedor = request.form.get("fornecedor")
 
             cursor.execute("SELECT quantidade FROM estoque WHERE produto=%s", (produto,))
             dado = cursor.fetchone()
 
             if dado:
-                nova_qtd = dado[0] + qtd
-                cursor.execute("UPDATE estoque SET quantidade=%s, valor=%s WHERE produto=%s",
-                               (nova_qtd, valor, produto))
+                cursor.execute("UPDATE estoque SET quantidade=%s WHERE produto=%s",
+                               (dado[0] + qtd, produto))
             else:
                 cursor.execute("""
                 INSERT INTO estoque (produto, quantidade, categoria, valor)
@@ -133,8 +193,6 @@ def entrada():
             """, (produto, qtd, valor, fornecedor, session["user"]))
 
             conn.commit()
-            registrar_log(session["user"], "entrada_produto", produto)
-
             msg = "✅ Entrada registrada"
 
         except Exception as e:
@@ -148,10 +206,10 @@ def entrada():
     <h2>📥 ENTRADA DE PRODUTOS</h2>
 
     <form method="POST">
-    <input name="produto" placeholder="Produto" required>
-    <input name="qtd" placeholder="Quantidade" required>
-    <input name="valor" placeholder="Valor (R$)" required>
-    <input name="fornecedor" placeholder="Fornecedor" required>
+    <input name="produto" required>
+    <input name="qtd" required>
+    <input name="valor" required>
+    <input name="fornecedor" required>
     <button>Registrar</button>
     </form>
 
@@ -175,8 +233,10 @@ def transferencia():
 
         if dado and dado[0] >= qtd:
             cursor.execute("UPDATE estoque SET quantidade=%s WHERE produto=%s",(dado[0]-qtd,produto))
-            cursor.execute("INSERT INTO transferencias (produto,quantidade,origem,destino,usuario) VALUES (%s,%s,%s,%s,%s)",
-            (produto,qtd,"estoque","saida",session["user"]))
+            cursor.execute("""
+            INSERT INTO transferencias (produto,quantidade,origem,destino,usuario)
+            VALUES (%s,%s,%s,%s,%s)
+            """,(produto,qtd,"estoque","saida",session["user"]))
             conn.commit()
             msg="✅ Transferido"
         else:
@@ -196,8 +256,8 @@ def transferencia():
     </div>
     """)
 
-# ================= HISTÓRICO COMPLETO =================
-@estoque_bp.route("/historico", methods=["GET"])
+# ================= HISTÓRICO =================
+@estoque_bp.route("/historico")
 def historico():
     if "user" not in session:
         return redirect("/")
@@ -205,31 +265,12 @@ def historico():
     conn = conectar()
     cursor = conn.cursor()
 
-    produto = request.args.get("produto", "")
-    usuario = request.args.get("usuario", "")
-    data = request.args.get("data", "")
-
-    filtro_sql = ""
-    valores = []
-
-    if produto:
-        filtro_sql += " AND produto ILIKE %s"
-        valores.append(f"%{produto}%")
-
-    if usuario:
-        filtro_sql += " AND usuario ILIKE %s"
-        valores.append(f"%{usuario}%")
-
-    if data:
-        filtro_sql += " AND DATE(data) = %s"
-        valores.append(data)
-
-    cursor.execute(f"""
-    SELECT produto, quantidade, 'TRANSFERÊNCIA', origem, destino, usuario, data FROM transferencias WHERE 1=1 {filtro_sql}
+    cursor.execute("""
+    SELECT produto, quantidade, 'TRANSFERÊNCIA', origem, destino, usuario, data FROM transferencias
     UNION ALL
-    SELECT produto, quantidade, 'ENTRADA', 'fornecedor', fornecedor, usuario, data FROM entradas WHERE 1=1 {filtro_sql}
+    SELECT produto, quantidade, 'ENTRADA', 'fornecedor', fornecedor, usuario, data FROM entradas
     ORDER BY data DESC
-    """, valores * 2)
+    """)
 
     dados = cursor.fetchall()
 
@@ -262,51 +303,3 @@ def historico():
     </table>
     </div>
     """)
-    @estoque_bp.route("/excluir_estoque/<int:id>")
-def excluir_estoque(id):
-    if "user" not in session:
-        return redirect("/")
-
-    if not tem_permissao("pode_excluir_estoque"):
-        return acesso_negado()
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("DELETE FROM estoque WHERE id=%s", (id,))
-        conn.commit()
-
-        registrar_log(session["user"], "excluir_estoque", str(id))
-
-    except Exception as e:
-        conn.rollback()
-        print("Erro ao excluir:", e)
-
-    devolver_conexao(conn)
-
-    return redirect("/estoque")
-@estoque_bp.route("/excluir_estoque/<int:id>")
-def excluir_estoque(id):
-    if "user" not in session:
-        return redirect("/")
-
-    if not tem_permissao("pode_excluir_estoque"):
-        return acesso_negado()
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("DELETE FROM estoque WHERE id=%s", (id,))
-        conn.commit()
-
-        registrar_log(session["user"], "excluir_estoque", str(id))
-
-    except Exception as e:
-        conn.rollback()
-        print("Erro ao excluir:", e)
-
-    devolver_conexao(conn)
-
-    return redirect("/estoque")
