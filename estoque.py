@@ -180,7 +180,7 @@ def transferencia():
     """)
 
 # ================= HISTÓRICO =================
-@estoque_bp.route("/historico")
+@estoque_bp.route("/historico", methods=["GET"])
 def historico():
     if "user" not in session:
         return redirect("/")
@@ -188,49 +188,89 @@ def historico():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    SELECT produto, quantidade, origem, destino, usuario, data 
-    FROM transferencias 
+    # ================= FILTROS =================
+    produto = request.args.get("produto", "")
+    usuario = request.args.get("usuario", "")
+    data = request.args.get("data", "")
+
+    filtro_sql = ""
+    valores = []
+
+    if produto:
+        filtro_sql += " AND produto ILIKE %s"
+        valores.append(f"%{produto}%")
+
+    if usuario:
+        filtro_sql += " AND usuario ILIKE %s"
+        valores.append(f"%{usuario}%")
+
+    if data:
+        filtro_sql += " AND DATE(data) = %s"
+        valores.append(data)
+
+    # ================= CONSULTA UNIFICADA =================
+    cursor.execute(f"""
+    SELECT produto, quantidade, 'TRANSFERÊNCIA' AS tipo, origem, destino, usuario, data
+    FROM transferencias
+    WHERE 1=1 {filtro_sql}
+
+    UNION ALL
+
+    SELECT produto, quantidade, 'ENTRADA' AS tipo, 'fornecedor', fornecedor, usuario, data
+    FROM entradas
+    WHERE 1=1 {filtro_sql}
+
     ORDER BY data DESC
-    """)
+    """, valores * 2)  # duplicado por causa do UNION
+
     dados = cursor.fetchall()
 
     tabela = ""
+    total = 0
 
-    for produto, qtd, origem, destino, user, data in dados:
+    for produto, qtd, tipo, origem, destino, user, data in dados:
+        cor = "#00ff00" if tipo == "ENTRADA" else "#ff4444"
+
         tabela += f"""
         <tr>
             <td>{produto}</td>
             <td>{qtd}</td>
+            <td style="color:{cor}; font-weight:bold;">{tipo}</td>
             <td>{origem}</td>
             <td>{destino}</td>
             <td>{user}</td>
             <td>{data}</td>
         </tr>
         """
+        total += 1
 
     if not tabela:
-        tabela = """
-        <tr>
-            <td colspan="6">Nenhum registro encontrado</td>
-        </tr>
-        """
+        tabela = "<tr><td colspan='7'>Nenhum registro encontrado</td></tr>"
 
     devolver_conexao(conn)
 
     return container(f"""
     <div class="card">
-        <h2>📊 HISTÓRICO DE MOVIMENTAÇÕES</h2>
+        <h2>📊 HISTÓRICO COMPLETO</h2>
+
+        <form method="GET" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+            <input name="produto" placeholder="Produto" value="{produto}">
+            <input name="usuario" placeholder="Usuário" value="{usuario}">
+            <input name="data" type="date" value="{data}">
+            <button>Filtrar</button>
+        </form>
 
         <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <a href="/exportar_pdf" style="background:#333;padding:8px 15px;border-radius:5px;">📄 Exportar PDF</a>
-            <a href="/exportar_excel" style="background:#555;padding:8px 15px;border-radius:5px;">📊 Exportar Excel</a>
+            <a href="/exportar_pdf">📄 PDF</a>
+            <a href="/exportar_excel">📊 Excel</a>
+            <span style="margin-left:auto;">Total: <b>{total}</b></span>
         </div>
 
         <table style="width:100%; border-collapse: collapse;">
             <tr style="background:#222;">
-                <th style="padding:10px;">Produto</th>
+                <th>Produto</th>
                 <th>Qtd</th>
+                <th>Tipo</th>
                 <th>Origem</th>
                 <th>Destino</th>
                 <th>Usuário</th>
@@ -240,32 +280,6 @@ def historico():
         </table>
     </div>
     """)
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT produto, quantidade, origem, destino, usuario, data FROM transferencias ORDER BY data DESC")
-    dados = cursor.fetchall()
-
-    tabela=""
-    for d in dados:
-        tabela+=f"<tr>{''.join(f'<td>{x}</td>' for x in d)}</tr>"
-
-    devolver_conexao(conn)
-
-    return container(f"""
-    <div class="card">
-    <h2>Histórico</h2>
-
-    <a href="/exportar_pdf">PDF</a>
-    <a href="/exportar_excel">Excel</a>
-
-    <table>
-    <tr><th>Produto</th><th>Qtd</th><th>Origem</th><th>Destino</th><th>User</th><th>Data</th></tr>
-    {tabela}
-    </table>
-    </div>
-    """)
-
 # ================= PDF =================
 @estoque_bp.route("/exportar_pdf")
 def pdf():
