@@ -262,3 +262,51 @@ def historico():
     </table>
     </div>
     """)
+    @estoque_bp.route("/excluir_estoque/<int:id>")
+def excluir_estoque(id):
+    if "user" not in session:
+        return redirect("/")
+
+    if not tem_permissao("pode_excluir_estoque"):
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("DELETE FROM estoque WHERE id=%s", (id,))
+        conn.commit()
+
+        registrar_log(session["user"], "excluir_estoque", str(id))
+
+    except Exception as e:
+        conn.rollback()
+        print("Erro ao excluir:", e)
+
+    devolver_conexao(conn)
+
+    return redirect("/estoque")
+@estoque_bp.route("/excluir_estoque/<int:id>")
+def excluir_estoque(id):
+    if "user" not in session:
+        return redirect("/")
+
+    if not tem_permissao("pode_excluir_estoque"):
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("DELETE FROM estoque WHERE id=%s", (id,))
+        conn.commit()
+
+        registrar_log(session["user"], "excluir_estoque", str(id))
+
+    except Exception as e:
+        conn.rollback()
+        print("Erro ao excluir:", e)
+
+    devolver_conexao(conn)
+
+    return redirect("/estoque")
