@@ -1,146 +1,319 @@
-from flask import session
-from banco import conectar, devolver_conexao
+from flask import Blueprint, request, redirect, session
+from banco import conectar, devolver_conexao, registrar_log
+from layout import container, acesso_negado, tem_permissao
 
+from reportlab.platypus import SimpleDocTemplate, Table
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from openpyxl import Workbook
 
-def carregar_permissoes(usuario):
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-        cursor.execute("""
-        SELECT cargo,
-               pode_estoque,
-               pode_transferencia,
-               pode_historico,
-               pode_usuarios,
-               pode_editar_estoque,
-               pode_excluir_estoque,
-               pode_logs,
-               ativo,
-               email,
-               plano,
-               nome_empresa
-        FROM usuarios
-        WHERE usuario=%s
-        """, (usuario,))
-        dado = cursor.fetchone()
+estoque_bp = Blueprint("estoque_bp", __name__)
 
-        if dado:
-            session["cargo"] = dado[0]
-            session["pode_estoque"] = bool(dado[1])
-            session["pode_transferencia"] = bool(dado[2])
-            session["pode_historico"] = bool(dado[3])
-            session["pode_usuarios"] = bool(dado[4])
-            session["pode_editar_estoque"] = bool(dado[5])
-            session["pode_excluir_estoque"] = bool(dado[6])
-            session["pode_logs"] = bool(dado[7])
-            session["ativo"] = bool(dado[8])
-            session["email"] = dado[9] or ""
-            session["plano"] = dado[10] or ""
-            session["nome_empresa"] = dado[11] or ""
-    finally:
-        devolver_conexao(conn)
+# ================= ESTOQUE =================
+@estoque_bp.route("/estoque", methods=["GET", "POST"])
+def estoque():
+    if "user" not in session:
+        return redirect("/")
 
+    if not tem_permissao("pode_estoque"):
+        return acesso_negado()
 
-def tem_permissao(nome):
-    if session.get("cargo") == "admin":
-        return True
-    return bool(session.get(nome, False))
+    conn = conectar()
+    cursor = conn.cursor()
+    msg = ""
 
+    if request.method == "POST":
+        produto = request.form.get("produto")
+        qtd = request.form.get("qtd")
+        categoria = request.form.get("categoria")
 
-# ✅ CORREÇÃO PRINCIPAL (isso que quebrava tudo)
-def acesso_negado():
-    return container("""
+        if produto and qtd and categoria:
+            try:
+                qtd = int(qtd)
+                cursor.execute("""
+                INSERT INTO estoque (produto, quantidade, categoria, valor)
+                VALUES (%s,%s,%s,%s)
+                """, (produto, qtd, categoria, 0))
+                conn.commit()
+                registrar_log(session["user"], "add_estoque", produto)
+                msg = "✅ Adicionado"
+            except Exception as e:
+                msg = f"❌ Erro: {e}"
+
+    cursor.execute("SELECT id, produto, quantidade, categoria, valor FROM estoque ORDER BY id DESC")
+    dados = cursor.fetchall()
+
+    total_qtd = sum([d[2] for d in dados])
+    total_valor = sum([d[2] * float(d[4] or 0) for d in dados])
+
+    tabela = ""
+    for i, p, q, c, v in dados:
+        tabela += f"""
+        <tr>
+        <td>{i}</td>
+        <td>{p}</td>
+        <td>{q}</td>
+        <td>{c}</td>
+        <td>R$ {float(v):,.2f}</td>
+        <td>
+        <a href='/editar_estoque/{i}'>Editar</a>
+        <a href='/excluir_estoque/{i}'>Excluir</a>
+        </td>
+        </tr>
+        """
+
+    devolver_conexao(conn)
+
+    return container(f"""
     <div class="card">
-        <h2 class="erro">⛔ Você não tem autorização para acessar esta área.</h2>
-        <p>Fale com um administrador para liberar esta permissão.</p>
-        <p><a href="/painel">⬅ Voltar para o painel</a></p>
+    <h2>📦 ESTOQUE</h2>
+
+    <div style="margin-bottom:15px; padding:10px; background:#111; border-radius:8px;">
+        <b>Quantidade total:</b> {total_qtd} <br>
+        <b>Custo total:</b> R$ {total_valor:,.2f}
+    </div>
+
+    <a href="/entrada">➕ Entrada de Produtos</a>
+
+    <form method="POST">
+    <input name="produto" placeholder="Produto">
+    <input name="qtd" placeholder="Qtd">
+    <input name="categoria" placeholder="Categoria">
+    <button>Adicionar</button>
+    </form>
+
+    <p>{msg}</p>
+
+    <table>
+    <tr>
+    <th>ID</th><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Valor</th><th>Ações</th>
+    </tr>
+    {tabela}
+    </table>
     </div>
     """)
 
+# ================= ENTRADA =================
+@estoque_bp.route("/entrada", methods=["GET", "POST"])
+def entrada():
+    if "user" not in session:
+        return redirect("/")
 
-def gerar_barras_3d(dados, altura_max=220, modo="quantidade"):
-    if not dados:
-        return '<div class="sem-dados">Sem dados para exibir.</div>'
+    conn = conectar()
+    cursor = conn.cursor()
+    msg = ""
 
-    maiores = []
-    for item in dados:
-        valor = item[1]
+    if request.method == "POST":
+        produto = request.form.get("produto")
+        qtd = request.form.get("qtd")
+        valor = request.form.get("valor")
+        fornecedor = request.form.get("fornecedor")
+
         try:
-            valor = int(valor or 0)
-        except:
-            valor = 0
-        maiores.append(valor)
+            qtd = int(qtd)
+            valor = valor.replace("R$", "").replace(",", ".").strip()
+            valor = float(valor)
 
-    max_valor = max(maiores) if maiores else 1
-    if max_valor <= 0:
-        max_valor = 1
+            cursor.execute("SELECT quantidade FROM estoque WHERE produto=%s", (produto,))
+            dado = cursor.fetchone()
 
-    barras = ""
-    for nome, valor in dados:
-        try:
-            valor = int(valor or 0)
-        except:
-            valor = 0
+            if dado:
+                nova_qtd = dado[0] + qtd
+                cursor.execute(
+                    "UPDATE estoque SET quantidade=%s, valor=%s WHERE produto=%s",
+                    (nova_qtd, valor, produto)
+                )
+            else:
+                cursor.execute("""
+                INSERT INTO estoque (produto, quantidade, categoria, valor)
+                VALUES (%s,%s,%s,%s)
+                """, (produto, qtd, "entrada", valor))
 
-        altura = int((valor / max_valor) * altura_max)
-        if valor > 0 and altura < 18:
-            altura = 18
+            cursor.execute("""
+            INSERT INTO entradas (produto, quantidade, valor, fornecedor, usuario)
+            VALUES (%s,%s,%s,%s,%s)
+            """, (produto, qtd, valor, fornecedor, session["user"]))
 
-        if modo == "transferencia":
-            cor_frente = "#8b8b8b"
-            cor_lado = "#5d5d5d"
-            cor_topo = "#bfbfbf"
+            conn.commit()
+            registrar_log(session["user"], "entrada_produto", produto)
+
+            msg = "✅ Entrada registrada"
+
+        except Exception as e:
+            conn.rollback()
+            msg = f"❌ Erro: {e}"
+
+    devolver_conexao(conn)
+
+    return container(f"""
+    <div class="card">
+    <h2>📥 ENTRADA DE PRODUTOS</h2>
+
+    <form method="POST">
+    <input name="produto" placeholder="Produto" required>
+    <input name="qtd" placeholder="Quantidade" required>
+    <input name="valor" placeholder="Valor (R$)" required>
+    <input name="fornecedor" placeholder="Fornecedor" required>
+    <button>Registrar</button>
+    </form>
+
+    <p>{msg}</p>
+    </div>
+    """)
+
+# ================= TRANSFERENCIA =================
+@estoque_bp.route("/transferencia", methods=["GET", "POST"])
+def transferencia():
+    conn = conectar()
+    cursor = conn.cursor()
+    msg = ""
+
+    if request.method == "POST":
+        produto = request.form["produto"]
+        qtd = int(request.form["qtd"])
+
+        cursor.execute("SELECT quantidade FROM estoque WHERE produto=%s", (produto,))
+        dado = cursor.fetchone()
+
+        if dado and dado[0] >= qtd:
+            cursor.execute(
+                "UPDATE estoque SET quantidade=%s WHERE produto=%s",
+                (dado[0] - qtd, produto)
+            )
+            cursor.execute(
+                "INSERT INTO transferencias (produto,quantidade,origem,destino,usuario) VALUES (%s,%s,%s,%s,%s)",
+                (produto, qtd, "estoque", "saida", session["user"])
+            )
+            conn.commit()
+            msg = "✅ Transferido"
         else:
-            cor_frente = "#a3a3a3"
-            cor_lado = "#737373"
-            cor_topo = "#d4d4d4"
+            msg = "❌ Sem estoque"
 
-        barras += f"""
-        <div class="bar-3d-item">
-            <div class="bar-value">{valor}</div>
-            <div class="bar-3d-wrap" style="height:{altura}px;">
-                <div class="bar-3d-front" style="height:{altura}px; background:{cor_frente};"></div>
-                <div class="bar-3d-side" style="height:{altura}px; background:{cor_lado};"></div>
-                <div class="bar-3d-top" style="background:{cor_topo};"></div>
-            </div>
-            <div class="bar-label">{nome}</div>
-        </div>
+    devolver_conexao(conn)
+
+    return container(f"""
+    <div class="card">
+    <h2>Transferência</h2>
+    <form method="POST">
+    <input name="produto">
+    <input name="qtd">
+    <button>Enviar</button>
+    </form>
+    <p>{msg}</p>
+    </div>
+    """)
+
+# ================= HISTÓRICO COMPLETO =================
+@estoque_bp.route("/historico", methods=["GET"])
+def historico():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    produto = request.args.get("produto", "")
+    usuario = request.args.get("usuario", "")
+    data = request.args.get("data", "")
+
+    filtro_sql = ""
+    valores = []
+
+    if produto:
+        filtro_sql += " AND produto ILIKE %s"
+        valores.append(f"%{produto}%")
+
+    if usuario:
+        filtro_sql += " AND usuario ILIKE %s"
+        valores.append(f"%{usuario}%")
+
+    if data:
+        filtro_sql += " AND DATE(data) = %s"
+        valores.append(data)
+
+    cursor.execute(f"""
+    SELECT produto, quantidade, 'TRANSFERÊNCIA', origem, destino, usuario, data FROM transferencias WHERE 1=1 {filtro_sql}
+    UNION ALL
+    SELECT produto, quantidade, 'ENTRADA', 'fornecedor', fornecedor, usuario, data FROM entradas WHERE 1=1 {filtro_sql}
+    ORDER BY data DESC
+    """, valores * 2)
+
+    dados = cursor.fetchall()
+
+    tabela = ""
+    for p, q, tipo, o, d, u, data in dados:
+        cor = "#00ff00" if tipo == "ENTRADA" else "#ff4444"
+        tabela += f"""
+        <tr>
+        <td>{p}</td>
+        <td>{q}</td>
+        <td style="color:{cor}">{tipo}</td>
+        <td>{o}</td>
+        <td>{d}</td>
+        <td>{u}</td>
+        <td>{data}</td>
+        </tr>
         """
-    return barras
 
+    devolver_conexao(conn)
 
-def topo():
-    return """
-    <div class="navbar">
-        <div class="logo-area">
-            <img src="/static/logo.png" class="logo" alt="Logo KBSISTEMAS">
-            <span class="logo-text">KBSISTEMAS</span>
-        </div>
+    return container(f"""
+    <div class="card">
+    <h2>📊 HISTÓRICO</h2>
 
-        <div class="menu">
-            <a href="/painel" data-nav="true">Painel</a>
-            <a href="/estoque" data-nav="true">Estoque</a>
-            <a href="/transferencia" data-nav="true">Transferência</a>
-            <a href="/historico" data-nav="true">Histórico</a>
-            <a href="/usuarios" data-nav="true">Usuários</a>
-            <a href="/logs" data-nav="true">Logs</a>
-            <a href="/logout" class="logout">Sair</a>
-        </div>
+    <table>
+    <tr>
+    <th>Produto</th><th>Qtd</th><th>Tipo</th><th>Origem</th><th>Destino</th><th>User</th><th>Data</th>
+    </tr>
+    {tabela}
+    </table>
     </div>
-    """
+    """)
+
+# ================= EXCLUIR =================
+@estoque_bp.route("/excluir_estoque/<int:id>")
+def excluir_estoque(id):
+    if "user" not in session:
+        return redirect("/")
+
+    if not tem_permissao("pode_excluir_estoque"):
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("DELETE FROM estoque WHERE id=%s", (id,))
+        conn.commit()
+        registrar_log(session["user"], "excluir_estoque", str(id))
+    except Exception as e:
+        conn.rollback()
+        print("Erro ao excluir:", e)
+
+    devolver_conexao(conn)
+
+    return redirect("/estoque")
 
 
-def container(c):
-    return f"""
-    <head>
-        <title>KBSISTEMAS</title>
-        <link rel="icon" type="image/png" href="/static/logo.png">
-        <meta http-equiv="Cache-Control" content="public, max-age=300">
-        <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    </head>
-    """ + topo() + f"""
-    <div class="overlay" id="mainContent">
-        {c}
-    </div>
-    """
+@estoque_bp.route("/excluir_estoque/<int:id>")
+def excluir_estoque(id):
+    if "user" not in session:
+        return redirect("/")
+
+    if not tem_permissao("pode_excluir_estoque"):
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("DELETE FROM estoque WHERE id=%s", (id,))
+        conn.commit()
+        registrar_log(session["user"], "excluir_estoque", str(id))
+    except Exception as e:
+        conn.rollback()
+        print("Erro ao excluir:", e)
+
+    devolver_conexao(conn)
+
+    return redirect("/estoque")
