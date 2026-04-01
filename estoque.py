@@ -282,8 +282,8 @@ def logs():
         </table>
     </div>
     """)
-    # ================= HISTÓRICO =================
-@estoque_bp.route("/historico")
+ # ================= HISTÓRICO PRO =================
+@estoque_bp.route("/historico", methods=["GET"])
 def historico():
     if not tem_permissao("pode_historico"):
         return acesso_negado()
@@ -291,15 +291,42 @@ def historico():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    # ===== FILTROS =====
+    produto = request.args.get("produto", "")
+    usuario = request.args.get("usuario", "")
+    data_inicio = request.args.get("data_inicio", "")
+    data_fim = request.args.get("data_fim", "")
+
+    query = """
     SELECT produto, quantidade, origem, destino, usuario, data
     FROM transferencias
-    ORDER BY id DESC
-    LIMIT 100
-    """)
+    WHERE 1=1
+    """
 
+    params = []
+
+    if produto:
+        query += " AND produto ILIKE %s"
+        params.append(f"%{produto}%")
+
+    if usuario:
+        query += " AND usuario ILIKE %s"
+        params.append(f"%{usuario}%")
+
+    if data_inicio:
+        query += " AND data >= %s"
+        params.append(data_inicio)
+
+    if data_fim:
+        query += " AND data <= %s"
+        params.append(data_fim)
+
+    query += " ORDER BY data DESC LIMIT 200"
+
+    cursor.execute(query, params)
     dados = cursor.fetchall()
 
+    # ===== TABELA =====
     tabela = ""
     for p, q, o, d, u, dt in dados:
         tabela += f"""
@@ -314,14 +341,25 @@ def historico():
         """
 
     if not tabela:
-        tabela = "<tr><td colspan='6'>Sem histórico ainda</td></tr>"
+        tabela = "<tr><td colspan='6'>Nenhum resultado encontrado</td></tr>"
 
     devolver_conexao(conn)
 
     return container(f"""
     <div class="card">
-        <h2>📜 HISTÓRICO DE TRANSFERÊNCIAS</h2>
+        <h2>📜 HISTÓRICO PROFISSIONAL</h2>
 
+        <form method="GET" style="margin-bottom:20px;">
+            <input name="produto" placeholder="Produto" value="{produto}">
+            <input name="usuario" placeholder="Usuário" value="{usuario}">
+            <input type="date" name="data_inicio" value="{data_inicio}">
+            <input type="date" name="data_fim" value="{data_fim}">
+            <button>Filtrar</button>
+            <a href="/historico">Limpar</a>
+        </form>
+    </div>
+
+    <div class="card">
         <table>
             <tr>
                 <th>Produto</th>
