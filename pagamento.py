@@ -18,112 +18,140 @@ def valor_plano(plano):
     return 0
 
 
+# ================= CRIAR PAGAMENTO =================
 @pagamento_routes.route("/criar_pagamento", methods=["POST"])
 def criar_pagamento():
-    usuario = request.form["user"]
-    senha = generate_password_hash(request.form["senha"])
-    email = request.form["email"]
-    empresa = request.form["nome_empresa"]
-    plano = request.form["plano"]
+    try:
+        usuario = request.form.get("user")
+        senha_raw = request.form.get("senha")
+        email = request.form.get("email")
+        empresa = request.form.get("nome_empresa")
+        plano = request.form.get("plano")
 
-    valor = valor_plano(plano)
+        # 🔒 validação (EVITA ERRO 500)
+        if not all([usuario, senha_raw, email, empresa, plano]):
+            return "❌ ERRO: dados incompletos"
 
-    payment_data = {
-        "transaction_amount": float(valor),
-        "description": f"Plano {plano}",
-        "payment_method_id": "pix",
-        "payer": {
-            "email": email,
-            "first_name": usuario
+        senha = generate_password_hash(senha_raw)
+        valor = valor_plano(plano)
+
+        payment_data = {
+            "transaction_amount": float(valor),
+            "description": f"Plano {plano}",
+            "payment_method_id": "pix",
+            "payer": {
+                "email": email,
+                "first_name": usuario
+            }
         }
-    }
 
-    pagamento = sdk.payment().create(payment_data)
-    resposta = pagamento["response"]
+        pagamento = sdk.payment().create(payment_data)
 
-    pagamento_id = resposta["id"]
+        # 🔥 proteção contra erro da API
+        if "response" not in pagamento:
+            return f"Erro Mercado Pago: {pagamento}"
 
-    conn = conectar()
-    cursor = conn.cursor()
+        resposta = pagamento["response"]
+        pagamento_id = resposta["id"]
 
-    cursor.execute("""
-    INSERT INTO pagamentos (usuario, email, senha, nome_empresa, plano, status, pagamento_id)
-    VALUES (%s,%s,%s,%s,%s,'pendente',%s)
-    """, (usuario, email, senha, empresa, plano, pagamento_id))
-
-    conn.commit()
-    devolver_conexao(conn)
-
-    session["pagamento_id"] = pagamento_id
-
-    qr_code = resposta["point_of_interaction"]["transaction_data"]["qr_code"]
-    qr_base64 = resposta["point_of_interaction"]["transaction_data"]["qr_code_base64"]
-
-    return f"""
-    <h2 style="color:lime">💰 PAGAMENTO PIX</h2>
-    <p>Plano: {plano}</p>
-    <p>Valor: R$ {valor}</p>
-
-    <textarea rows=5 cols=60>{qr_code}</textarea>
-
-    <br><br>
-    <img src="data:image/png;base64,{qr_base64}">
-
-    <br><br>
-    <a href="/verificar_pagamento">Já paguei</a>
-    """
-
-
-@pagamento_routes.route("/verificar_pagamento")
-def verificar_pagamento():
-    pagamento_id = session.get("pagamento_id")
-
-    if not pagamento_id:
-        return "❌ Pagamento não encontrado"
-
-    pagamento = sdk.payment().get(pagamento_id)
-    status = pagamento["response"]["status"]
-
-    if status == "approved":
         conn = conectar()
         cursor = conn.cursor()
 
         cursor.execute("""
-        SELECT usuario, senha, email, nome_empresa, plano
-        FROM pagamentos
-        WHERE pagamento_id=%s AND status='pendente'
-        """, (pagamento_id,))
+        INSERT INTO pagamentos (usuario, email, senha, nome_empresa, plano, status, pagamento_id)
+        VALUES (%s,%s,%s,%s,%s,'pendente',%s)
+        """, (usuario, email, senha, empresa, plano, pagamento_id))
 
-        user = cursor.fetchone()
-
-        if user:
-            usuario, senha, email, empresa, plano = user
-
-            cursor.execute("""
-            INSERT INTO usuarios (
-                usuario, senha, cargo, online, ativo, email, plano, nome_empresa,
-                pode_estoque, pode_transferencia, pode_historico,
-                pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs
-            )
-            VALUES (%s,%s,'operador',0,1,%s,%s,%s,1,1,1,0,0,0,0)
-            """, (usuario, senha, email, plano, empresa))
-
-            cursor.execute("""
-            UPDATE pagamentos SET status='pago'
-            WHERE pagamento_id=%s
-            """, (pagamento_id,))
-
-            conn.commit()
-
+        conn.commit()
         devolver_conexao(conn)
 
-        return """
-        <h2 style="color:lime">✅ PAGAMENTO APROVADO!</h2>
-        <a href="/">Fazer login</a>
+        session["pagamento_id"] = pagamento_id
+
+        qr_data = resposta.get("point_of_interaction", {}).get("transaction_data", {})
+
+        qr_code = qr_data.get("qr_code", "Erro ao gerar QR")
+        qr_base64 = qr_data.get("qr_code_base64", "")
+
+        return f"""
+        <body style="background:black;color:#00ff00;text-align:center;padding-top:50px;">
+            <h2>💰 PAGAMENTO PIX</h2>
+            <p>Plano: {plano}</p>
+            <p>Valor: R$ {valor}</p>
+
+            <p>Copie o código:</p>
+            <textarea rows=5 cols=60>{qr_code}</textarea>
+
+            <br><br>
+            <img src="data:image/png;base64,{qr_base64}">
+
+            <br><br>
+            <a href="/verificar_pagamento">Já paguei</a>
+        </body>
         """
 
-    return f"""
-    <h2>⏳ Aguardando pagamento...</h2>
-    <p>Status: {status}</p>
-    <a href="/verificar_pagamento">Atualizar</a>
-    """
+    except Exception as e:
+        return f"❌ ERRO INTERNO: {str(e)}"
+
+
+# ================= VERIFICAR PAGAMENTO =================
+@pagamento_routes.route("/verificar_pagamento")
+def verificar_pagamento():
+    try:
+        pagamento_id = session.get("pagamento_id")
+
+        if not pagamento_id:
+            return "❌ Pagamento não encontrado"
+
+        pagamento = sdk.payment().get(pagamento_id)
+        status = pagamento["response"]["status"]
+
+        if status == "approved":
+            conn = conectar()
+            cursor = conn.cursor()
+
+            cursor.execute("""
+            SELECT usuario, senha, email, nome_empresa, plano
+            FROM pagamentos
+            WHERE pagamento_id=%s AND status='pendente'
+            """, (pagamento_id,))
+
+            user = cursor.fetchone()
+
+            if user:
+                usuario, senha, email, empresa, plano = user
+
+                cursor.execute("""
+                INSERT INTO usuarios (
+                    usuario, senha, cargo, online, ativo, email, plano, nome_empresa,
+                    pode_estoque, pode_transferencia, pode_historico,
+                    pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs
+                )
+                VALUES (%s,%s,'operador',0,1,%s,%s,%s,1,1,1,0,0,0,0)
+                """, (usuario, senha, email, plano, empresa))
+
+                cursor.execute("""
+                UPDATE pagamentos SET status='pago'
+                WHERE pagamento_id=%s
+                """, (pagamento_id,))
+
+                conn.commit()
+
+            devolver_conexao(conn)
+
+            return """
+            <body style="background:black;color:#00ff00;text-align:center;padding-top:100px;">
+                <h2>✅ PAGAMENTO APROVADO!</h2>
+                <a href="/">Fazer login</a>
+            </body>
+            """
+
+        return f"""
+        <body style="background:black;color:#00ff00;text-align:center;padding-top:100px;">
+            <h2>⏳ Aguardando pagamento...</h2>
+            <p>Status: {status}</p>
+            <a href="/verificar_pagamento">Atualizar</a>
+        </body>
+        """
+
+    except Exception as e:
+        return f"❌ ERRO AO VERIFICAR: {str(e)}"
