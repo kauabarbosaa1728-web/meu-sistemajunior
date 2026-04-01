@@ -217,7 +217,7 @@ def entrada():
     </div>
     """)
 
-# ================= TRANSFERENCIA (MELHORADA) =================
+# ================= TRANSFERENCIA CORRIGIDA =================
 @estoque_bp.route("/transferencia", methods=["GET","POST"])
 def transferencia():
     if "user" not in session:
@@ -227,11 +227,13 @@ def transferencia():
     cursor = conn.cursor()
     msg=""
 
+    # PRODUTOS
     cursor.execute("SELECT produto FROM estoque")
     produtos = [p[0] for p in cursor.fetchall()]
 
+    # USUÁRIOS (CORRIGIDO)
     try:
-        cursor.execute("SELECT usuario FROM usuarios WHERE ativo=true")
+        cursor.execute("SELECT usuario FROM usuarios")
         usuarios = [u[0] for u in cursor.fetchall()]
     except:
         usuarios = []
@@ -266,24 +268,32 @@ def transferencia():
         else:
             msg="❌ Estoque insuficiente"
 
-    cursor.execute("""
-    SELECT produto, quantidade, destino, usuario, data 
-    FROM transferencias ORDER BY data DESC LIMIT 5
-    """)
-    historico = cursor.fetchall()
+    # HISTÓRICO CORRIGIDO
+    try:
+        cursor.execute("""
+        SELECT produto, quantidade, destino, usuario 
+        FROM transferencias ORDER BY id DESC LIMIT 5
+        """)
+        historico = cursor.fetchall()
+    except:
+        historico = []
 
     lista_produtos = "".join([f"<option value='{p}'>{p}</option>" for p in produtos])
     lista_usuarios = "".join([f"<option value='{u}'>{u}</option>" for u in usuarios])
 
     tabela = ""
-    for p,q,d,u,data in historico:
+    for h in historico:
+        p = h[0]
+        q = h[1]
+        d = h[2]
+        u = h[3]
+
         tabela += f"""
         <tr>
         <td>{p}</td>
         <td>{q}</td>
         <td>{d}</td>
         <td>{u}</td>
-        <td>{data}</td>
         </tr>
         """
 
@@ -329,7 +339,7 @@ def transferencia():
 
     <table>
     <tr>
-    <th>Produto</th><th>Qtd</th><th>Destino</th><th>Usuário</th><th>Data</th>
+    <th>Produto</th><th>Qtd</th><th>Destino</th><th>Usuário</th>
     </tr>
     {tabela}
     </table>
