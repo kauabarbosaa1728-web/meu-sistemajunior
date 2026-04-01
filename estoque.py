@@ -2,402 +2,222 @@ from flask import Blueprint, request, redirect, session
 from banco import conectar, devolver_conexao, registrar_log
 from layout import container, acesso_negado, tem_permissao
 
-estoque_bp = Blueprint("estoque_bp", __name__)
+estoque_bp = Blueprint("estoque_bp", **name**)
+
+# ================= ESTOQUE =================
 
 @estoque_bp.route("/estoque", methods=["GET", "POST"])
 def estoque():
-    if "user" not in session:
-        return redirect("/")
+if "user" not in session:
+return redirect("/")
 
-    if not tem_permissao("pode_estoque"):
-        return acesso_negado()
+```
+if not tem_permissao("pode_estoque"):
+    return acesso_negado()
 
-    conn = None
+conn = conectar()
+cursor = conn.cursor()
+mensagem = ""
+
+# ===== CADASTRAR =====
+if request.method == "POST":
+    produto = request.form["produto"].strip()
+    qtd = request.form["qtd"].strip()
+    categoria = request.form["categoria"].strip()
+
     try:
-        conn = conectar()
-        cursor = conn.cursor()
-        mensagem = ""
+        qtd_int = int(qtd)
 
-        if request.method == "POST":
-            produto = request.form["produto"].strip()
-            qtd = request.form["qtd"].strip()
-            categoria = request.form["categoria"].strip()
-
-            if not produto or not qtd or not categoria:
-                mensagem = "Preencha todos os campos."
-            else:
-                try:
-                    qtd_int = int(qtd)
-                    if qtd_int < 0:
-                        mensagem = "A quantidade não pode ser negativa."
-                    else:
-                        cursor.execute("""
-                        INSERT INTO estoque (produto, quantidade, categoria)
-                        VALUES (%s, %s, %s)
-                        """, (produto, qtd_int, categoria))
-                        conn.commit()
-                        mensagem = "Produto adicionado com sucesso."
-                        registrar_log(session["user"], "adicionar_estoque", f"Produto: {produto} | Qtd: {qtd_int} | Categoria: {categoria}")
-                except:
-                    mensagem = "Quantidade inválida."
-
-        busca = request.args.get("busca", "").strip()
-
-        if busca:
-            cursor.execute("""
-            SELECT id, produto, quantidade, categoria
-            FROM estoque
-            WHERE produto ILIKE %s OR categoria ILIKE %s
-            ORDER BY id DESC
-            """, (f"%{busca}%", f"%{busca}%"))
+        if qtd_int < 0:
+            mensagem = "Quantidade inválida."
         else:
             cursor.execute("""
-            SELECT id, produto, quantidade, categoria
-            FROM estoque
-            ORDER BY id DESC
-            """)
+            INSERT INTO estoque (produto, quantidade, categoria)
+            VALUES (%s, %s, %s)
+            """, (produto, qtd_int, categoria))
+            conn.commit()
 
-        dados = cursor.fetchall()
+            registrar_log(session["user"], "add_estoque", produto)
 
-        tabela = ""
-        for i, p, q, c in dados:
-            acoes = ""
-            if tem_permissao("pode_editar_estoque"):
-                acoes += f'<a href="/editar_estoque/{i}" class="btn-warning">Editar</a>'
-            if tem_permissao("pode_excluir_estoque"):
-                acoes += f'<a href="/excluir_estoque/{i}" class="btn-danger" onclick="return confirm(\'Deseja excluir este item?\')">Excluir</a>'
-            if not acoes:
-                acoes = "Sem permissão"
+            mensagem = "Produto adicionado com sucesso."
 
-            tabela += f"""
-            <tr>
-                <td>{i}</td>
-                <td>{p}</td>
-                <td>{q}</td>
-                <td>{c}</td>
-                <td>{acoes}</td>
-            </tr>
-            """
+    except:
+        mensagem = "Erro ao cadastrar."
 
-        return container(f"""
-        <div class="card">
-            <h2>📦 ESTOQUE</h2>
+# ===== BUSCA =====
+busca = request.args.get("busca", "")
 
-            <form method="POST">
-                <input name="produto" placeholder="Produto" required>
-                <input name="qtd" placeholder="Quantidade" required>
-                <input name="categoria" placeholder="Categoria" required>
-                <button>Adicionar</button>
-            </form>
+if busca:
+    cursor.execute("""
+    SELECT * FROM estoque WHERE produto ILIKE %s
+    """, (f"%{busca}%",))
+else:
+    cursor.execute("SELECT * FROM estoque")
 
-            <div class="mensagem">{mensagem}</div>
-        </div>
+dados = cursor.fetchall()
 
-        <div class="card">
-            <form method="GET">
-                <input name="busca" placeholder="Buscar por produto ou categoria" value="{busca}">
-                <button>Pesquisar</button>
-                <a href="/estoque">Limpar</a>
-            </form>
+# ===== ALERTA =====
+alerta = ""
+for item in dados:
+    if item[2] <= 10:
+        alerta += f"<p style='color:red;'>⚠ {item[1]} com estoque baixo ({item[2]})</p>"
 
-            <table>
-                <tr>
-                    <th>ID</th>
-                    <th>Produto</th>
-                    <th>Qtd</th>
-                    <th>Categoria</th>
-                    <th>Ações</th>
-                </tr>
-                {tabela}
-            </table>
-        </div>
-        """)
-    except Exception as e:
-        return container(f'<div class="card"><h2 class="erro">Erro no estoque: {e}</h2></div>')
-    finally:
-        devolver_conexao(conn)
+tabela = ""
+for item in dados:
+    acoes = ""
 
-@estoque_bp.route("/editar_estoque/<int:item_id>", methods=["GET", "POST"])
-def editar_estoque(item_id):
-    if "user" not in session:
-        return redirect("/")
+    if tem_permissao("pode_editar_estoque"):
+        acoes += f"<a href='/editar_estoque/{item[0]}'>Editar</a> "
 
-    if not tem_permissao("pode_editar_estoque"):
-        return acesso_negado()
+    if tem_permissao("pode_excluir_estoque"):
+        acoes += f"<a href='/excluir_estoque/{item[0]}'>Excluir</a>"
 
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-        mensagem = ""
+    tabela += f"""
+    <tr>
+        <td>{item[1]}</td>
+        <td>{item[2]}</td>
+        <td>{item[3]}</td>
+        <td>{acoes}</td>
+    </tr>
+    """
 
-        cursor.execute("SELECT id, produto, quantidade, categoria FROM estoque WHERE id=%s", (item_id,))
-        dado = cursor.fetchone()
+devolver_conexao(conn)
 
-        if not dado:
-            return container("<div class='card'><h2>Item não encontrado.</h2></div>")
+return container(f"""
+<div class="card">
+    <h2>📦 ESTOQUE</h2>
 
-        i, p_antigo, q_antigo, c_antigo = dado
+    {alerta}
 
-        if request.method == "POST":
-            produto = request.form["produto"].strip()
-            qtd = request.form["qtd"].strip()
-            categoria = request.form["categoria"].strip()
+    <form method="POST">
+        <input name="produto" placeholder="Produto" required>
+        <input name="qtd" placeholder="Quantidade" required>
+        <input name="categoria" placeholder="Categoria" required>
+        <button>Adicionar</button>
+    </form>
 
-            try:
-                qtd_int = int(qtd)
-                if qtd_int < 0:
-                    mensagem = "A quantidade não pode ser negativa."
-                else:
-                    cursor.execute("""
-                    UPDATE estoque
-                    SET produto=%s, quantidade=%s, categoria=%s
-                    WHERE id=%s
-                    """, (produto, qtd_int, categoria, item_id))
-                    conn.commit()
-                    registrar_log(
-                        session["user"],
-                        "editar_estoque",
-                        f"ID: {item_id} | Antes: {p_antigo}/{q_antigo}/{c_antigo} | Depois: {produto}/{qtd_int}/{categoria}"
-                    )
-                    return redirect("/estoque")
-            except:
-                mensagem = "Quantidade inválida."
+    <p>{mensagem}</p>
+</div>
 
-        return container(f"""
-        <div class="card">
-            <h2>✏️ EDITAR ESTOQUE</h2>
-            <form method="POST">
-                <input name="produto" value="{p_antigo}" placeholder="Produto" required>
-                <input name="qtd" value="{q_antigo}" placeholder="Quantidade" required>
-                <input name="categoria" value="{c_antigo}" placeholder="Categoria" required>
-                <button>Salvar alterações</button>
-            </form>
-            <div class="mensagem">{mensagem}</div>
-            <p><a href="/estoque">⬅ Voltar</a></p>
-        </div>
-        """)
-    except Exception as e:
-        return container(f'<div class="card"><h2 class="erro">Erro ao editar estoque: {e}</h2></div>')
-    finally:
-        devolver_conexao(conn)
+<div class="card">
+    <form method="GET">
+        <input name="busca" placeholder="Buscar produto">
+        <button>Buscar</button>
+    </form>
 
-@estoque_bp.route("/excluir_estoque/<int:item_id>")
-def excluir_estoque(item_id):
-    if "user" not in session:
-        return redirect("/")
+    <table>
+        <tr>
+            <th>Produto</th>
+            <th>Qtd</th>
+            <th>Categoria</th>
+            <th>Ações</th>
+        </tr>
+        {tabela}
+    </table>
+</div>
+""")
+```
 
-    if not tem_permissao("pode_excluir_estoque"):
-        return acesso_negado()
+# ================= EXCLUIR =================
 
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
+@estoque_bp.route("/excluir_estoque/[int:id](int:id)")
+def excluir(id):
+if not tem_permissao("pode_excluir_estoque"):
+return acesso_negado()
 
-        cursor.execute("SELECT produto, quantidade, categoria FROM estoque WHERE id=%s", (item_id,))
-        dado = cursor.fetchone()
+```
+conn = conectar()
+cursor = conn.cursor()
 
-        cursor.execute("DELETE FROM estoque WHERE id=%s", (item_id,))
-        conn.commit()
+cursor.execute("DELETE FROM estoque WHERE id=%s", (id,))
+conn.commit()
 
-        if dado:
-            registrar_log(session["user"], "excluir_estoque", f"ID: {item_id} | Produto: {dado[0]} | Qtd: {dado[1]} | Categoria: {dado[2]}")
+registrar_log(session["user"], "delete_estoque", str(id))
 
-        return redirect("/estoque")
-    except Exception as e:
-        return container(f'<div class="card"><h2 class="erro">Erro ao excluir item: {e}</h2></div>')
-    finally:
-        devolver_conexao(conn)
+devolver_conexao(conn)
+return redirect("/estoque")
+```
+
+# ================= TRANSFERÊNCIA =================
 
 @estoque_bp.route("/transferencia", methods=["GET", "POST"])
 def transferencia():
-    if "user" not in session:
-        return redirect("/")
+if not tem_permissao("pode_transferencia"):
+return acesso_negado()
 
-    if not tem_permissao("pode_transferencia"):
-        return acesso_negado()
+```
+conn = conectar()
+cursor = conn.cursor()
+mensagem = ""
 
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-        mensagem = ""
+if request.method == "POST":
+    produto = request.form["produto"]
+    qtd = int(request.form["qtd"])
 
-        if request.method == "POST":
-            produto = request.form["produto"].strip()
-            qtd = request.form["qtd"].strip()
-            origem = request.form["origem"].strip()
-            destino = request.form["destino"].strip()
+    cursor.execute("SELECT quantidade FROM estoque WHERE produto=%s", (produto,))
+    dado = cursor.fetchone()
 
-            try:
-                qtd_int = int(qtd)
+    if dado and dado[0] >= qtd:
+        nova = dado[0] - qtd
 
-                if qtd_int <= 0:
-                    mensagem = "Informe uma quantidade válida."
-                else:
-                    cursor.execute("SELECT id, quantidade FROM estoque WHERE produto=%s ORDER BY id LIMIT 1", (produto,))
-                    item = cursor.fetchone()
+        cursor.execute("UPDATE estoque SET quantidade=%s WHERE produto=%s", (nova, produto))
+        conn.commit()
 
-                    if not item:
-                        mensagem = "Produto não encontrado no estoque."
-                    else:
-                        estoque_id, qtd_atual = item
+        registrar_log(session["user"], "transferencia", produto)
 
-                        if qtd_int > qtd_atual:
-                            mensagem = "Quantidade insuficiente no estoque."
-                        else:
-                            nova_qtd = qtd_atual - qtd_int
+        mensagem = "Transferência feita"
+    else:
+        mensagem = "Erro na transferência"
 
-                            cursor.execute("""
-                            UPDATE estoque
-                            SET quantidade=%s
-                            WHERE id=%s
-                            """, (nova_qtd, estoque_id))
+devolver_conexao(conn)
 
-                            cursor.execute("""
-                            INSERT INTO transferencias (produto, quantidade, origem, destino, usuario)
-                            VALUES (%s,%s,%s,%s,%s)
-                            """, (
-                                produto,
-                                qtd_int,
-                                origem,
-                                destino,
-                                session["user"]
-                            ))
+return container(f"""
+<div class="card">
+    <h2>🔄 Transferência</h2>
 
-                            conn.commit()
-                            mensagem = "Transferência realizada com sucesso."
-                            registrar_log(session["user"], "transferencia", f"Produto: {produto} | Qtd: {qtd_int} | Origem: {origem} | Destino: {destino}")
-            except:
-                mensagem = "Quantidade inválida."
+    <form method="POST">
+        <input name="produto" placeholder="Produto">
+        <input name="qtd" placeholder="Quantidade">
+        <button>Transferir</button>
+    </form>
 
-        return container(f"""
-        <div class="card">
-            <h2>🔄 TRANSFERÊNCIA</h2>
+    <p>{mensagem}</p>
+</div>
+""")
+```
 
-            <form method="POST">
-                <input name="produto" placeholder="Produto" required>
-                <input name="qtd" placeholder="Quantidade" required>
-                <input name="origem" placeholder="Origem" required>
-                <input name="destino" placeholder="Destino" required>
-                <button>Transferir</button>
-            </form>
-
-            <div class="mensagem">{mensagem}</div>
-        </div>
-        """)
-    except Exception as e:
-        return container(f'<div class="card"><h2 class="erro">Erro na transferência: {e}</h2></div>')
-    finally:
-        devolver_conexao(conn)
-
-@estoque_bp.route("/historico")
-def historico():
-    if "user" not in session:
-        return redirect("/")
-
-    if not tem_permissao("pode_historico"):
-        return acesso_negado()
-
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        SELECT produto, quantidade, origem, destino, usuario, data
-        FROM transferencias
-        ORDER BY data DESC
-        """)
-        dados = cursor.fetchall()
-
-        tabela = ""
-        for p, q, o, d, u, dt in dados:
-            tabela += f"""
-            <tr>
-                <td>{p}</td>
-                <td>{q}</td>
-                <td>{o}</td>
-                <td>{d}</td>
-                <td>{u}</td>
-                <td>{dt}</td>
-            </tr>
-            """
-
-        return container(f"""
-        <div class="card">
-            <h2>📜 HISTÓRICO DE TRANSFERÊNCIAS</h2>
-
-            <table>
-                <tr>
-                    <th>Produto</th>
-                    <th>Qtd</th>
-                    <th>Origem</th>
-                    <th>Destino</th>
-                    <th>Usuário</th>
-                    <th>Data</th>
-                </tr>
-                {tabela}
-            </table>
-        </div>
-        """)
-    except Exception as e:
-        return container(f'<div class="card"><h2 class="erro">Erro no histórico: {e}</h2></div>')
-    finally:
-        devolver_conexao(conn)
+# ================= LOGS =================
 
 @estoque_bp.route("/logs")
 def logs():
-    if "user" not in session:
-        return redirect("/")
+if not tem_permissao("pode_logs"):
+return acesso_negado()
 
-    if not tem_permissao("pode_logs"):
-        return acesso_negado()
+```
+conn = conectar()
+cursor = conn.cursor()
 
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
+cursor.execute("SELECT * FROM logs ORDER BY id DESC LIMIT 100")
+dados = cursor.fetchall()
 
-        cursor.execute("""
-        SELECT id, usuario, acao, detalhes, data
-        FROM logs
-        ORDER BY data DESC, id DESC
-        LIMIT 300
-        """)
-        dados = cursor.fetchall()
+tabela = ""
+for l in dados:
+    tabela += f"<tr><td>{l[1]}</td><td>{l[2]}</td><td>{l[3]}</td></tr>"
 
-        tabela = ""
-        for i, u, a, d, dt in dados:
-            tabela += f"""
-            <tr>
-                <td>{i}</td>
-                <td>{u}</td>
-                <td>{a}</td>
-                <td>{d}</td>
-                <td>{dt}</td>
-            </tr>
-            """
+devolver_conexao(conn)
 
-        return container(f"""
-        <div class="card">
-            <h2>📋 LOGS DO SISTEMA</h2>
-            <p>Aqui ficam registradas as ações importantes realizadas no sistema.</p>
+return container(f"""
+<div class="card">
+    <h2>📋 LOGS</h2>
 
-            <table>
-                <tr>
-                    <th>ID</th>
-                    <th>Usuário</th>
-                    <th>Ação</th>
-                    <th>Detalhes</th>
-                    <th>Data</th>
-                </tr>
-                {tabela}
-            </table>
-        </div>
-        """)
-    except Exception as e:
-        return container(f'<div class="card"><h2 class="erro">Erro nos logs: {e}</h2></div>')
-    finally:
-        devolver_conexao(conn)
+    <table>
+        <tr>
+            <th>Usuário</th>
+            <th>Ação</th>
+            <th>Detalhes</th>
+        </tr>
+        {tabela}
+    </table>
+</div>
+""")
+```
