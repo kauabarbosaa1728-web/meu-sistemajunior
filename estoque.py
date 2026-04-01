@@ -34,8 +34,8 @@ def estoque():
                 conn.commit()
                 registrar_log(session["user"], "add_estoque", produto)
                 msg = "✅ Adicionado"
-            except:
-                msg = "❌ Erro"
+            except Exception as e:
+                msg = f"❌ Erro: {e}"
         else:
             msg = "❌ Preencha tudo"
 
@@ -60,6 +60,8 @@ def estoque():
     <div class="card">
     <h2>📦 ESTOQUE</h2>
 
+    <a href="/entrada">➕ Entrada de Produtos</a>
+
     <form method="POST">
     <input name="produto" placeholder="Produto">
     <input name="qtd" placeholder="Qtd">
@@ -76,44 +78,69 @@ def estoque():
     </div>
     """)
 
-# ================= EDITAR =================
-@estoque_bp.route("/editar_estoque/<int:id>", methods=["GET","POST"])
-def editar(id):
+# ================= ENTRADA DE PRODUTOS =================
+@estoque_bp.route("/entrada", methods=["GET", "POST"])
+def entrada():
+    if "user" not in session:
+        return redirect("/")
+
+    if not tem_permissao("pode_estoque"):
+        return acesso_negado()
+
     conn = conectar()
     cursor = conn.cursor()
+    msg = ""
 
     if request.method == "POST":
-        cursor.execute("UPDATE estoque SET produto=%s, quantidade=%s, categoria=%s WHERE id=%s",
-        (request.form["produto"], request.form["qtd"], request.form["categoria"], id))
-        conn.commit()
-        devolver_conexao(conn)
-        return redirect("/estoque")
+        produto = request.form.get("produto")
+        qtd = request.form.get("qtd")
+        valor = request.form.get("valor")
+        fornecedor = request.form.get("fornecedor")
 
-    cursor.execute("SELECT produto, quantidade, categoria FROM estoque WHERE id=%s",(id,))
-    p,q,c = cursor.fetchone()
+        try:
+            qtd = int(qtd)
+            valor = float(valor)
+
+            cursor.execute("SELECT quantidade FROM estoque WHERE produto=%s", (produto,))
+            dado = cursor.fetchone()
+
+            if dado:
+                nova_qtd = dado[0] + qtd
+                cursor.execute("UPDATE estoque SET quantidade=%s WHERE produto=%s", (nova_qtd, produto))
+            else:
+                cursor.execute("INSERT INTO estoque (produto, quantidade, categoria) VALUES (%s,%s,%s)", (produto, qtd, "entrada"))
+
+            cursor.execute("""
+            INSERT INTO entradas (produto, quantidade, valor, fornecedor, usuario)
+            VALUES (%s,%s,%s,%s,%s)
+            """, (produto, qtd, valor, fornecedor, session["user"]))
+
+            conn.commit()
+            registrar_log(session["user"], "entrada_produto", f"{produto} +{qtd}")
+
+            msg = "✅ Entrada registrada com sucesso"
+
+        except Exception as e:
+            conn.rollback()
+            msg = f"❌ Erro: {e}"
+
     devolver_conexao(conn)
 
     return container(f"""
     <div class="card">
-    <h2>Editar</h2>
-    <form method="POST">
-    <input name="produto" value="{p}">
-    <input name="qtd" value="{q}">
-    <input name="categoria" value="{c}">
-    <button>Salvar</button>
-    </form>
+        <h2>📥 ENTRADA DE PRODUTOS</h2>
+
+        <form method="POST">
+            <input name="produto" placeholder="Produto" required>
+            <input name="qtd" placeholder="Quantidade" required>
+            <input name="valor" placeholder="Valor unitário (R$)" required>
+            <input name="fornecedor" placeholder="Fornecedor / Loja" required>
+            <button>Registrar Entrada</button>
+        </form>
+
+        <p>{msg}</p>
     </div>
     """)
-
-# ================= EXCLUIR =================
-@estoque_bp.route("/excluir_estoque/<int:id>")
-def excluir(id):
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM estoque WHERE id=%s",(id,))
-    conn.commit()
-    devolver_conexao(conn)
-    return redirect("/estoque")
 
 # ================= TRANSFERENCIA =================
 @estoque_bp.route("/transferencia", methods=["GET","POST"])
@@ -216,72 +243,3 @@ def excel():
 
     devolver_conexao(conn)
     return redirect("/historico")
-    # ================= ENTRADA DE PRODUTOS =================
-@estoque_bp.route("/entrada", methods=["GET", "POST"])
-def entrada():
-    if "user" not in session:
-        return redirect("/")
-
-    if not tem_permissao("pode_estoque"):
-        return acesso_negado()
-
-    conn = conectar()
-    cursor = conn.cursor()
-    msg = ""
-
-    if request.method == "POST":
-        produto = request.form.get("produto")
-        qtd = request.form.get("qtd")
-        valor = request.form.get("valor")
-        fornecedor = request.form.get("fornecedor")
-
-        try:
-            qtd = int(qtd)
-            valor = float(valor)
-
-            # verifica se já existe no estoque
-            cursor.execute("SELECT quantidade FROM estoque WHERE produto=%s", (produto,))
-            dado = cursor.fetchone()
-
-            if dado:
-                nova_qtd = dado[0] + qtd
-                cursor.execute("UPDATE estoque SET quantidade=%s WHERE produto=%s", (nova_qtd, produto))
-            else:
-                cursor.execute("""
-                INSERT INTO estoque (produto, quantidade, categoria)
-                VALUES (%s, %s, %s)
-                """, (produto, qtd, "entrada"))
-
-            # salva histórico da entrada
-            cursor.execute("""
-            INSERT INTO entradas (produto, quantidade, valor, fornecedor, usuario)
-            VALUES (%s, %s, %s, %s, %s)
-            """, (produto, qtd, valor, fornecedor, session["user"]))
-
-            conn.commit()
-
-            registrar_log(session["user"], "entrada_produto", f"{produto} +{qtd}")
-
-            msg = "✅ Entrada registrada com sucesso"
-
-        except Exception as e:
-            conn.rollback()
-            msg = f"❌ Erro: {str(e)}"
-
-    devolver_conexao(conn)
-
-    return container(f"""
-    <div class="card">
-        <h2>📥 ENTRADA DE PRODUTOS</h2>
-
-        <form method="POST">
-            <input name="produto" placeholder="Produto" required>
-            <input name="qtd" placeholder="Quantidade" required>
-            <input name="valor" placeholder="Valor unitário (R$)" required>
-            <input name="fornecedor" placeholder="Fornecedor / Loja" required>
-            <button>Registrar Entrada</button>
-        </form>
-
-        <p>{msg}</p>
-    </div>
-    """)
