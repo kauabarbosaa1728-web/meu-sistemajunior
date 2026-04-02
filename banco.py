@@ -231,3 +231,32 @@ def criar_banco():
         if cursor:
             cursor.close()
         devolver_conexao(conn)
+        from datetime import datetime
+
+def verificar_pagamento(user):
+    conn = None
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT data_pagamento FROM usuarios WHERE usuario=%s", (user,))
+        dado = cursor.fetchone()
+
+        if not dado or not dado[0]:
+            return "bloqueado"
+
+        data_pagamento = dado[0]
+        hoje = datetime.now()
+
+        dias = (hoje - data_pagamento).days
+
+        if dias <= 30:
+            return "ok"
+        elif dias <= 35:
+            return "aviso"
+        else:
+            return "bloqueado"
+
+    finally:
+        if conn:
+            devolver_conexao(conn)
