@@ -81,18 +81,20 @@ def criar_pagamento():
 {qr.get("qr_code", "erro")}
                 </textarea>
 
-                <p style="font-size:12px;">Aguardando pagamento automático...</p>
+                <h3 id="status">⏳ Aguardando pagamento...</h3>
 
                 <script>
-                setInterval(() => {{
-                    fetch("/verificar_pagamento")
-                    .then(res => res.text())
-                    .then(html => {{
-                        if(html.includes("Pagamento aprovado")) {{
-                            location.href = "/";
-                        }}
-                    }});
-                }}, 5000);
+                async function verificar() {{
+                    const res = await fetch('/verificar_pagamento_auto');
+                    const txt = await res.text();
+
+                    if (txt.includes("APROVADO")) {{
+                        document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO!";
+                        setTimeout(() => window.location.href = "/", 2000);
+                    }}
+                }}
+
+                setInterval(verificar, 3000);
                 </script>
 
             </div>
@@ -103,59 +105,9 @@ def criar_pagamento():
         return f"❌ ERRO: {str(e)}"
 
 
-# ================= WEBHOOK =================
-@pagamento_routes.route("/webhook", methods=["POST"])
-def webhook():
-    try:
-        data = request.json
-
-        if "data" in data and "id" in data["data"]:
-            pagamento_id = data["data"]["id"]
-
-            pagamento = sdk.payment().get(pagamento_id)
-            status = pagamento["response"]["status"]
-
-            if status == "approved":
-                conn = conectar()
-                cursor = conn.cursor()
-
-                cursor.execute("""
-                SELECT usuario, senha, email, nome_empresa, plano
-                FROM pagamentos
-                WHERE pagamento_id=%s AND status='pendente'
-                """, (pagamento_id,))
-
-                user = cursor.fetchone()
-
-                if user:
-                    usuario, senha, email, empresa, plano = user
-
-                    cursor.execute("""
-                    INSERT INTO usuarios (
-                        usuario, senha, cargo, online, ativo, email, plano, nome_empresa,
-                        pode_estoque, pode_transferencia, pode_historico
-                    )
-                    VALUES (%s,%s,'operador',0,1,%s,%s,%s,1,1,1)
-                    """, (usuario, senha, email, plano, empresa))
-
-                    cursor.execute("""
-                    UPDATE pagamentos SET status='pago'
-                    WHERE pagamento_id=%s
-                    """, (pagamento_id,))
-
-                    conn.commit()
-
-                devolver_conexao(conn)
-
-        return "OK", 200
-
-    except Exception as e:
-        return str(e), 500
-
-
-# ================= VERIFICAR =================
-@pagamento_routes.route("/verificar_pagamento")
-def verificar_pagamento():
+# ================= VERIFICAÇÃO AUTOMÁTICA =================
+@pagamento_routes.route("/verificar_pagamento_auto")
+def verificar_pagamento_auto():
     try:
         pagamento_id = session.get("pagamento_id")
 
@@ -166,11 +118,42 @@ def verificar_pagamento():
         status = pagamento["response"]["status"]
 
         if status == "approved":
-            return "Pagamento aprovado"
+            conn = conectar()
+            cursor = conn.cursor()
 
-        return "Aguardando"
+            cursor.execute("""
+            SELECT usuario, senha, email, nome_empresa, plano
+            FROM pagamentos
+            WHERE pagamento_id=%s AND status='pendente'
+            """, (pagamento_id,))
 
-    except:
+            user = cursor.fetchone()
+
+            if user:
+                usuario, senha, email, empresa, plano = user
+
+                cursor.execute("""
+                INSERT INTO usuarios (
+                    usuario, senha, cargo, online, ativo, email, plano, nome_empresa,
+                    pode_estoque, pode_transferencia, pode_historico
+                )
+                VALUES (%s,%s,'operador',0,1,%s,%s,%s,1,1,1)
+                """, (usuario, senha, email, plano, empresa))
+
+                cursor.execute("""
+                UPDATE pagamentos SET status='pago'
+                WHERE pagamento_id=%s
+                """, (pagamento_id,))
+
+                conn.commit()
+
+            devolver_conexao(conn)
+
+            return "APROVADO"
+
+        return "aguardando"
+
+    except Exception as e:
         return "erro"
 
 
