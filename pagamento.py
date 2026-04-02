@@ -3,14 +3,10 @@ import mercadopago
 from banco import conectar, devolver_conexao
 from werkzeug.security import generate_password_hash
 
-# ✅ CORRETO
 pagamento_routes = Blueprint("pagamento", __name__)
 
-# 🔐 TOKEN
 sdk = mercadopago.SDK("APP_USR-6569039713831543-033108-32073b03704b3b93eac080da1fe1d0f7-1249023990")
 
-
-# ================= VALOR DOS PLANOS =================
 def valor_plano(plano):
     return {
         "basico": 39.90,
@@ -19,7 +15,7 @@ def valor_plano(plano):
     }.get(plano, 39.90)
 
 
-# ================= CRIAR PAGAMENTO PIX =================
+# ================= CRIAR PAGAMENTO =================
 @pagamento_routes.route("/criar_pagamento", methods=["POST"])
 def criar_pagamento():
     try:
@@ -48,12 +44,8 @@ def criar_pagamento():
         pagamento = sdk.payment().create(payment_data)
         resposta = pagamento.get("response", {})
 
-        # 🔥 CORREÇÃO DO ERRO 'id'
         if "id" not in resposta:
-            return f"""
-            <h2>❌ ERRO NO MERCADO PAGO</h2>
-            <pre>{resposta}</pre>
-            """
+            return f"<pre>{resposta}</pre>"
 
         pagamento_id = resposta["id"]
 
@@ -72,18 +64,34 @@ def criar_pagamento():
 
         qr = resposta.get("point_of_interaction", {}).get("transaction_data", {})
 
+        # 🔥 NOVA TELA BONITA
         return f"""
-        <body style="background:black;color:#00ff00;text-align:center;padding-top:50px;">
-        <h2>💰 PAGAMENTO PIX</h2>
-        <p>Plano: {plano}</p>
-        <p>Valor: R$ {valor}</p>
+        <body style="margin:0;background:#000;color:#d1d5db;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;">
+        
+            <div style="width:420px;background:#0a0a0a;padding:30px;border-radius:14px;border:1px solid #2a2a2a;text-align:center;box-shadow:0 0 20px #000;">
+                
+                <h2 style="color:#ffffff;">Pagamento PIX</h2>
+                <p style="color:#9ca3af;">Plano: {plano}</p>
+                <p style="color:#9ca3af;">Valor: R$ {valor}</p>
 
-        <p>Copie o código:</p>
-        <textarea rows=5 cols=60>{qr.get("qr_code", "erro")}</textarea><br><br>
+                <img src="data:image/png;base64,{qr.get("qr_code_base64", "")}"
+                style="width:220px;margin:20px 0;border-radius:10px;border:1px solid #333;">
 
-        <img src="data:image/png;base64,{qr.get("qr_code_base64", "")}"><br><br>
+                <textarea style="width:100%;background:#111;color:#fff;border:1px solid #333;padding:10px;border-radius:6px;">
+{qr.get("qr_code", "erro")}
+                </textarea>
 
-        <a href="/verificar_pagamento">Já paguei</a>
+                <form action="/verificar_pagamento">
+                    <button style="width:100%;padding:12px;margin-top:15px;background:#1f1f1f;border:1px solid #444;color:#fff;border-radius:8px;">
+                        Já paguei
+                    </button>
+                </form>
+
+                <p style="margin-top:10px;color:#6b7280;font-size:12px;">
+                    Após pagar, clique no botão acima
+                </p>
+
+            </div>
         </body>
         """
 
@@ -91,7 +99,7 @@ def criar_pagamento():
         return f"❌ ERRO: {str(e)}"
 
 
-# ================= VERIFICAR PAGAMENTO =================
+# ================= VERIFICAR =================
 @pagamento_routes.route("/verificar_pagamento")
 def verificar_pagamento():
     try:
@@ -136,15 +144,15 @@ def verificar_pagamento():
             devolver_conexao(conn)
 
             return """
-            <body style="background:black;color:#00ff00;text-align:center;padding-top:100px;">
-            <h2>✅ PAGAMENTO APROVADO!</h2>
-            <a href="/">Fazer login</a>
+            <body style="background:#000;color:#00ff00;text-align:center;padding-top:100px;">
+            <h2>Pagamento aprovado!</h2>
+            <a href="/">Entrar no sistema</a>
             </body>
             """
 
         return f"""
-        <body style="background:black;color:#00ff00;text-align:center;padding-top:100px;">
-        <h2>⏳ Aguardando pagamento...</h2>
+        <body style="background:#000;color:#d1d5db;text-align:center;padding-top:100px;">
+        <h2>Aguardando pagamento...</h2>
         <p>Status: {status}</p>
         <a href="/verificar_pagamento">Atualizar</a>
         </body>
