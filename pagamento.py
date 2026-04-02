@@ -5,7 +5,7 @@ from werkzeug.security import generate_password_hash
 
 pagamento_routes = Blueprint("pagamento", __name__)
 
-sdk = mercadopago.SDK("APP_USR-6569039713831543-033108-32073b03704b3b93eac080da1fe1d0f7-1249023990")  # ⚠️ coloca seu token aqui
+sdk = mercadopago.SDK("APP_USR-6569039713831543-033108-32073b03704b3b93eac080da1fe1d0f7-1249023990")
 
 
 # ================= VALORES =================
@@ -15,6 +15,41 @@ def valor_plano(plano):
         "profissional": 79.90,
         "premium": 129.90
     }.get(plano, 39.90)
+
+
+# ================= PAGAR (BOTÃO DO BLOQUEIO) =================
+@pagamento_routes.route("/pagar")
+def pagar():
+    if "user" not in session:
+        return "Faça login"
+
+    return f"""
+    <body style="background:#000;color:#d1d5db;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;">
+        <div style="background:#0a0a0a;padding:30px;border-radius:14px;border:1px solid #2a2a2a;text-align:center;width:400px;">
+            
+            <h2>💰 Regularizar pagamento</h2>
+
+            <form method="POST" action="/criar_pagamento">
+                <input type="hidden" name="user" value="{session['user']}">
+                <input type="hidden" name="email" value="kaua@gmail.com">
+                <input type="hidden" name="senha" value="123456">
+
+                <select name="plano" style="width:100%;padding:10px;margin:10px 0;background:#111;color:#fff;">
+                    <option value="basico">Básico - R$39,90</option>
+                    <option value="profissional">Profissional - R$79,90</option>
+                    <option value="premium">Premium - R$129,90</option>
+                </select>
+
+                <input type="hidden" name="nome_empresa" value="KBSISTEMAS">
+
+                <button style="width:100%;padding:15px;background:#00ff00;border:none;font-size:18px;cursor:pointer;">
+                    🔥 Gerar PIX
+                </button>
+            </form>
+
+        </div>
+    </body>
+    """
 
 
 # ================= CRIAR PAGAMENTO =================
@@ -71,14 +106,14 @@ def criar_pagamento():
         
             <div style="width:420px;background:#0a0a0a;padding:30px;border-radius:14px;border:1px solid #2a2a2a;text-align:center;">
                 
-                <h2 style="color:#fff;">Pagamento PIX</h2>
+                <h2>Pagamento PIX</h2>
                 <p>Plano: {plano}</p>
                 <p>Valor: R$ {valor}</p>
 
                 <img src="data:image/png;base64,{qr.get("qr_code_base64", "")}" style="width:220px;margin:20px 0;">
 
                 <textarea style="width:100%;background:#111;color:#fff;border:1px solid #333;padding:10px;">
-{qr.get("qr_code", "erro")}
+{qr.get("qr_code", "")}
                 </textarea>
 
                 <h3 id="status">⏳ Aguardando pagamento...</h3>
@@ -105,7 +140,7 @@ def criar_pagamento():
         return f"❌ ERRO: {str(e)}"
 
 
-# ================= VERIFICAÇÃO AUTOMÁTICA =================
+# ================= VERIFICAR =================
 @pagamento_routes.route("/verificar_pagamento_auto")
 def verificar_pagamento_auto():
     try:
@@ -155,24 +190,3 @@ def verificar_pagamento_auto():
 
     except Exception as e:
         return "erro"
-
-
-# ================= PAINEL =================
-@pagamento_routes.route("/mensalidades")
-def mensalidades():
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT usuario, plano, status FROM pagamentos ORDER BY id DESC")
-    dados = cursor.fetchall()
-
-    html = "<h2>Mensalidades</h2><table border=1><tr><th>User</th><th>Plano</th><th>Status</th></tr>"
-
-    for u,p,s in dados:
-        html += f"<tr><td>{u}</td><td>{p}</td><td>{s}</td></tr>"
-
-    html += "</table>"
-
-    devolver_conexao(conn)
-
-    return f"<body style='background:#000;color:#fff'>{html}</body>"
