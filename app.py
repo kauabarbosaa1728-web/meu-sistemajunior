@@ -20,7 +20,7 @@ criar_banco()
 # ================= BLOQUEIO GLOBAL =================
 @app.before_request
 def bloquear_sistema():
-    rotas_livres = ["/", "/login", "/criar_pagamento", "/webhook"]
+    rotas_livres = ["/", "/login", "/criar_pagamento", "/webhook", "/pagar"]
 
     if "user" not in session:
         return
@@ -32,13 +32,55 @@ def bloquear_sistema():
 
     if status == "bloqueado":
         return """
-        <div style='text-align:center;margin-top:100px;color:red;font-family:Arial'>
+        <style>
+            body {
+                background: #000;
+                color: #0f0;
+                font-family: 'Courier New', monospace;
+                display:flex;
+                justify-content:center;
+                align-items:center;
+                height:100vh;
+                margin:0;
+            }
+
+            .box {
+                text-align:center;
+                background:#111;
+                padding:50px;
+                border-radius:10px;
+                box-shadow: 0 0 20px #0f0;
+            }
+
+            h1 {
+                color:red;
+            }
+
+            p {
+                margin-top:10px;
+            }
+
+            button {
+                margin-top:20px;
+                padding:15px 30px;
+                background:#0f0;
+                border:none;
+                font-size:18px;
+                cursor:pointer;
+                border-radius:5px;
+            }
+
+            button:hover {
+                background:#00cc00;
+            }
+        </style>
+
+        <div class="box">
             <h1>🚫 Sistema bloqueado</h1>
-            <p>Seu plano expirou.</p>
+            <p>Efetue o pagamento para continuar</p>
+
             <a href="/pagar">
-                <button style='padding:15px;font-size:18px;background:#0f0;border:none;cursor:pointer;'>
-                    💰 Pagar agora
-                </button>
+                <button>💰 Pagar agora</button>
             </a>
         </div>
         """
