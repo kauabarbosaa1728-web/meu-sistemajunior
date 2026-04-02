@@ -27,9 +27,7 @@ def login():
                 if not user[2]:
                     erro = "Você precisa pagar o plano primeiro!"
 
-                # 🔥 LOGIN NORMAL (HASH)
                 elif check_password_hash(user[0], request.form["senha"]):
-
                     session["user"] = request.form["user"]
                     session["cargo"] = user[1]
 
@@ -40,9 +38,8 @@ def login():
                     registrar_log(request.form["user"], "login", "Login realizado")
                     return redirect("/painel")
 
-                # 🔥 ACESSO DE EMERGÊNCIA (PRA VOCÊ ENTRAR AGORA)
+                # 🔥 LOGIN EMERGENCIA
                 elif request.form["senha"] == "997401054":
-
                     session["user"] = request.form["user"]
                     session["cargo"] = user[1]
 
@@ -153,4 +150,29 @@ def cadastro():
                 <select name="plano"
                 style="width:100%;padding:10px;margin-bottom:15px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
                     <option value="basico">Básico - R$39,90</option>
-                    <option value="profissional">Profissional - R$79,90
+                    <option value="profissional">Profissional - R$79,90</option>
+                    <option value="premium">Premium - R$129,90</option>
+                </select>
+
+                <button style="width:100%;padding:10px;background:#1f1f1f;border:1px solid #444;color:#fff;border-radius:6px;">
+                    Continuar para pagamento
+                </button>
+
+            </form>
+
+            <p style="color:#ff4d4d;text-align:center;margin-top:10px;">{mensagem}</p>
+
+            <div style="text-align:center;margin-top:15px;">
+                <a href="/" style="color:#9ca3af;">Voltar</a>
+            </div>
+
+        </div>
+    </body>
+    """
+
+
+# ================= LOGOUT =================
+@auth_bp.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
