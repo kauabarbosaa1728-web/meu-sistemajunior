@@ -15,19 +15,23 @@ def estoque():
     if "user" not in session:
         return redirect("/")
 
-    # 🔥 BLOQUEIO DE PAGAMENTO
-    status = verificar_pagamento(session["user"])
+    # 🔥 NÃO BLOQUEIA ADMIN
+    if session.get("cargo") != "admin":
 
-    if status == "bloqueado":
-        return """
-        <h1 style='color:red;text-align:center;margin-top:50px;'>
-        🚫 Sistema bloqueado<br><br>
-        Efetue o pagamento para continuar
-        </h1>
-        """
+        status = verificar_pagamento(session["user"])
 
-    elif status == "aviso":
-        aviso = "<div style='color:yellow;text-align:center;'>⚠️ Seu plano está vencendo!</div>"
+        if status == "bloqueado":
+            return """
+            <h1 style='color:red;text-align:center;margin-top:50px;'>
+            🚫 Sistema bloqueado<br><br>
+            Efetue o pagamento para continuar
+            </h1>
+            """
+
+        elif status == "aviso":
+            aviso = "<div style='color:yellow;text-align:center;'>⚠️ Seu plano está vencendo!</div>"
+        else:
+            aviso = ""
     else:
         aviso = ""
 
@@ -110,44 +114,6 @@ def estoque():
     </table>
     </div>
     """)
-
-# ================= EDITAR =================
-@estoque_bp.route("/editar_estoque/<int:id>", methods=["GET", "POST"])
-def editar_estoque(id):
-    if "user" not in session:
-        return redirect("/")
-
-    # 🔥 BLOQUEIO
-    status = verificar_pagamento(session["user"])
-    if status == "bloqueado":
-        return "<h1 style='color:red'>🚫 Sistema bloqueado</h1>"
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    if request.method == "POST":
-        produto = request.form.get("produto")
-        qtd = int(request.form.get("qtd"))
-        categoria = request.form.get("categoria")
-
-        cursor.execute("""
-        UPDATE estoque SET produto=%s, quantidade=%s, categoria=%s
-        WHERE id=%s
-        """, (produto, qtd, categoria, id))
-
-        conn.commit()
-        registrar_log(session["user"], "editar_estoque", produto)
-        devolver_conexao(conn)
-        return redirect("/estoque")
-
-    cursor.execute("SELECT produto, quantidade, categoria FROM estoque WHERE id=%s", (id,))
-    dado = cursor.fetchone()
-
-    devolver_conexao(conn)
-
-    return container(f"""
-    <div class="card">
-    <h2>✏️ EDITAR PRODUTO</h2>
 
     <form method="POST">
     <input name="produto" value="{dado[0]}">
