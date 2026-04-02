@@ -1,5 +1,5 @@
 from flask import Flask, session, request, redirect
-from banco import criar_banco, verificar_pagamento
+from banco import criar_banco, verificar_pagamento, conectar
 
 from auth import auth_bp
 from dashboard import dashboard_bp
@@ -28,6 +28,26 @@ def bloquear_sistema():
     if any(r in request.path for r in rotas_livres):
         return
 
+    # 🔥 VERIFICA SE É ADMIN
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT cargo FROM usuarios WHERE usuario=%s", (session["user"],))
+        user = cursor.fetchone()
+
+        if user and user[0] == "admin":
+            return  # 👈 ADMIN NUNCA BLOQUEIA
+
+    except:
+        pass
+    finally:
+        try:
+            conn.close()
+        except:
+            pass
+
+    # 🔒 BLOQUEIO NORMAL
     status = verificar_pagamento(session["user"])
 
     if status == "bloqueado":
