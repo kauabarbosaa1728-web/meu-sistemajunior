@@ -28,8 +28,12 @@ def bloquear_sistema():
     if any(r in request.path for r in rotas_livres):
         return
 
-    # 🔥 LIBERA ADMIN (FORÇADO)
-    if session.get("cargo") == "admin" or session.get("user") == "kaua":
+    # 🔥 LIBERA ADMIN 100% (SEM ERRO)
+    if session.get("cargo") == "admin":
+        return
+
+    # 🔥 LIBERA SEU USUÁRIO DIRETO (GARANTIA TOTAL)
+    if session.get("user") in ["kaua", "kaua@gmail.com"]:
         return
 
     # 🔒 BLOQUEIO NORMAL
