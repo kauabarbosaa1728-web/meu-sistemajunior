@@ -1,3 +1,46 @@
+from datetime import datetime
+
+tabela = ""
+
+for u, c, o, ativo, email, plano, nome_empresa, pe, pt, ph, pu, ped, pex, pl, validade in dados:
+
+    status_online = "🟢 Online" if o else "🔴 Offline"
+    status_ativo = "✅ Ativo" if ativo else "⛔ Inativo"
+
+    status_pagamento = "❌ VENCIDO"
+    dias_restantes = 0
+    cor = "red"
+
+    if validade:
+        diff = (validade - datetime.now()).days
+        if diff >= 0:
+            status_pagamento = "✅ ATIVO"
+            dias_restantes = diff
+            cor = "#00ff00"
+
+    permissoes = []
+    if pe: permissoes.append("Estoque")
+    if pt: permissoes.append("Transferência")
+    if ph: permissoes.append("Histórico")
+    if pu: permissoes.append("Usuários")
+    if ped: permissoes.append("Editar estoque")
+    if pex: permissoes.append("Excluir estoque")
+    if pl: permissoes.append("Logs")
+
+    texto_permissoes = ", ".join(permissoes) if permissoes else "Nenhuma"
+
+    acoes = ""
+    if u != "admin":
+        acoes += f'<a href="/editar_usuario/{u}" class="btn-edit">Editar</a>'
+        acoes += f'<a href="/alterar_senha/{u}" class="btn-warning">Trocar senha</a>'
+        acoes += f'<a href="/mudar_plano/{u}" class="btn-edit">Mudar plano</a>'
+        acoes += f'<a href="/excluir_usuario/{u}" class="btn-danger" onclick="return confirm(\'Deseja excluir este usuário?\')">Excluir</a>'
+        acoes += f'<br><a href="/liberar/{u}/5">🔥 5d</a>'
+        acoes += f' | <a href="/liberar/{u}/10">⚡ 10d</a>'
+        acoes += f' | <a href="/liberar/{u}/30">💎 30d</a>'
+    else:
+        acoes = "Protegido"
+
     tabela += f"""
     <tr>
         <td>{u}</td>
@@ -6,48 +49,74 @@
         <td>{nome_empresa or '-'}</td>
         <td>{plano or '-'}</td>
         <td>{status_online}<br>{status_ativo}</td>
-
         <td style="color:{cor}">
             {status_pagamento}<br>
             {dias_restantes} dias
         </td>
-
         <td>{texto_permissoes}</td>
         <td>{acoes}</td>
     </tr>
     """
 
-        return container(f"""
-        <div class="card">
-            <h2>👤 USUÁRIOS</h2>
+# 🔥 AQUI TERMINA O FOR
 
-            <form method="POST">
-                <input name="user" placeholder="Usuário" required>
-                <input name="senha" placeholder="Senha" required>
-                <input name="email" placeholder="E-mail">
-                <input name="nome_empresa" placeholder="Empresa">
+html = f"""
+<div class="card">
+    <h2>👤 USUÁRIOS</h2>
 
-                <select name="cargo" required>
-                    <option value="operador">operador</option>
-                    <option value="admin">admin</option>
-                </select>
+    <form method="POST">
+        <input name="user" placeholder="Usuário" required>
+        <input name="senha" placeholder="Senha" required>
+        <input name="email" placeholder="E-mail">
+        <input name="nome_empresa" placeholder="Empresa">
 
-                <select name="plano">
-                    <option value="basico">basico</option>
-                    <option value="profissional">profissional</option>
-                    <option value="premium">premium</option>
-                </select>
+        <select name="cargo" required>
+            <option value="operador">operador</option>
+            <option value="admin">admin</option>
+        </select>
 
-                <div class="permissoes-box">
-                    <label><input type="checkbox" name="ativo" value="1" checked> Usuário ativo</label>
-                    <label><input type="checkbox" name="pode_estoque" value="1"> Estoque</label>
-                    <label><input type="checkbox" name="pode_transferencia" value="1"> Transferência</label>
-                    <label><input type="checkbox" name="pode_historico" value="1"> Histórico</label>
-                    <label><input type="checkbox" name="pode_usuarios" value="1"> Usuários</label>
-                    <label><input type="checkbox" name="pode_editar_estoque" value="1"> Editar estoque</label>
-                    <label><input type="checkbox" name="pode_excluir_estoque" value="1"> Excluir estoque</label>
-                    <label><input type="checkbox" name="pode_logs" value="1"> Logs</label>
-                </div>
+        <select name="plano">
+            <option value="basico">basico</option>
+            <option value="profissional">profissional</option>
+            <option value="premium">premium</option>
+        </select>
+
+        <div class="permissoes-box">
+            <label><input type="checkbox" name="ativo" value="1" checked> Usuário ativo</label>
+            <label><input type="checkbox" name="pode_estoque" value="1"> Estoque</label>
+            <label><input type="checkbox" name="pode_transferencia" value="1"> Transferência</label>
+            <label><input type="checkbox" name="pode_historico" value="1"> Histórico</label>
+            <label><input type="checkbox" name="pode_usuarios" value="1"> Usuários</label>
+            <label><input type="checkbox" name="pode_editar_estoque" value="1"> Editar estoque</label>
+            <label><input type="checkbox" name="pode_excluir_estoque" value="1"> Excluir estoque</label>
+            <label><input type="checkbox" name="pode_logs" value="1"> Logs</label>
+        </div>
+
+        <button>Criar</button>
+    </form>
+
+    <div class="mensagem">{mensagem}</div>
+</div>
+
+<div class="card">
+    <table>
+        <tr>
+            <th>Usuário</th>
+            <th>Cargo</th>
+            <th>Email</th>
+            <th>Empresa</th>
+            <th>Plano</th>
+            <th>Status</th>
+            <th>Pagamento</th>
+            <th>Permissões</th>
+            <th>Ações</th>
+        </tr>
+        {tabela}
+    </table>
+</div>
+"""
+
+return container(html)
 
                 <button>Criar</button>
             </form>
