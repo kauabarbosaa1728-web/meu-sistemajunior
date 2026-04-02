@@ -1,5 +1,5 @@
-from flask import Flask
-from banco import criar_banco
+from flask import Flask, session, request, redirect
+from banco import criar_banco, verificar_pagamento
 
 from auth import auth_bp
 from dashboard import dashboard_bp
@@ -16,6 +16,27 @@ app.secret_key = "segredo123"
 
 # Criar banco automaticamente
 criar_banco()
+
+# ================= BLOQUEIO GLOBAL =================
+@app.before_request
+def bloquear_sistema():
+    rotas_livres = ["/", "/login", "/criar_pagamento", "/webhook"]
+
+    if "user" not in session:
+        return
+
+    if any(r in request.path for r in rotas_livres):
+        return
+
+    status = verificar_pagamento(session["user"])
+
+    if status == "bloqueado":
+        return """
+        <h1 style='color:red;text-align:center;margin-top:50px;'>
+        🚫 Sistema bloqueado<br><br>
+        Efetue o pagamento para continuar
+        </h1>
+        """
 
 # ================= ROTAS =================
 app.register_blueprint(auth_bp)
