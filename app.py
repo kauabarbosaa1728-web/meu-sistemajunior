@@ -1,5 +1,8 @@
 from flask import Flask, session, request, redirect
-from banco import criar_banco, verificar_pagamento
+from datetime import datetime, timedelta
+
+from banco import criar_banco, verificar_pagamento, conectar, devolver_conexao, registrar_log
+from layout import acesso_negado
 
 from auth import auth_bp
 from dashboard import dashboard_bp
@@ -14,7 +17,7 @@ from ia_routes import ia_bp
 app = Flask(__name__)
 app.secret_key = "segredo123"
 
-# Criar banco automaticamente
+# ================= BANCO =================
 criar_banco()
 
 # ================= BLOQUEIO GLOBAL =================
@@ -28,7 +31,7 @@ def bloquear_sistema():
     if any(r in request.path for r in rotas_livres):
         return
 
-    # 🔥 LIBERA ADMIN 100% (SEM ERRO)
+    # 🔥 LIBERA ADMIN 100%
     if session.get("cargo") == "admin":
         return
 
@@ -93,6 +96,39 @@ def bloquear_sistema():
             </a>
         </div>
         """
+
+# ================= LIBERAR USUÁRIO (ADMIN) =================
+@app.route("/liberar/<usuario>/<int:dias>")
+def liberar_usuario(usuario, dias):
+    if "user" not in session:
+        return redirect("/")
+
+    # 🔐 só admin pode
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+        nova_data = datetime.now() + timedelta(days=dias)
+
+        cursor.execute("""
+        UPDATE usuarios
+        SET data_validade=%s
+        WHERE usuario=%s
+        """, (nova_data, usuario))
+
+        conn.commit()
+
+        registrar_log(session["user"], "liberar_usuario", f"{usuario} por {dias} dias")
+
+    except Exception as e:
+        conn.rollback()
+        print("Erro ao liberar:", e)
+
+    devolver_conexao(conn)
+    return redirect("/usuarios")
 
 # ================= ROTAS =================
 app.register_blueprint(auth_bp)
