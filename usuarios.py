@@ -1,151 +1,79 @@
-from flask import Blueprint, request, redirect, session
-from werkzeug.security import generate_password_hash
-from banco import conectar, devolver_conexao, registrar_log, permissoes_por_plano
-from layout import container, acesso_negado
+cursor.execute("""
+SELECT usuario, cargo, online, ativo, email, plano, nome_empresa,
+       pode_estoque, pode_transferencia, pode_historico,
+       pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs,
+       data_validade
+FROM usuarios
+ORDER BY usuario
+""")
 
-usuarios_bp = Blueprint("usuarios_bp", __name__)
+dados = cursor.fetchall()
 
-@usuarios_bp.route("/usuarios", methods=["GET", "POST"])
-def usuarios():
-    if "user" not in session:
-        return redirect("/")
+from datetime import datetime
 
-    if session.get("cargo") != "admin":
-        return acesso_negado()
+tabela = ""
+for u, c, o, ativo, email, plano, nome_empresa, pe, pt, ph, pu, ped, pex, pl, validade in dados:
 
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-        mensagem = ""
+    status_online = "🟢 Online" if o else "🔴 Offline"
+    status_ativo = "✅ Ativo" if ativo else "⛔ Inativo"
 
-        if request.method == "POST":
-            try:
-                user = request.form["user"].strip()
-                senha = request.form["senha"].strip()
-                cargo = request.form["cargo"].strip()
-                email = request.form.get("email", "").strip()
-                nome_empresa = request.form.get("nome_empresa", "").strip()
-                plano = request.form.get("plano", "basico").strip().lower()
+    # STATUS PAGAMENTO
+    status_pagamento = "❌ VENCIDO"
+    dias_restantes = 0
+    cor = "red"
 
-                if cargo == "admin":
-                    ativo = 1
-                    pode_estoque = 1
-                    pode_transferencia = 1
-                    pode_historico = 1
-                    pode_usuarios = 1
-                    pode_editar_estoque = 1
-                    pode_excluir_estoque = 1
-                    pode_logs = 1
-                    plano = "admin"
-                else:
-                    ativo = 1 if request.form.get("ativo") == "1" else 0
-                    pode_estoque = 1 if request.form.get("pode_estoque") == "1" else 0
-                    pode_transferencia = 1 if request.form.get("pode_transferencia") == "1" else 0
-                    pode_historico = 1 if request.form.get("pode_historico") == "1" else 0
-                    pode_usuarios = 1 if request.form.get("pode_usuarios") == "1" else 0
-                    pode_editar_estoque = 1 if request.form.get("pode_editar_estoque") == "1" else 0
-                    pode_excluir_estoque = 1 if request.form.get("pode_excluir_estoque") == "1" else 0
-                    pode_logs = 1 if request.form.get("pode_logs") == "1" else 0
+    if validade:
+        diff = (validade - datetime.now()).days
 
-                cursor.execute("""
-                INSERT INTO usuarios (
-                    usuario, senha, cargo, ativo, email, plano, nome_empresa,
-                    pode_estoque, pode_transferencia, pode_historico,
-                    pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs
-                )
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                """, (
-                    user,
-                    generate_password_hash(senha),
-                    cargo,
-                    ativo,
-                    email,
-                    plano,
-                    nome_empresa,
-                    pode_estoque,
-                    pode_transferencia,
-                    pode_historico,
-                    pode_usuarios,
-                    pode_editar_estoque,
-                    pode_excluir_estoque,
-                    pode_logs
-                ))
-                conn.commit()
-                mensagem = "Usuário criado com sucesso."
-                registrar_log(session["user"], "criar_usuario", f"Usuário criado: {user} | Cargo: {cargo} | Plano: {plano}")
-            except Exception:
-                conn.rollback()
-                mensagem = "Não foi possível criar o usuário. Talvez ele já exista."
+        if diff >= 0:
+            status_pagamento = "✅ ATIVO"
+            dias_restantes = diff
+            cor = "#00ff00"
 
-        cursor.execute("""
-        SELECT usuario, cargo, online, ativo, email, plano, nome_empresa,
-               pode_estoque, pode_transferencia, pode_historico,
-               pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs
-        FROM usuarios
-        ORDER BY usuario
-        """)
-        dados = cursor.fetchall()
+    permissoes = []
+    if pe: permissoes.append("Estoque")
+    if pt: permissoes.append("Transferência")
+    if ph: permissoes.append("Histórico")
+    if pu: permissoes.append("Usuários")
+    if ped: permissoes.append("Editar estoque")
+    if pex: permissoes.append("Excluir estoque")
+    if pl: permissoes.append("Logs")
 
-        tabela = ""
-        for u, c, o, ativo, email, plano, nome_empresa, pe, pt, ph, pu, ped, pex, pl in dados:
-            status_online = "🟢 Online" if o else "🔴 Offline"
-            status_ativo = "✅ Ativo" if ativo else "⛔ Inativo"
+    texto_permissoes = ", ".join(permissoes) if permissoes else "Nenhuma"
 
-            permissoes = []
-            if pe: permissoes.append("Estoque")
-            if pt: permissoes.append("Transferência")
-            if ph: permissoes.append("Histórico")
-            if pu: permissoes.append("Usuários")
-            if ped: permissoes.append("Editar estoque")
-            if pex: permissoes.append("Excluir estoque")
-            if pl: permissoes.append("Logs")
+    acoes = ""
+    if u != "admin":
+        acoes += f'<a href="/editar_usuario/{u}" class="btn-edit">Editar</a>'
+        acoes += f'<a href="/alterar_senha/{u}" class="btn-warning">Trocar senha</a>'
+        acoes += f'<a href="/mudar_plano/{u}" class="btn-edit">Mudar plano</a>'
+        acoes += f'<a href="/excluir_usuario/{u}" class="btn-danger" onclick="return confirm(\'Deseja excluir este usuário?\')">Excluir</a>'
 
-            texto_permissoes = ", ".join(permissoes) if permissoes else "Nenhuma"
+        # BOTÕES NOVOS
+        acoes += f'<br><a href="/liberar/{u}/5">🔥 5d</a>'
+        acoes += f' | <a href="/liberar/{u}/10">⚡ 10d</a>'
+        acoes += f' | <a href="/liberar/{u}/30">💎 30d</a>'
 
-            acoes = ""
-            if u != "admin":
-                acoes += f'<a href="/editar_usuario/{u}" class="btn-edit">Editar</a>'
-                acoes += f'<a href="/alterar_senha/{u}" class="btn-warning">Trocar senha</a>'
-                acoes += f'<a href="/mudar_plano/{u}" class="btn-edit">Mudar plano</a>'
-                acoes += f'<a href="/excluir_usuario/{u}" class="btn-danger" onclick="return confirm(\'Deseja excluir este usuário?\')">Excluir</a>'
-            else:
-                acoes = "Protegido"
+    else:
+        acoes = "Protegido"
 
-            tabela += f"""
-            <tr>
-                <td>{u}</td>
-                <td>{c}</td>
-                <td>{email or '-'}</td>
-                <td>{nome_empresa or '-'}</td>
-                <td>{plano or '-'}</td>
-                <td>{status_online}<br>{status_ativo}</td>
-                <td>{texto_permissoes}</td>
-                <td>{acoes}</td>
-            </tr>
-            """
+    tabela += f"""
+    <tr>
+        <td>{u}</td>
+        <td>{c}</td>
+        <td>{email or '-'}</td>
+        <td>{nome_empresa or '-'}</td>
+        <td>{plano or '-'}</td>
+        <td>{status_online}<br>{status_ativo}</td>
 
-        return container(f"""
-        <div class="card">
-            <h2>👤 USUÁRIOS</h2>
+        <td style="color:{cor}">
+            {status_pagamento}<br>
+            {dias_restantes} dias
+        </td>
 
-            <form method="POST">
-                <input name="user" placeholder="Usuário" required>
-                <input name="senha" placeholder="Senha" required>
-                <input name="email" placeholder="E-mail">
-                <input name="nome_empresa" placeholder="Empresa">
-
-                <select name="cargo" required>
-                    <option value="operador">operador</option>
-                    <option value="admin">admin</option>
-                </select>
-
-                <select name="plano">
-                    <option value="basico">basico</option>
-                    <option value="profissional">profissional</option>
-                    <option value="premium">premium</option>
-                </select>
-
+        <td>{texto_permissoes}</td>
+        <td>{acoes}</td>
+    </tr>
+    """
                 <div class="permissoes-box">
                     <label class="perm-item"><input type="checkbox" name="ativo" value="1" checked>Usuário ativo</label>
                     <label class="perm-item"><input type="checkbox" name="pode_estoque" value="1">Acessar estoque</label>
