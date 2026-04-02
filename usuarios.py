@@ -226,21 +226,6 @@ def editar_usuario(usuario_alvo):
             ))
             conn.commit()
             mensagem = "Usuário atualizado com sucesso."
-            registrar_log(
-                session["user"],
-                "editar_usuario",
-                f"Usuário: {usuario_alvo} | Cargo: {c_antigo} -> {cargo} | Ativo: {ativo_antigo} -> {ativo}"
-            )
-
-            cursor.execute("""
-            SELECT usuario, cargo, ativo,
-                   pode_estoque, pode_transferencia, pode_historico,
-                   pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs
-            FROM usuarios
-            WHERE usuario=%s
-            """, (usuario_alvo,))
-            dado = cursor.fetchone()
-            u, c_antigo, ativo_antigo, pe_antigo, pt_antigo, ph_antigo, pu_antigo, ped_antigo, pex_antigo, pl_antigo = dado
 
         checked_ativo = "checked" if ativo_antigo else ""
         checked_pe = "checked" if pe_antigo else ""
@@ -266,170 +251,25 @@ def editar_usuario(usuario_alvo):
                 </select>
 
                 <div class="permissoes-box">
-                    <label class="perm-item"><input type="checkbox" name="ativo" value="1" {checked_ativo}>Usuário ativo</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_estoque" value="1" {checked_pe}>Acessar estoque</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_transferencia" value="1" {checked_pt}>Acessar transferência</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_historico" value="1" {checked_ph}>Acessar histórico</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_usuarios" value="1" {checked_pu}>Acessar usuários</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_editar_estoque" value="1" {checked_ped}>Editar estoque</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_excluir_estoque" value="1" {checked_pex}>Excluir estoque</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_logs" value="1" {checked_pl}>Acessar logs</label>
+                    <label><input type="checkbox" name="ativo" value="1" {checked_ativo}>Usuário ativo</label>
+                    <label><input type="checkbox" name="pode_estoque" value="1" {checked_pe}>Estoque</label>
+                    <label><input type="checkbox" name="pode_transferencia" value="1" {checked_pt}>Transferência</label>
+                    <label><input type="checkbox" name="pode_historico" value="1" {checked_ph}>Histórico</label>
+                    <label><input type="checkbox" name="pode_usuarios" value="1" {checked_pu}>Usuários</label>
+                    <label><input type="checkbox" name="pode_editar_estoque" value="1" {checked_ped}>Editar</label>
+                    <label><input type="checkbox" name="pode_excluir_estoque" value="1" {checked_pex}>Excluir</label>
+                    <label><input type="checkbox" name="pode_logs" value="1" {checked_pl}>Logs</label>
                 </div>
 
-                <button>Salvar alterações</button>
+                <button>Salvar</button>
             </form>
 
-            <div class="mensagem">{mensagem}</div>
             <p><a href="/usuarios">⬅ Voltar</a></p>
         </div>
         """)
-    except Exception as e:
-        return container(f'<div class="card"><h2 class="erro">Erro ao editar usuário: {e}</h2></div>')
     finally:
         devolver_conexao(conn)
 
-@usuarios_bp.route("/alterar_senha/<usuario_alvo>", methods=["GET", "POST"])
-def alterar_senha(usuario_alvo):
-    if "user" not in session:
-        return redirect("/")
-
-    if session.get("cargo") != "admin":
-        return acesso_negado()
-
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-        mensagem = ""
-
-        if request.method == "POST":
-            nova_senha = request.form["nova_senha"].strip()
-
-            if not nova_senha:
-                mensagem = "Digite a nova senha."
-            else:
-                cursor.execute("""
-                UPDATE usuarios
-                SET senha=%s
-                WHERE usuario=%s
-                """, (generate_password_hash(nova_senha), usuario_alvo))
-                conn.commit()
-                mensagem = "Senha alterada com sucesso."
-                registrar_log(session["user"], "alterar_senha", f"Senha alterada para o usuário: {usuario_alvo}")
-
-        return container(f"""
-        <div class="card">
-            <h2>🔑 ALTERAR SENHA</h2>
-            <p>Usuário: <b>{usuario_alvo}</b></p>
-
-            <form method="POST">
-                <input name="nova_senha" placeholder="Nova senha" required>
-                <button>Salvar nova senha</button>
-            </form>
-
-            <div class="mensagem">{mensagem}</div>
-            <p><a href="/usuarios">⬅ Voltar</a></p>
-        </div>
-        """)
-    except Exception as e:
-        return container(f'<div class="card"><h2 class="erro">Erro ao alterar senha: {e}</h2></div>')
-    finally:
-        devolver_conexao(conn)
-
-@usuarios_bp.route("/mudar_plano/<usuario_alvo>", methods=["GET", "POST"])
-def mudar_plano(usuario_alvo):
-    if "user" not in session:
-        return redirect("/")
-
-    if session.get("cargo") != "admin":
-        return acesso_negado()
-
-    if usuario_alvo == "admin":
-        return container("""
-        <div class="card">
-            <h2 class="erro">⛔ O plano do admin não pode ser alterado aqui.</h2>
-            <p><a href="/usuarios">⬅ Voltar</a></p>
-        </div>
-        """)
-
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-        mensagem = ""
-
-        cursor.execute("""
-        SELECT usuario, plano
-        FROM usuarios
-        WHERE usuario=%s
-        """, (usuario_alvo,))
-        dado = cursor.fetchone()
-
-        if not dado:
-            return container("<div class='card'><h2>Usuário não encontrado.</h2></div>")
-
-        usuario_nome, plano_atual = dado
-
-        if request.method == "POST":
-            novo_plano = request.form["plano"].strip().lower()
-            permissoes = permissoes_por_plano(novo_plano)
-
-            cursor.execute("""
-            UPDATE usuarios
-            SET plano=%s,
-                pode_estoque=%s,
-                pode_transferencia=%s,
-                pode_historico=%s,
-                pode_usuarios=%s,
-                pode_editar_estoque=%s,
-                pode_excluir_estoque=%s,
-                pode_logs=%s
-            WHERE usuario=%s
-            """, (
-                novo_plano,
-                permissoes["pode_estoque"],
-                permissoes["pode_transferencia"],
-                permissoes["pode_historico"],
-                permissoes["pode_usuarios"],
-                permissoes["pode_editar_estoque"],
-                permissoes["pode_excluir_estoque"],
-                permissoes["pode_logs"],
-                usuario_alvo
-            ))
-            conn.commit()
-
-            registrar_log(session["user"], "mudar_plano", f"Usuário: {usuario_alvo} | Plano: {plano_atual} -> {novo_plano}")
-            mensagem = "Plano alterado com sucesso."
-            plano_atual = novo_plano
-
-        selected_basico = "selected" if plano_atual == "basico" else ""
-        selected_profissional = "selected" if plano_atual == "profissional" else ""
-        selected_premium = "selected" if plano_atual == "premium" else ""
-
-        return container(f"""
-        <div class="card">
-            <h2>💳 MUDAR PLANO</h2>
-            <p>Usuário: <b>{usuario_nome}</b></p>
-            <p>Plano atual: <b>{plano_atual}</b></p>
-
-            <form method="POST">
-                <select name="plano" required>
-                    <option value="basico" {selected_basico}>basico - R$ 39,90/mês</option>
-                    <option value="profissional" {selected_profissional}>profissional - R$ 79,90/mês</option>
-                    <option value="premium" {selected_premium}>premium - R$ 129,90/mês</option>
-                </select>
-
-                <button>Salvar plano</button>
-            </form>
-
-            <div class="mensagem">{mensagem}</div>
-            <p><a href="/usuarios">⬅ Voltar</a></p>
-        </div>
-        """)
-    except Exception as e:
-        return container(f'<div class="card"><h2 class="erro">Erro ao mudar plano: {e}</h2></div>')
-    finally:
-        devolver_conexao(conn)
 
 @usuarios_bp.route("/excluir_usuario/<usuario_alvo>")
 def excluir_usuario(usuario_alvo):
@@ -439,23 +279,11 @@ def excluir_usuario(usuario_alvo):
     if session.get("cargo") != "admin":
         return acesso_negado()
 
-    if usuario_alvo == "admin":
-        return container("""
-        <div class="card">
-            <h2 class="erro">⛔ O usuário admin não pode ser excluído.</h2>
-            <p><a href="/usuarios">⬅ Voltar</a></p>
-        </div>
-        """)
+    conn = conectar()
+    cursor = conn.cursor()
 
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM usuarios WHERE usuario=%s", (usuario_alvo,))
-        conn.commit()
-        registrar_log(session["user"], "excluir_usuario", f"Usuário excluído: {usuario_alvo}")
-        return redirect("/usuarios")
-    except Exception as e:
-        return container(f'<div class="card"><h2 class="erro">Erro ao excluir usuário: {e}</h2></div>')
-    finally:
-        devolver_conexao(conn)
+    cursor.execute("DELETE FROM usuarios WHERE usuario=%s", (usuario_alvo,))
+    conn.commit()
+
+    devolver_conexao(conn)
+    return redirect("/usuarios")
