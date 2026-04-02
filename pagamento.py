@@ -5,7 +5,7 @@ from werkzeug.security import generate_password_hash
 
 pagamento_routes = Blueprint("pagamento", __name__)
 
-sdk = mercadopago.SDK("SEU_TOKEN_AQUI")  # ⚠️ coloca seu token aqui
+sdk = mercadopago.SDK("APP_USR-6569039713831543-033108-32073b03704b3b93eac080da1fe1d0f7-1249023990")  # ⚠️ coloca seu token aqui
 
 
 # ================= VALORES =================
