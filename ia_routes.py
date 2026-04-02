@@ -3,23 +3,11 @@ from openai import OpenAI
 from banco import conectar, devolver_conexao
 import os
 
-# ✅ ISSO QUE FALTAVA
+# ================= BLUEPRINT =================
 ia_bp = Blueprint("ia_bp", __name__)
 
+# ================= OPENAI =================
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# ================= PEGAR ESTOQUE =================
-def pegar_estoque():
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-        cursor.execute("SELECT produto, quantidade FROM estoque")
-        return cursor.fetchall()
-    finally:
-        if conn:
-            devolver_conexao(conn)
-
 
 # ================= IA CHAT =================
 @ia_bp.route("/ia", methods=["GET", "POST"])
@@ -33,95 +21,92 @@ def ia():
     if request.method == "POST":
         pergunta = request.form.get("pergunta")
 
-        dados = pegar_estoque()
-        texto = "\n".join([f"{p}: {q}" for p, q in dados])
-
-        prompt = f"""
-        Você é uma IA especialista em gestão de estoque.
-
-        Dados:
-        {texto}
-
-        Pergunta:
-        {pergunta}
-        """
-
         try:
-            chat = client.chat.completions.create(
+            resposta_openai = client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}]
+                messages=session["chat"] + [
+                    {"role": "user", "content": pergunta}
+                ]
             )
 
-            resposta = chat.choices[0].message.content
+            resposta = resposta_openai.choices[0].message.content
 
         except Exception as e:
             resposta = f"Erro: {str(e)}"
 
-        session["chat"].append(("user", pergunta))
-        session["chat"].append(("bot", resposta))
+        session["chat"].append({"role": "user", "content": pergunta})
+        session["chat"].append({"role": "assistant", "content": resposta})
 
     historico = ""
-    for tipo, msg in session["chat"]:
-        if tipo == "user":
-            historico += f"<div class='msg user'>{msg}</div>"
+    for msg in session["chat"]:
+        if msg["role"] == "user":
+            historico += f"<div class='msg user'>{msg['content']}</div>"
         else:
-            historico += f"<div class='msg bot'>{msg}</div>"
+            historico += f"<div class='msg bot'>{msg['content']}</div>"
 
     return f"""
     <style>
         body {{
-            background:#000;
-            color:#0f0;
-            font-family: 'Courier New', monospace;
+            background:#0f0f0f;
+            font-family: Arial;
+            color:white;
         }}
 
-        .chat-box {{
-            width:80%;
+        .container {{
+            width:90%;
+            max-width:800px;
             margin:auto;
-            margin-top:20px;
+            margin-top:40px;
         }}
 
         .msg {{
-            padding:10px;
-            margin:10px 0;
+            padding:12px;
             border-radius:10px;
+            margin:10px 0;
             max-width:70%;
         }}
 
         .user {{
-            background:#003300;
+            background:#2b2b2b;
             margin-left:auto;
-            text-align:right;
         }}
 
         .bot {{
-            background:#001100;
+            background:#1a1a1a;
             margin-right:auto;
         }}
 
+        .input-box {{
+            display:flex;
+            margin-top:20px;
+        }}
+
         input {{
-            width:80%;
-            padding:10px;
-            background:black;
-            color:#0f0;
-            border:1px solid #0f0;
+            flex:1;
+            padding:15px;
+            border-radius:10px;
+            border:none;
+            background:#2b2b2b;
+            color:white;
         }}
 
         button {{
-            padding:10px;
-            background:#0f0;
+            padding:15px;
+            margin-left:10px;
             border:none;
+            border-radius:10px;
+            background:white;
             cursor:pointer;
         }}
     </style>
 
-    <div class="chat-box">
-        <h2>🤖 Chat IA</h2>
+    <div class="container">
+        <h2>💬 IA KBSISTEMAS</h2>
 
         {historico}
 
-        <form method="post">
-            <input name="pergunta" placeholder="Digite sua pergunta...">
+        <form method="post" class="input-box">
+            <input name="pergunta" placeholder="Pergunte qualquer coisa...">
             <button>Enviar</button>
         </form>
     </div>
