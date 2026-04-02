@@ -119,6 +119,9 @@ def topo():
             <a href="/historico" data-nav="true">Histórico</a>
             <a href="/usuarios" data-nav="true">Usuários</a>
             <a href="/logs" data-nav="true">Logs</a>
+
+            <a href="/ia" data-nav="true">🤖 IA</a>
+
             <a href="/logout" class="logout">Sair</a>
         </div>
     </div>
