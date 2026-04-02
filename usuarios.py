@@ -1,61 +1,3 @@
-cursor.execute("""
-SELECT usuario, cargo, online, ativo, email, plano, nome_empresa,
-       pode_estoque, pode_transferencia, pode_historico,
-       pode_usuarios, pode_editar_estoque, pode_excluir_estoque, pode_logs,
-       data_validade
-FROM usuarios
-ORDER BY usuario
-""")
-
-dados = cursor.fetchall()
-
-from datetime import datetime
-
-tabela = ""
-for u, c, o, ativo, email, plano, nome_empresa, pe, pt, ph, pu, ped, pex, pl, validade in dados:
-
-    status_online = "🟢 Online" if o else "🔴 Offline"
-    status_ativo = "✅ Ativo" if ativo else "⛔ Inativo"
-
-    # STATUS PAGAMENTO
-    status_pagamento = "❌ VENCIDO"
-    dias_restantes = 0
-    cor = "red"
-
-    if validade:
-        diff = (validade - datetime.now()).days
-
-        if diff >= 0:
-            status_pagamento = "✅ ATIVO"
-            dias_restantes = diff
-            cor = "#00ff00"
-
-    permissoes = []
-    if pe: permissoes.append("Estoque")
-    if pt: permissoes.append("Transferência")
-    if ph: permissoes.append("Histórico")
-    if pu: permissoes.append("Usuários")
-    if ped: permissoes.append("Editar estoque")
-    if pex: permissoes.append("Excluir estoque")
-    if pl: permissoes.append("Logs")
-
-    texto_permissoes = ", ".join(permissoes) if permissoes else "Nenhuma"
-
-    acoes = ""
-    if u != "admin":
-        acoes += f'<a href="/editar_usuario/{u}" class="btn-edit">Editar</a>'
-        acoes += f'<a href="/alterar_senha/{u}" class="btn-warning">Trocar senha</a>'
-        acoes += f'<a href="/mudar_plano/{u}" class="btn-edit">Mudar plano</a>'
-        acoes += f'<a href="/excluir_usuario/{u}" class="btn-danger" onclick="return confirm(\'Deseja excluir este usuário?\')">Excluir</a>'
-
-        # BOTÕES NOVOS
-        acoes += f'<br><a href="/liberar/{u}/5">🔥 5d</a>'
-        acoes += f' | <a href="/liberar/{u}/10">⚡ 10d</a>'
-        acoes += f' | <a href="/liberar/{u}/30">💎 30d</a>'
-
-    else:
-        acoes = "Protegido"
-
     tabela += f"""
     <tr>
         <td>{u}</td>
@@ -74,15 +16,37 @@ for u, c, o, ativo, email, plano, nome_empresa, pe, pt, ph, pu, ped, pex, pl, va
         <td>{acoes}</td>
     </tr>
     """
+
+        return container(f"""
+        <div class="card">
+            <h2>👤 USUÁRIOS</h2>
+
+            <form method="POST">
+                <input name="user" placeholder="Usuário" required>
+                <input name="senha" placeholder="Senha" required>
+                <input name="email" placeholder="E-mail">
+                <input name="nome_empresa" placeholder="Empresa">
+
+                <select name="cargo" required>
+                    <option value="operador">operador</option>
+                    <option value="admin">admin</option>
+                </select>
+
+                <select name="plano">
+                    <option value="basico">basico</option>
+                    <option value="profissional">profissional</option>
+                    <option value="premium">premium</option>
+                </select>
+
                 <div class="permissoes-box">
-                    <label class="perm-item"><input type="checkbox" name="ativo" value="1" checked>Usuário ativo</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_estoque" value="1">Acessar estoque</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_transferencia" value="1">Acessar transferência</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_historico" value="1">Acessar histórico</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_usuarios" value="1">Acessar usuários</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_editar_estoque" value="1">Editar estoque</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_excluir_estoque" value="1">Excluir estoque</label>
-                    <label class="perm-item"><input type="checkbox" name="pode_logs" value="1">Acessar logs</label>
+                    <label><input type="checkbox" name="ativo" value="1" checked> Usuário ativo</label>
+                    <label><input type="checkbox" name="pode_estoque" value="1"> Estoque</label>
+                    <label><input type="checkbox" name="pode_transferencia" value="1"> Transferência</label>
+                    <label><input type="checkbox" name="pode_historico" value="1"> Histórico</label>
+                    <label><input type="checkbox" name="pode_usuarios" value="1"> Usuários</label>
+                    <label><input type="checkbox" name="pode_editar_estoque" value="1"> Editar estoque</label>
+                    <label><input type="checkbox" name="pode_excluir_estoque" value="1"> Excluir estoque</label>
+                    <label><input type="checkbox" name="pode_logs" value="1"> Logs</label>
                 </div>
 
                 <button>Criar</button>
@@ -100,6 +64,7 @@ for u, c, o, ativo, email, plano, nome_empresa, pe, pt, ph, pu, ped, pex, pl, va
                     <th>Empresa</th>
                     <th>Plano</th>
                     <th>Status</th>
+                    <th>Pagamento</th>
                     <th>Permissões</th>
                     <th>Ações</th>
                 </tr>
@@ -107,10 +72,6 @@ for u, c, o, ativo, email, plano, nome_empresa, pe, pt, ph, pu, ped, pex, pl, va
             </table>
         </div>
         """)
-    except Exception as e:
-        return container(f'<div class="card"><h2 class="erro">Erro nos usuários: {e}</h2></div>')
-    finally:
-        devolver_conexao(conn)
 
 @usuarios_bp.route("/editar_usuario/<usuario_alvo>", methods=["GET", "POST"])
 def editar_usuario(usuario_alvo):
