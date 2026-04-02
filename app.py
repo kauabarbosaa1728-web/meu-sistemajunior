@@ -32,10 +32,15 @@ def bloquear_sistema():
 
     if status == "bloqueado":
         return """
-        <h1 style='color:red;text-align:center;margin-top:50px;'>
-        🚫 Sistema bloqueado<br><br>
-        Efetue o pagamento para continuar
-        </h1>
+        <div style='text-align:center;margin-top:100px;color:red;font-family:Arial'>
+            <h1>🚫 Sistema bloqueado</h1>
+            <p>Seu plano expirou.</p>
+            <a href="/pagar">
+                <button style='padding:15px;font-size:18px;background:#0f0;border:none;cursor:pointer;'>
+                    💰 Pagar agora
+                </button>
+            </a>
+        </div>
         """
 
 # ================= ROTAS =================
