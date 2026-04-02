@@ -1,3 +1,27 @@
+from flask import Blueprint, request, session, redirect
+from openai import OpenAI
+from banco import conectar, devolver_conexao
+import os
+
+# ✅ ISSO QUE FALTAVA
+ia_bp = Blueprint("ia_bp", __name__)
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# ================= PEGAR ESTOQUE =================
+def pegar_estoque():
+    conn = None
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute("SELECT produto, quantidade FROM estoque")
+        return cursor.fetchall()
+    finally:
+        if conn:
+            devolver_conexao(conn)
+
+
+# ================= IA CHAT =================
 @ia_bp.route("/ia", methods=["GET", "POST"])
 def ia():
     if "user" not in session:
