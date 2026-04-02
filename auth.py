@@ -47,18 +47,31 @@ def login():
             devolver_conexao(conn)
 
     return f"""
-    <body style="background:black;color:#00ff00;text-align:center;padding-top:100px;">
-        <h1>KBSISTEMAS</h1>
+    <body style="margin:0;background:#000;color:#d1d5db;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;">
+        
+        <div style="width:350px;background:#0a0a0a;padding:30px;border-radius:12px;border:1px solid #2a2a2a;box-shadow:0 0 20px #000;">
+            
+            <h2 style="text-align:center;margin-bottom:20px;color:#ffffff;">KBSISTEMAS</h2>
 
-        <form method="POST">
-            <input name="user" placeholder="Usuário"><br><br>
-            <input name="senha" type="password" placeholder="Senha"><br><br>
-            <button>ENTRAR</button>
-        </form>
+            <form method="POST">
+                <input name="user" placeholder="Usuário" required
+                style="width:100%;padding:10px;margin-bottom:10px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
 
-        <p style="color:red;">{erro}</p>
+                <input name="senha" type="password" placeholder="Senha" required
+                style="width:100%;padding:10px;margin-bottom:15px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
 
-        <a href="/cadastro">Criar conta</a>
+                <button style="width:100%;padding:10px;background:#1f1f1f;border:1px solid #444;color:#fff;border-radius:6px;cursor:pointer;">
+                    Entrar
+                </button>
+            </form>
+
+            <p style="color:#ff4d4d;text-align:center;margin-top:10px;">{erro}</p>
+
+            <div style="text-align:center;margin-top:15px;">
+                <a href="/cadastro" style="color:#9ca3af;">Criar conta</a>
+            </div>
+
+        </div>
     </body>
     """
 
@@ -84,7 +97,6 @@ def cadastro():
             if cursor.fetchone():
                 mensagem = "Usuário já existe"
             else:
-                # 🔥 ENVIA DIRETO PRO PIX
                 return f"""
 <form id="auto" action="/criar_pagamento" method="POST">
 <input type="hidden" name="user" value="{usuario}">
@@ -101,27 +113,46 @@ def cadastro():
             devolver_conexao(conn)
 
     return f"""
-    <body style="background:black;color:#00ff00;text-align:center;padding-top:100px;">
-        <h1>Cadastro</h1>
+    <body style="margin:0;background:#000;color:#d1d5db;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;">
+        
+        <div style="width:400px;background:#0a0a0a;padding:30px;border-radius:12px;border:1px solid #2a2a2a;">
+            
+            <h2 style="text-align:center;margin-bottom:20px;color:#ffffff;">Criar Conta</h2>
 
-        <form method="POST">
-            <input name="user" placeholder="Usuário"><br><br>
-            <input name="senha" placeholder="Senha"><br><br>
-            <input name="email" placeholder="Email"><br><br>
-            <input name="nome_empresa" placeholder="Empresa"><br><br>
+            <form method="POST">
 
-            <select name="plano">
-                <option value="basico">Básico - R$39,90</option>
-                <option value="profissional">Profissional - R$79,90</option>
-                <option value="premium">Premium - R$129,90</option>
-            </select><br><br>
+                <input name="user" placeholder="Usuário" required
+                style="width:100%;padding:10px;margin-bottom:10px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
 
-            <button>Cadastrar</button>
-        </form>
+                <input name="senha" placeholder="Senha" required
+                style="width:100%;padding:10px;margin-bottom:10px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
 
-        <p style="color:red;">{mensagem}</p>
+                <input name="email" placeholder="Email" required
+                style="width:100%;padding:10px;margin-bottom:10px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
 
-        <a href="/">Voltar</a>
+                <input name="nome_empresa" placeholder="Empresa" required
+                style="width:100%;padding:10px;margin-bottom:15px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
+
+                <select name="plano"
+                style="width:100%;padding:10px;margin-bottom:15px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
+                    <option value="basico">Básico - R$39,90</option>
+                    <option value="profissional">Profissional - R$79,90</option>
+                    <option value="premium">Premium - R$129,90</option>
+                </select>
+
+                <button style="width:100%;padding:10px;background:#1f1f1f;border:1px solid #444;color:#fff;border-radius:6px;">
+                    Continuar para pagamento
+                </button>
+
+            </form>
+
+            <p style="color:#ff4d4d;text-align:center;margin-top:10px;">{mensagem}</p>
+
+            <div style="text-align:center;margin-top:15px;">
+                <a href="/" style="color:#9ca3af;">Voltar</a>
+            </div>
+
+        </div>
     </body>
     """
 
