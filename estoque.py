@@ -1,5 +1,5 @@
 from flask import Blueprint, request, redirect, session
-from banco import conectar, devolver_conexao, registrar_log
+from banco import conectar, devolver_conexao, registrar_log, verificar_pagamento
 from layout import container, acesso_negado, tem_permissao
 
 from reportlab.platypus import SimpleDocTemplate, Table
@@ -14,6 +14,22 @@ estoque_bp = Blueprint("estoque_bp", __name__)
 def estoque():
     if "user" not in session:
         return redirect("/")
+
+    # 🔥 BLOQUEIO DE PAGAMENTO
+    status = verificar_pagamento(session["user"])
+
+    if status == "bloqueado":
+        return """
+        <h1 style='color:red;text-align:center;margin-top:50px;'>
+        🚫 Sistema bloqueado<br><br>
+        Efetue o pagamento para continuar
+        </h1>
+        """
+
+    elif status == "aviso":
+        aviso = "<div style='color:yellow;text-align:center;'>⚠️ Seu plano está vencendo!</div>"
+    else:
+        aviso = ""
 
     if not tem_permissao("pode_estoque"):
         return acesso_negado()
@@ -65,6 +81,8 @@ def estoque():
     devolver_conexao(conn)
 
     return container(f"""
+    {aviso}
+
     <div class="card">
     <h2>📦 ESTOQUE</h2>
 
@@ -98,6 +116,11 @@ def estoque():
 def editar_estoque(id):
     if "user" not in session:
         return redirect("/")
+
+    # 🔥 BLOQUEIO
+    status = verificar_pagamento(session["user"])
+    if status == "bloqueado":
+        return "<h1 style='color:red'>🚫 Sistema bloqueado</h1>"
 
     conn = conectar()
     cursor = conn.cursor()
@@ -141,6 +164,11 @@ def excluir_estoque(id):
     if "user" not in session:
         return redirect("/")
 
+    # 🔥 BLOQUEIO
+    status = verificar_pagamento(session["user"])
+    if status == "bloqueado":
+        return "<h1 style='color:red'>🚫 Sistema bloqueado</h1>"
+
     if not tem_permissao("pode_excluir_estoque"):
         return acesso_negado()
 
@@ -157,47 +185,6 @@ def excluir_estoque(id):
 
     devolver_conexao(conn)
     return redirect("/estoque")
-
-# ================= ENTRADA =================
-@estoque_bp.route("/entrada", methods=["GET", "POST"])
-def entrada():
-    if "user" not in session:
-        return redirect("/")
-
-    conn = conectar()
-    cursor = conn.cursor()
-    msg = ""
-
-    if request.method == "POST":
-        try:
-            produto = request.form.get("produto")
-            qtd = int(request.form.get("qtd"))
-            valor = float(request.form.get("valor").replace(",", "."))
-            fornecedor = request.form.get("fornecedor")
-
-            cursor.execute("SELECT quantidade FROM estoque WHERE produto=%s", (produto,))
-            dado = cursor.fetchone()
-
-            if dado:
-                cursor.execute("UPDATE estoque SET quantidade=%s WHERE produto=%s",
-                               (dado[0] + qtd, produto))
-            else:
-                cursor.execute("""
-                INSERT INTO estoque (produto, quantidade, categoria, valor)
-                VALUES (%s,%s,%s,%s)
-                """, (produto, qtd, "entrada", valor))
-
-            cursor.execute("""
-            INSERT INTO entradas (produto, quantidade, valor, fornecedor, usuario)
-            VALUES (%s,%s,%s,%s,%s)
-            """, (produto, qtd, valor, fornecedor, session["user"]))
-
-            conn.commit()
-            msg = "✅ Entrada registrada"
-
-        except Exception as e:
-            conn.rollback()
-            msg = f"❌ Erro: {e}"
 
     devolver_conexao(conn)
 
