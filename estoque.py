@@ -10,19 +10,14 @@ def estoque():
     if "user" not in session:
         return redirect("/")
 
-    # 🔥 ADMIN NÃO BLOQUEIA
+    # 🔥 NÃO BLOQUEIA ADMIN
     if session.get("cargo") != "admin":
         status = verificar_pagamento(session["user"])
 
         if status == "bloqueado":
-            return """
-            <h1 style='color:red;text-align:center;margin-top:50px;'>
-            🚫 Sistema bloqueado<br><br>
-            Efetue o pagamento para continuar
-            </h1>
-            """
+            return "<h1 style='color:red;text-align:center;'>🚫 Sistema bloqueado</h1>"
         elif status == "aviso":
-            aviso = "<div style='color:yellow;text-align:center;'>⚠️ Seu plano está vencendo!</div>"
+            aviso = "<div style='color:yellow;text-align:center;'>⚠️ Plano vencendo</div>"
         else:
             aviso = ""
     else:
@@ -66,7 +61,7 @@ def estoque():
         <td>{c}</td>
         <td>R$ {float(v or 0):,.2f}</td>
         <td>
-        <a href='/editar_estoque/{i}'>✏️</a>
+        <a href='/editar_estoque/{i}'>✏️</a> |
         <a href='/excluir_estoque/{i}'>🗑️</a>
         </td>
         </tr>
@@ -97,17 +92,11 @@ def estoque():
     </div>
     """)
 
-
 # ================= EDITAR =================
 @estoque_bp.route("/editar_estoque/<int:id>", methods=["GET","POST"])
 def editar_estoque(id):
     if "user" not in session:
         return redirect("/")
-
-    if session.get("cargo") != "admin":
-        status = verificar_pagamento(session["user"])
-        if status == "bloqueado":
-            return "🚫 bloqueado"
 
     conn = conectar()
     cursor = conn.cursor()
@@ -132,7 +121,7 @@ def editar_estoque(id):
 
     return container(f"""
     <div class="card">
-    <h2>Editar</h2>
+    <h2>✏️ EDITAR</h2>
     <form method="POST">
     <input name="produto" value="{dado[0]}">
     <input name="qtd" value="{dado[1]}">
@@ -142,17 +131,11 @@ def editar_estoque(id):
     </div>
     """)
 
-
 # ================= EXCLUIR =================
 @estoque_bp.route("/excluir_estoque/<int:id>")
 def excluir_estoque(id):
     if "user" not in session:
         return redirect("/")
-
-    if session.get("cargo") != "admin":
-        status = verificar_pagamento(session["user"])
-        if status == "bloqueado":
-            return "🚫 bloqueado"
 
     conn = conectar()
     cursor = conn.cursor()
@@ -162,3 +145,99 @@ def excluir_estoque(id):
 
     devolver_conexao(conn)
     return redirect("/estoque")
+
+# ================= TRANSFERENCIA =================
+@estoque_bp.route("/transferencia", methods=["GET","POST"])
+def transferencia():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+    msg=""
+
+    cursor.execute("SELECT produto FROM estoque")
+    produtos = [p[0] for p in cursor.fetchall()]
+
+    cursor.execute("SELECT usuario FROM usuarios")
+    usuarios = [u[0] for u in cursor.fetchall()]
+
+    if request.method == "POST":
+        produto = request.form["produto"]
+        qtd = int(request.form["qtd"])
+        destino = request.form.get("destino")
+
+        cursor.execute("SELECT quantidade FROM estoque WHERE produto=%s",(produto,))
+        dado = cursor.fetchone()
+
+        if dado and dado[0] >= qtd:
+            cursor.execute(
+                "UPDATE estoque SET quantidade=%s WHERE produto=%s",
+                (dado[0] - qtd, produto)
+            )
+
+            cursor.execute("""
+            INSERT INTO transferencias (produto,quantidade,origem,destino,usuario)
+            VALUES (%s,%s,%s,%s,%s)
+            """, (produto, qtd, "estoque", destino or "saida", session["user"]))
+
+            conn.commit()
+            msg="✅ Transferido"
+        else:
+            msg="❌ Estoque insuficiente"
+
+    devolver_conexao(conn)
+
+    return container(f"""
+    <div class="card">
+    <h2>🔁 TRANSFERÊNCIA</h2>
+
+    <form method="POST">
+    <select name="produto">
+    {''.join([f"<option>{p}</option>" for p in produtos])}
+    </select>
+
+    <input name="qtd" type="number">
+
+    <select name="destino">
+    {''.join([f"<option>{u}</option>" for u in usuarios])}
+    </select>
+
+    <button>Transferir</button>
+    </form>
+
+    <p>{msg}</p>
+    </div>
+    """)
+
+# ================= HISTÓRICO =================
+@estoque_bp.route("/historico")
+def historico():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT produto, quantidade, destino, usuario FROM transferencias
+    ORDER BY id DESC
+    """)
+
+    dados = cursor.fetchall()
+
+    tabela = ""
+    for p,q,d,u in dados:
+        tabela += f"<tr><td>{p}</td><td>{q}</td><td>{d}</td><td>{u}</td></tr>"
+
+    devolver_conexao(conn)
+
+    return container(f"""
+    <div class="card">
+    <h2>📊 HISTÓRICO</h2>
+    <table>
+    <tr><th>Produto</th><th>Qtd</th><th>Destino</th><th>Usuário</th></tr>
+    {tabela}
+    </table>
+    </div>
+    """)
