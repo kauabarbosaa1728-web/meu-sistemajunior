@@ -60,11 +60,30 @@ def usuarios():
         texto_status = "PAGO" if status_pagamento == "pago" else "BLOQUEADO"
 
         if u != "admin":
-            acoes = f'''
-            <a href="/usuarios/editar_usuario/{u}">Editar</a> |
-            <a href="/usuarios/alterar_senha/{u}">Senha</a> |
-            <a href="/usuarios/mudar_plano/{u}">Plano</a> |
-            <a href="/usuarios/excluir_usuario/{u}">Excluir</a><br><br>
+            acoes = f"""
+            <form action="/usuarios/editar_usuario/{u}" method="GET" style="display:inline;">
+                <button>Editar</button>
+            </form>
+
+            <form action="/usuarios/alterar_senha/{u}" method="POST" style="display:inline;">
+                <input type="password" name="senha" placeholder="Nova senha" required style="width:120px;">
+                <button>Senha</button>
+            </form>
+
+            <form action="/usuarios/mudar_plano/{u}" method="POST" style="display:inline;">
+                <select name="plano">
+                    <option value="basico">basico</option>
+                    <option value="profissional">profissional</option>
+                    <option value="premium">premium</option>
+                </select>
+                <button>Plano</button>
+            </form>
+
+            <form action="/usuarios/excluir_usuario/{u}" method="POST" style="display:inline;">
+                <button style="color:red;">Excluir</button>
+            </form>
+
+            <br><br>
 
             <form action="/usuarios/liberar_usuario/{u}" method="POST" style="display:inline;">
                 <input type="number" name="dias" placeholder="Dias" required style="width:60px;">
@@ -75,7 +94,7 @@ def usuarios():
                 <input type="number" name="dias" placeholder="Dias" required style="width:60px;">
                 <button style="background:red;color:#fff;">🔒 Bloquear</button>
             </form>
-            '''
+            """
         else:
             acoes = "Protegido"
 
@@ -144,39 +163,37 @@ def editar_usuario(usuario):
 
 
 # ================= ALTERAR SENHA =================
-@usuarios_bp.route("/alterar_senha/<usuario>", methods=["POST", "GET"])
+@usuarios_bp.route("/alterar_senha/<usuario>", methods=["POST"])
 def alterar_senha(usuario):
-    if request.method == "POST":
-        nova = request.form.get("senha")
+    nova = request.form.get("senha")
 
-        conn = conectar()
-        cursor = conn.cursor()
+    conn = conectar()
+    cursor = conn.cursor()
 
-        cursor.execute("""
-        UPDATE usuarios SET senha=%s WHERE usuario=%s
-        """, (generate_password_hash(nova), usuario))
+    cursor.execute("""
+    UPDATE usuarios SET senha=%s WHERE usuario=%s
+    """, (generate_password_hash(nova), usuario))
 
-        conn.commit()
-        devolver_conexao(conn)
+    conn.commit()
+    devolver_conexao(conn)
 
     return redirect("/usuarios")
 
 
 # ================= MUDAR PLANO =================
-@usuarios_bp.route("/mudar_plano/<usuario>", methods=["POST", "GET"])
+@usuarios_bp.route("/mudar_plano/<usuario>", methods=["POST"])
 def mudar_plano(usuario):
-    if request.method == "POST":
-        novo_plano = request.form.get("plano")
+    novo_plano = request.form.get("plano")
 
-        conn = conectar()
-        cursor = conn.cursor()
+    conn = conectar()
+    cursor = conn.cursor()
 
-        cursor.execute("""
-        UPDATE usuarios SET plano=%s WHERE usuario=%s
-        """, (novo_plano, usuario))
+    cursor.execute("""
+    UPDATE usuarios SET plano=%s WHERE usuario=%s
+    """, (novo_plano, usuario))
 
-        conn.commit()
-        devolver_conexao(conn)
+    conn.commit()
+    devolver_conexao(conn)
 
     return redirect("/usuarios")
 
@@ -226,7 +243,7 @@ def bloquear_usuario(usuario):
 
 
 # ================= EXCLUIR =================
-@usuarios_bp.route("/excluir_usuario/<usuario>")
+@usuarios_bp.route("/excluir_usuario/<usuario>", methods=["POST"])
 def excluir_usuario(usuario):
     conn = conectar()
     cursor = conn.cursor()
