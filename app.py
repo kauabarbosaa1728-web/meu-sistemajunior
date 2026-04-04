@@ -20,29 +20,79 @@ app.secret_key = "segredo123"
 # ================= BANCO =================
 criar_banco()
 
+
+# ================= FUNÇÃO EXTRA (SEGURANÇA) =================
+def usuario_liberado_manual():
+    usuario = session.get("user")
+    return usuario in ["kaua", "kaua@gmail.com"]
+
+
+# ================= FUNÇÃO EXTRA (CHECK VENCIMENTO) =================
+def verificar_vencimento(usuario):
+    conn = None
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        SELECT vencimento FROM pagamentos WHERE usuario=%s
+        """, (usuario,))
+
+        dado = cursor.fetchone()
+
+        if not dado:
+            return False
+
+        vencimento = dado[0]
+
+        if vencimento and datetime.now() > vencimento:
+            cursor.execute("""
+            UPDATE pagamentos SET status='bloqueado' WHERE usuario=%s
+            """, (usuario,))
+            conn.commit()
+            return False
+
+        return True
+
+    except:
+        return False
+
+    finally:
+        if conn:
+            devolver_conexao(conn)
+
+
 # ================= BLOQUEIO GLOBAL =================
 @app.before_request
 def bloquear_sistema():
-    rotas_livres = ["/", "/login", "/criar_pagamento", "/webhook", "/pagar"]
+    rotas_livres = [
+        "/", "/login", "/criar_pagamento", "/webhook", "/pagar"
+    ]
 
     if "user" not in session:
         return
 
+    # ROTAS LIVRES
     if any(r in request.path for r in rotas_livres):
         return
 
-    # 🔥 LIBERA ADMIN 100%
+    # ADMIN LIBERADO
     if session.get("cargo") == "admin":
         return
 
-    # 🔥 LIBERA SEU USUÁRIO DIRETO (GARANTIA TOTAL)
-    if session.get("user") in ["kaua", "kaua@gmail.com"]:
+    # USUARIO LIBERADO MANUAL
+    if usuario_liberado_manual():
         return
 
-    # 🔒 BLOQUEIO NORMAL
-    status = verificar_pagamento(session["user"])
+    usuario = session["user"]
 
-    if status == "bloqueado":
+    # VERIFICA PAGAMENTO NORMAL
+    status = verificar_pagamento(usuario)
+
+    # VERIFICA VENCIMENTO
+    ativo = verificar_vencimento(usuario)
+
+    if status == "bloqueado" or not ativo:
         return """
         <style>
             body {
@@ -64,13 +114,7 @@ def bloquear_sistema():
                 box-shadow: 0 0 20px #0f0;
             }
 
-            h1 {
-                color:red;
-            }
-
-            p {
-                margin-top:10px;
-            }
+            h1 { color:red; }
 
             button {
                 margin-top:20px;
@@ -89,7 +133,7 @@ def bloquear_sistema():
 
         <div class="box">
             <h1>🚫 Sistema bloqueado</h1>
-            <p>Efetue o pagamento para continuar</p>
+            <p>Seu acesso expirou ou está bloqueado</p>
 
             <a href="/pagar">
                 <button>💰 Pagar agora</button>
@@ -97,49 +141,22 @@ def bloquear_sistema():
         </div>
         """
 
-# ================= LIBERAR USUÁRIO (ADMIN) =================
-@app.route("/liberar/<usuario>/<int:dias>")
-def liberar_usuario(usuario, dias):
-    if "user" not in session:
-        return redirect("/")
 
-    # 🔐 só admin pode
-    if session.get("cargo") != "admin":
-        return acesso_negado()
+# ================= REGISTRO DAS ROTAS =================
 
-    conn = conectar()
-    cursor = conn.cursor()
+# 🔥 IMPORTANTE (ESSA LINHA RESOLVE 90% DOS SEUS ERROS)
+app.register_blueprint(usuarios_bp, url_prefix="/usuarios")
 
-    try:
-        nova_data = datetime.now() + timedelta(days=dias)
-
-        cursor.execute("""
-        UPDATE usuarios
-        SET data_validade=%s
-        WHERE usuario=%s
-        """, (nova_data, usuario))
-
-        conn.commit()
-
-        registrar_log(session["user"], "liberar_usuario", f"{usuario} por {dias} dias")
-
-    except Exception as e:
-        conn.rollback()
-        print("Erro ao liberar:", e)
-
-    devolver_conexao(conn)
-    return redirect("/usuarios")
-
-# ================= ROTAS =================
+# OUTRAS ROTAS
 app.register_blueprint(auth_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(estoque_bp)
-app.register_blueprint(usuarios_bp)
 app.register_blueprint(pagamento_routes)
 app.register_blueprint(logs_bp)
 
 # ================= IA =================
 app.register_blueprint(ia_bp)
+
 
 # ================= START =================
 if __name__ == "__main__":
