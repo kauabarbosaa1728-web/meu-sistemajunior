@@ -92,8 +92,13 @@ print("STATUS REAL:", status)
 if status != "pago":
     ativo = True
 
-    if status == "bloqueado" or not ativo:
+    @app.before_request
+def bloquear_sistema():
+    ...
+    if status != "pago":
         return """
+        🚫 Sistema bloqueado
+        """
         <style>
             body {
                 background: #000;
