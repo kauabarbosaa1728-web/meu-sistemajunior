@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 usuarios_bp = Blueprint("usuarios_bp", __name__)
 
 # ================= USUÁRIOS =================
-@usuarios_bp.route("/", methods=["GET", "POST"])
+@usuarios_bp.route("/usuarios", methods=["GET", "POST"])
 def usuarios():
     if "user" not in session:
         return redirect("/")
