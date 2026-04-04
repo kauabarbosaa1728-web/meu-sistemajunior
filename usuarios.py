@@ -19,7 +19,6 @@ def usuarios():
     cursor = conn.cursor()
     mensagem = ""
 
-    # ================= CRIAR =================
     if request.method == "POST":
         try:
             user = request.form["user"].strip()
@@ -40,7 +39,6 @@ def usuarios():
             conn.rollback()
             mensagem = f"Erro ao criar usuário: {e}"
 
-    # ================= LISTAGEM =================
     cursor.execute("""
     SELECT usuario, cargo, online, ativo, email, plano, nome_empresa
     FROM usuarios ORDER BY usuario
@@ -155,51 +153,8 @@ def usuarios():
     </div>
     """)
 
-
-# ================= EDITAR =================
-@usuarios_bp.route("/editar_usuario/<usuario>")
-def editar_usuario(usuario):
-    return redirect("/usuarios")
-
-
-# ================= ALTERAR SENHA =================
-@usuarios_bp.route("/alterar_senha/<usuario>", methods=["POST"])
-def alterar_senha(usuario):
-    nova = request.form.get("senha")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    UPDATE usuarios SET senha=%s WHERE usuario=%s
-    """, (generate_password_hash(nova), usuario))
-
-    conn.commit()
-    devolver_conexao(conn)
-
-    return redirect("/usuarios")
-
-
-# ================= MUDAR PLANO =================
-@usuarios_bp.route("/mudar_plano/<usuario>", methods=["POST"])
-def mudar_plano(usuario):
-    novo_plano = request.form.get("plano")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    UPDATE usuarios SET plano=%s WHERE usuario=%s
-    """, (novo_plano, usuario))
-
-    conn.commit()
-    devolver_conexao(conn)
-
-    return redirect("/usuarios")
-
-
 # ================= LIBERAR =================
-@usuarios_bp.route("/liberar_usuario/<usuario>", methods=["POST"])
+@usuarios_bp.route("/usuarios/liberar_usuario/<usuario>", methods=["POST"])
 def liberar_usuario(usuario):
     dias = int(request.form.get("dias", 0))
     vencimento = datetime.now() + timedelta(days=dias)
@@ -219,9 +174,8 @@ def liberar_usuario(usuario):
 
     return redirect("/usuarios")
 
-
 # ================= BLOQUEAR =================
-@usuarios_bp.route("/bloquear_usuario/<usuario>", methods=["POST"])
+@usuarios_bp.route("/usuarios/bloquear_usuario/<usuario>", methods=["POST"])
 def bloquear_usuario(usuario):
     dias = int(request.form.get("dias", 0))
     vencimento = datetime.now() + timedelta(days=dias)
@@ -238,131 +192,5 @@ def bloquear_usuario(usuario):
 
     conn.commit()
     devolver_conexao(conn)
-
-    return redirect("/usuarios")
-
-
-# ================= EXCLUIR =================
-@usuarios_bp.route("/excluir_usuario/<usuario>", methods=["POST"])
-def excluir_usuario(usuario):
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("DELETE FROM usuarios WHERE usuario=%s", (usuario,))
-    cursor.execute("DELETE FROM pagamentos WHERE usuario=%s", (usuario,))
-
-    conn.commit()
-    devolver_conexao(conn)
-
-    return redirect("/usuarios")
-
-# ================= FALLBACK ROTAS (ANTI-404) =================
-
-@usuarios_bp.route("/usuarios/editar_usuario/<usuario>")
-def editar_usuario_fallback(usuario):
-    return redirect("/usuarios")
-
-
-@usuarios_bp.route("/usuarios/alterar_senha/<usuario>", methods=["POST"])
-def alterar_senha_fallback(usuario):
-    nova = request.form.get("senha")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    UPDATE usuarios SET senha=%s WHERE usuario=%s
-    """, (generate_password_hash(nova), usuario))
-
-    conn.commit()
-    devolver_conexao(conn)
-
-    return redirect("/usuarios")
-
-
-@usuarios_bp.route("/usuarios/mudar_plano/<usuario>", methods=["POST"])
-def mudar_plano_fallback(usuario):
-    novo_plano = request.form.get("plano")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    UPDATE usuarios SET plano=%s WHERE usuario=%s
-    """, (novo_plano, usuario))
-
-    conn.commit()
-    devolver_conexao(conn)
-
-    return redirect("/usuarios")
-
-@usuarios_bp.route("/usuarios/excluir_usuario/<usuario>", methods=["POST"])
-def excluir_usuario_fallback(usuario):
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("DELETE FROM usuarios WHERE usuario=%s", (usuario,))
-    cursor.execute("DELETE FROM pagamentos WHERE usuario=%s", (usuario,))
-
-    conn.commit()
-    devolver_conexao(conn)
-
-    return redirect("/usuarios")
-    # ================= LIBERAR USUARIO =================
-@usuarios_bp.route("/usuarios/liberar_usuario/<usuario_alvo>")
-def liberar_usuario(usuario_alvo):
-    if "user" not in session:
-        return redirect("/")
-
-    if session.get("cargo") != "admin":
-        return acesso_negado()
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-        UPDATE usuarios
-        SET ativo = TRUE
-        WHERE usuario = %s
-        """, (usuario_alvo,))
-
-        conn.commit()
-
-    except Exception as e:
-        print("Erro ao liberar:", e)
-
-    finally:
-        cursor.close()
-        devolver_conexao(conn)
-
-    return redirect("/usuarios")
-    # ================= BLOQUEAR USUARIO =================
-@usuarios_bp.route("/usuarios/bloquear_usuario/<usuario_alvo>")
-def bloquear_usuario(usuario_alvo):
-    if "user" not in session:
-        return redirect("/")
-
-    if session.get("cargo") != "admin":
-        return acesso_negado()
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-        UPDATE usuarios
-        SET ativo = FALSE
-        WHERE usuario = %s
-        """, (usuario_alvo,))
-
-        conn.commit()
-
-    except Exception as e:
-        print("Erro ao bloquear:", e)
-
-    finally:
-        cursor.close()
-        devolver_conexao(conn)
 
     return redirect("/usuarios")
