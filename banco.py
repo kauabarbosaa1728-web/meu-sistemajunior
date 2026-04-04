@@ -245,6 +245,7 @@ def verificar_pagamento(usuario):
 
         dado = cursor.fetchone()
 
+        # ❌ Sem registro → bloqueado
         if not dado:
             return "bloqueado"
 
@@ -252,18 +253,25 @@ def verificar_pagamento(usuario):
 
         from datetime import datetime
 
-        # Se estiver pago e não venceu
+        # 🔥 SE ESTIVER PAGO
         if status == "pago":
-            if vencimento and datetime.now() <= vencimento:
-                return "pago"
-            else:
-                # venceu → bloqueia
-                cursor.execute("""
-                UPDATE pagamentos SET status='bloqueado' WHERE usuario=%s
-                """, (usuario,))
-                conn.commit()
-                return "bloqueado"
 
+            # ✅ SE NÃO TEM VENCIMENTO → LIBERA
+            if not vencimento:
+                return "pago"
+
+            # ✅ SE AINDA NÃO VENCEU → LIBERA
+            if datetime.now() <= vencimento:
+                return "pago"
+
+            # ❌ SE VENCEU → BLOQUEIA
+            cursor.execute("""
+            UPDATE pagamentos SET status='bloqueado' WHERE usuario=%s
+            """, (usuario,))
+            conn.commit()
+            return "bloqueado"
+
+        # ❌ QUALQUER OUTRO STATUS
         return "bloqueado"
 
     except Exception as e:
