@@ -308,3 +308,61 @@ def excluir_usuario_fallback(usuario):
     devolver_conexao(conn)
 
     return redirect("/usuarios")
+    # ================= LIBERAR USUARIO =================
+@usuarios_bp.route("/usuarios/liberar_usuario/<usuario_alvo>")
+def liberar_usuario(usuario_alvo):
+    if "user" not in session:
+        return redirect("/")
+
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+        UPDATE usuarios
+        SET ativo = TRUE
+        WHERE usuario = %s
+        """, (usuario_alvo,))
+
+        conn.commit()
+
+    except Exception as e:
+        print("Erro ao liberar:", e)
+
+    finally:
+        cursor.close()
+        devolver_conexao(conn)
+
+    return redirect("/usuarios")
+    # ================= BLOQUEAR USUARIO =================
+@usuarios_bp.route("/usuarios/bloquear_usuario/<usuario_alvo>")
+def bloquear_usuario(usuario_alvo):
+    if "user" not in session:
+        return redirect("/")
+
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+        UPDATE usuarios
+        SET ativo = FALSE
+        WHERE usuario = %s
+        """, (usuario_alvo,))
+
+        conn.commit()
+
+    except Exception as e:
+        print("Erro ao bloquear:", e)
+
+    finally:
+        cursor.close()
+        devolver_conexao(conn)
+
+    return redirect("/usuarios")
