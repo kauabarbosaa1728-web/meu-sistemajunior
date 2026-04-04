@@ -138,7 +138,7 @@ def bloquear_sistema():
 
 
 # ================= ROTAS =================
-app.register_blueprint(usuarios_bp, url_prefix="/usuarios")
+app.register_blueprint(usuarios_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(estoque_bp)
