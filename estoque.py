@@ -45,18 +45,26 @@ def estoque():
         produto = request.form.get("produto")
         qtd = request.form.get("qtd")
         categoria = request.form.get("categoria")
+        fornecedor = request.form.get("fornecedor")
+        valor = request.form.get("valor")
 
         if produto and qtd and categoria:
             try:
                 qtd = int(qtd)
+                valor = float(valor or 0)
+
                 cursor.execute("""
                 INSERT INTO estoque (produto, quantidade, categoria, valor)
                 VALUES (%s,%s,%s,%s)
-                """, (produto, qtd, categoria, 0))
+                """, (produto, qtd, categoria, valor))
+
                 conn.commit()
                 registrar_log(session["user"], "add_estoque", produto)
+
                 msg = "✅ Adicionado"
+
             except Exception as e:
+                conn.rollback()
                 msg = f"❌ Erro: {e}"
 
     cursor.execute("SELECT id, produto, quantidade, categoria, valor FROM estoque ORDER BY id DESC")
@@ -96,11 +104,13 @@ def estoque():
 
     <a href="/entrada">➕ Entrada de Produtos</a>
 
-    <form method="POST">
-    <input name="produto" placeholder="Produto">
-    <input name="qtd" placeholder="Qtd">
-    <input name="categoria" placeholder="Categoria">
-    <button>Adicionar</button>
+    <form method="POST" style="display:flex; flex-direction:column; gap:10px; max-width:300px;">
+        <input name="produto" placeholder="Produto">
+        <input name="qtd" placeholder="Quantidade">
+        <input name="categoria" placeholder="Categoria">
+        <input name="fornecedor" placeholder="Fornecedor">
+        <input name="valor" placeholder="Valor (R$)">
+        <button>Adicionar</button>
     </form>
 
     <p>{msg}</p>
