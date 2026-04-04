@@ -297,22 +297,41 @@ def transferencia():
 
     return container(f"""
     <div class="card">
-    <h2>🔁 TRANSFERÊNCIA</h2>
+    <h2>🔄 NOVA TRANSFERÊNCIA</h2>
 
-    <form method="POST">
-        <select name="produto">{lista_produtos}</select>
-        <input name="qtd" type="number">
-        <select name="destino">
-            <option value="">Saída</option>
+    <form method="POST" style="display:grid;gap:10px;max-width:400px">
+
+        <label>Produto:</label>
+        <select name="produto" required>
+            {lista_produtos}
+        </select>
+
+        <label>Quantidade:</label>
+        <input name="qtd" type="number" min="1" required>
+
+        <label>Destino (Usuário / Setor):</label>
+        <select name="destino" required>
+            <option value="saida">Saída</option>
+            <option value="lixo">Lixo Eletrônico</option>
             {lista_usuarios}
         </select>
-        <button>Transferir</button>
+
+        <button style="margin-top:10px">🚀 Transferir</button>
     </form>
 
-    <p>{msg}</p>
+    <p style="margin-top:15px">{msg}</p>
+
+    <hr>
+
+    <h3>📜 Últimas Transferências</h3>
 
     <table>
-    <tr><th>Produto</th><th>Qtd</th><th>Destino</th><th>Usuário</th></tr>
+    <tr>
+        <th>Produto</th>
+        <th>Qtd</th>
+        <th>Destino</th>
+        <th>Usuário</th>
+    </tr>
     {tabela}
     </table>
     </div>
