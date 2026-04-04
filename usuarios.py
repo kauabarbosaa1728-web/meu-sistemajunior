@@ -160,15 +160,27 @@ def liberar_usuario(usuario):
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    INSERT INTO pagamentos (usuario, status, data, vencimento)
-    VALUES (%s, 'pago', NOW(), %s)
-    ON CONFLICT (usuario) DO UPDATE
-    SET status='pago', data=NOW(), vencimento=%s
-    """, (usuario, vencimento, vencimento))
+    try:
+        cursor.execute("""
+        UPDATE pagamentos
+        SET status='pago', data=NOW(), vencimento=%s
+        WHERE usuario=%s
+        """, (vencimento, usuario))
 
-    conn.commit()
-    devolver_conexao(conn)
+        if cursor.rowcount == 0:
+            cursor.execute("""
+            INSERT INTO pagamentos (usuario, status, data, vencimento)
+            VALUES (%s, 'pago', NOW(), %s)
+            """, (usuario, vencimento))
+
+        conn.commit()
+
+    except Exception as e:
+        conn.rollback()
+        print("Erro liberar:", e)
+
+    finally:
+        devolver_conexao(conn)
 
     return redirect("/usuarios")
 
@@ -182,13 +194,30 @@ def bloquear_usuario(usuario):
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    UPDATE pagamentos
-    SET status='bloqueado', vencimento=%s
-    WHERE usuario=%s
-    """, (vencimento, usuario))
+    try:
+        cursor.execute("""
+        UPDATE pagamentos
+        SET status='bloqueado', vencimento=%s
+        WHERE usuario=%s
+        """, (vencimento, usuario))
 
-    conn.commit()
-    devolver_conexao(conn)
+        if cursor.rowcount == 0:
+            cursor.execute("""
+            INSERT INTO pagamentos (usuario, status, data, vencimento)
+            VALUES (%s, 'bloqueado', NOW(), %s)
+            """, (usuario, vencimento))
+
+        conn.commit()
+
+    except Exception as e:
+        conn.rollback()
+        print("Erro bloquear:", e)
+
+    finally:
+        devolver_conexao(conn)
 
     return redirect("/usuarios")
+
+
+
+   
