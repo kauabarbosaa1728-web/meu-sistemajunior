@@ -233,29 +233,42 @@ def criar_banco():
         devolver_conexao(conn)
         from datetime import datetime
 
-def verificar_pagamento(user):
+def verificar_pagamento(usuario):
     conn = None
     try:
         conn = conectar()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT data_pagamento FROM usuarios WHERE usuario=%s", (user,))
+        cursor.execute("""
+        SELECT status, vencimento FROM pagamentos WHERE usuario=%s
+        """, (usuario,))
+
         dado = cursor.fetchone()
 
-        if not dado or not dado[0]:
+        if not dado:
             return "bloqueado"
 
-        data_pagamento = dado[0]
-        hoje = datetime.now()
+        status, vencimento = dado
 
-        dias = (hoje - data_pagamento).days
+        from datetime import datetime
 
-        if dias <= 30:
-            return "ok"
-        elif dias <= 35:
-            return "aviso"
-        else:
-            return "bloqueado"
+        # Se estiver pago e não venceu
+        if status == "pago":
+            if vencimento and datetime.now() <= vencimento:
+                return "pago"
+            else:
+                # venceu → bloqueia
+                cursor.execute("""
+                UPDATE pagamentos SET status='bloqueado' WHERE usuario=%s
+                """, (usuario,))
+                conn.commit()
+                return "bloqueado"
+
+        return "bloqueado"
+
+    except Exception as e:
+        print("Erro verificar pagamento:", e)
+        return "bloqueado"
 
     finally:
         if conn:
