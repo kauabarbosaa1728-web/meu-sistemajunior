@@ -21,13 +21,13 @@ app.secret_key = "segredo123"
 criar_banco()
 
 
-# ================= FUNÇÃO EXTRA (SEGURANÇA) =================
+# ================= FUNÇÃO EXTRA =================
 def usuario_liberado_manual():
     usuario = session.get("user")
     return usuario in ["kaua", "kaua@gmail.com"]
 
 
-# ================= FUNÇÃO EXTRA (CHECK VENCIMENTO) =================
+# ================= VERIFICAR VENCIMENTO =================
 def verificar_vencimento(usuario):
     conn = None
     try:
@@ -54,7 +54,8 @@ def verificar_vencimento(usuario):
 
         return True
 
-    except:
+    except Exception as e:
+        print("Erro vencimento:", e)
         return False
 
     finally:
@@ -72,24 +73,18 @@ def bloquear_sistema():
     if "user" not in session:
         return
 
-    # ROTAS LIVRES
-    if any(r in request.path for r in rotas_livres):
+    if request.path in rotas_livres:
         return
 
-    # ADMIN LIBERADO
     if session.get("cargo") == "admin":
         return
 
-    # USUARIO LIBERADO MANUAL
     if usuario_liberado_manual():
         return
 
     usuario = session["user"]
 
-    # VERIFICA PAGAMENTO NORMAL
     status = verificar_pagamento(usuario)
-
-    # VERIFICA VENCIMENTO
     ativo = verificar_vencimento(usuario)
 
     if status == "bloqueado" or not ativo:
@@ -142,19 +137,13 @@ def bloquear_sistema():
         """
 
 
-# ================= REGISTRO DAS ROTAS =================
-
-# 🔥 IMPORTANTE (ESSA LINHA RESOLVE 90% DOS SEUS ERROS)
+# ================= ROTAS =================
 app.register_blueprint(usuarios_bp, url_prefix="/usuarios")
-
-# OUTRAS ROTAS
 app.register_blueprint(auth_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(estoque_bp)
 app.register_blueprint(pagamento_routes)
 app.register_blueprint(logs_bp)
-
-# ================= IA =================
 app.register_blueprint(ia_bp)
 
 
