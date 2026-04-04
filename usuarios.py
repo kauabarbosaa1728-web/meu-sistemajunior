@@ -217,6 +217,140 @@ def bloquear_usuario(usuario):
         devolver_conexao(conn)
 
     return redirect("/usuarios")
+    # ================= EDITAR USUARIO =================
+@usuarios_bp.route("/editar_usuario/<usuario>", methods=["GET", "POST"])
+def editar_usuario(usuario):
+    if "user" not in session:
+        return redirect("/")
+
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        novo_cargo = request.form.get("cargo")
+        cursor.execute("""
+        UPDATE usuarios SET cargo=%s WHERE usuario=%s
+        """, (novo_cargo, usuario))
+        conn.commit()
+
+    cursor.execute("SELECT cargo FROM usuarios WHERE usuario=%s", (usuario,))
+    cargo = cursor.fetchone()[0]
+
+    devolver_conexao(conn)
+
+    return container(f"""
+    <div class="card">
+        <h2>Editar Usuário: {usuario}</h2>
+
+        <form method="POST">
+            <select name="cargo">
+                <option value="operador" {"selected" if cargo=="operador" else ""}>operador</option>
+                <option value="admin" {"selected" if cargo=="admin" else ""}>admin</option>
+            </select>
+            <button>Salvar</button>
+        </form>
+    </div>
+    """)
+
+
+# ================= ALTERAR SENHA =================
+@usuarios_bp.route("/alterar_senha/<usuario>", methods=["GET", "POST"])
+def alterar_senha(usuario):
+    if "user" not in session:
+        return redirect("/")
+
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    if request.method == "POST":
+        nova = request.form.get("senha")
+
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE usuarios SET senha=%s WHERE usuario=%s
+        """, (generate_password_hash(nova), usuario))
+
+        conn.commit()
+        devolver_conexao(conn)
+
+        return redirect("/usuarios")
+
+    return container(f"""
+    <div class="card">
+        <h2>Nova senha para {usuario}</h2>
+
+        <form method="POST">
+            <input name="senha" placeholder="Nova senha" required>
+            <button>Alterar</button>
+        </form>
+    </div>
+    """)
+
+
+# ================= MUDAR PLANO =================
+@usuarios_bp.route("/mudar_plano/<usuario>", methods=["GET", "POST"])
+def mudar_plano(usuario):
+    if "user" not in session:
+        return redirect("/")
+
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    if request.method == "POST":
+        plano = request.form.get("plano")
+
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE usuarios SET plano=%s WHERE usuario=%s
+        """, (plano, usuario))
+
+        conn.commit()
+        devolver_conexao(conn)
+
+        return redirect("/usuarios")
+
+    return container(f"""
+    <div class="card">
+        <h2>Plano de {usuario}</h2>
+
+        <form method="POST">
+            <select name="plano">
+                <option value="basico">basico</option>
+                <option value="profissional">profissional</option>
+                <option value="premium">premium</option>
+            </select>
+            <button>Salvar</button>
+        </form>
+    </div>
+    """)
+
+
+# ================= EXCLUIR =================
+@usuarios_bp.route("/excluir_usuario/<usuario>")
+def excluir_usuario(usuario):
+    if "user" not in session:
+        return redirect("/")
+
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM usuarios WHERE usuario=%s", (usuario,))
+    cursor.execute("DELETE FROM pagamentos WHERE usuario=%s", (usuario,))
+
+    conn.commit()
+    devolver_conexao(conn)
+
+    return redirect("/usuarios")
 
 
 
