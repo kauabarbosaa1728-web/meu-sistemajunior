@@ -156,41 +156,59 @@ def usuarios():
 # ================= LIBERAR =================
 @usuarios_bp.route("/usuarios/liberar_usuario/<usuario>", methods=["POST"])
 def liberar_usuario(usuario):
-    dias = int(request.form.get("dias", 0))
+    try:
+        dias = request.form.get("dias")
+        dias = int(dias) if dias else 0
+    except:
+        dias = 0
+
     vencimento = datetime.now() + timedelta(days=dias)
 
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    INSERT INTO pagamentos (usuario, status, data, vencimento)
-    VALUES (%s, 'pago', NOW(), %s)
-    ON CONFLICT (usuario)
-    DO UPDATE SET status='pago', vencimento=%s
-    """, (usuario, vencimento, vencimento))
+    try:
+        cursor.execute("""
+        INSERT INTO pagamentos (usuario, status, data, vencimento)
+        VALUES (%s, 'pago', NOW(), %s)
+        ON CONFLICT (usuario)
+        DO UPDATE SET status='pago', vencimento=%s
+        """, (usuario, vencimento, vencimento))
 
-    conn.commit()
-    devolver_conexao(conn)
+        conn.commit()
+    except Exception as e:
+        print("Erro liberar:", e)
+    finally:
+        devolver_conexao(conn)
 
     return redirect("/usuarios")
 
 # ================= BLOQUEAR =================
 @usuarios_bp.route("/usuarios/bloquear_usuario/<usuario>", methods=["POST"])
 def bloquear_usuario(usuario):
-    dias = int(request.form.get("dias", 0))
+    try:
+        dias = request.form.get("dias")
+        dias = int(dias) if dias else 0
+    except:
+        dias = 0
+
     vencimento = datetime.now() + timedelta(days=dias)
 
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    INSERT INTO pagamentos (usuario, status, data, vencimento)
-    VALUES (%s, 'bloqueado', NOW(), %s)
-    ON CONFLICT (usuario)
-    DO UPDATE SET status='bloqueado', vencimento=%s
-    """, (usuario, vencimento, vencimento))
+    try:
+        cursor.execute("""
+        INSERT INTO pagamentos (usuario, status, data, vencimento)
+        VALUES (%s, 'bloqueado', NOW(), %s)
+        ON CONFLICT (usuario)
+        DO UPDATE SET status='bloqueado', vencimento=%s
+        """, (usuario, vencimento, vencimento))
 
-    conn.commit()
-    devolver_conexao(conn)
+        conn.commit()
+    except Exception as e:
+        print("Erro bloquear:", e)
+    finally:
+        devolver_conexao(conn)
 
     return redirect("/usuarios")
