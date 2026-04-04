@@ -1,5 +1,6 @@
 from flask import Flask, session, request, redirect
-from datetime import datetime, timedelta
+from datetime import datetime
+from werkzeug.security import generate_password_hash
 
 from banco import criar_banco, verificar_pagamento, conectar, devolver_conexao, registrar_log
 from layout import acesso_negado
@@ -21,7 +22,7 @@ app.secret_key = "segredo123"
 criar_banco()
 
 
-# ================= FUNÇÃO EXTRA =================
+# ================= LIBERAÇÃO MANUAL =================
 def usuario_liberado_manual():
     usuario = session.get("user")
     return usuario in ["kaua", "kaua@gmail.com"]
@@ -147,11 +148,7 @@ app.register_blueprint(logs_bp)
 app.register_blueprint(ia_bp)
 
 
-# ================= START =================
-if __name__ == "__main__":
-    app.run(debug=True)
-    # ================= ROTAS DIRETAS (ANTI-404) =================
-
+# ================= ROTAS DIRETAS (ANTI-404) =================
 @app.route("/usuarios/excluir_usuario/<usuario>", methods=["POST"])
 def excluir_usuario_direto(usuario):
     conn = conectar()
@@ -198,3 +195,8 @@ def alterar_senha_direto(usuario):
     devolver_conexao(conn)
 
     return redirect("/usuarios")
+
+
+# ================= START =================
+if __name__ == "__main__":
+    app.run(debug=True)
