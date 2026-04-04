@@ -17,7 +17,7 @@ def valor_plano(plano):
     }.get(plano, 39.90)
 
 
-# ================= PAGAR (BOTÃO DO BLOQUEIO) =================
+# ================= PAGAR =================
 @pagamento_routes.route("/pagar")
 def pagar():
     if "user" not in session:
@@ -31,16 +31,12 @@ def pagar():
 
             <form method="POST" action="/criar_pagamento">
                 <input type="hidden" name="user" value="{session['user']}">
-                <input type="hidden" name="email" value="kaua@gmail.com">
-                <input type="hidden" name="senha" value="123456">
 
                 <select name="plano" style="width:100%;padding:10px;margin:10px 0;background:#111;color:#fff;">
                     <option value="basico">Básico - R$39,90</option>
                     <option value="profissional">Profissional - R$79,90</option>
                     <option value="premium">Premium - R$129,90</option>
                 </select>
-
-                <input type="hidden" name="nome_empresa" value="KBSISTEMAS">
 
                 <button style="width:100%;padding:15px;background:#00ff00;border:none;font-size:18px;cursor:pointer;">
                     🔥 Gerar PIX
@@ -57,15 +53,11 @@ def pagar():
 def criar_pagamento():
     try:
         usuario = request.form.get("user")
-        senha_raw = request.form.get("senha")
-        email = request.form.get("email")
-        empresa = request.form.get("nome_empresa")
         plano = request.form.get("plano")
 
-        if not all([usuario, senha_raw, email, empresa, plano]):
+        if not usuario or not plano:
             return "❌ Dados incompletos"
 
-        senha = generate_password_hash(senha_raw)
         valor = valor_plano(plano)
 
         payment_data = {
@@ -73,7 +65,7 @@ def criar_pagamento():
             "description": f"Plano {plano}",
             "payment_method_id": "pix",
             "payer": {
-                "email": email,
+                "email": "teste@email.com",
                 "first_name": usuario
             }
         }
@@ -90,9 +82,9 @@ def criar_pagamento():
         cursor = conn.cursor()
 
         cursor.execute("""
-        INSERT INTO pagamentos (usuario, email, senha, nome_empresa, plano, status, pagamento_id)
-        VALUES (%s,%s,%s,%s,%s,'pendente',%s)
-        """, (usuario, email, senha, empresa, plano, pagamento_id))
+        INSERT INTO pagamentos (usuario, plano, status, pagamento_id)
+        VALUES (%s,%s,'pendente',%s)
+        """, (usuario, plano, pagamento_id))
 
         conn.commit()
         devolver_conexao(conn)
@@ -140,7 +132,7 @@ def criar_pagamento():
         return f"❌ ERRO: {str(e)}"
 
 
-# ================= VERIFICAR =================
+# ================= VERIFICAR PAGAMENTO =================
 @pagamento_routes.route("/verificar_pagamento_auto")
 def verificar_pagamento_auto():
     try:
@@ -157,36 +149,17 @@ def verificar_pagamento_auto():
             cursor = conn.cursor()
 
             cursor.execute("""
-            SELECT usuario, senha, email, nome_empresa, plano
-            FROM pagamentos
-            WHERE pagamento_id=%s AND status='pendente'
+            UPDATE pagamentos 
+            SET status='pago', data=NOW()
+            WHERE pagamento_id=%s
             """, (pagamento_id,))
 
-            user = cursor.fetchone()
-
-            if user:
-                usuario, senha, email, empresa, plano = user
-
-                cursor.execute("""
-                INSERT INTO usuarios (
-                    usuario, senha, cargo, online, ativo, email, plano, nome_empresa,
-                    pode_estoque, pode_transferencia, pode_historico
-                )
-                VALUES (%s,%s,'operador',0,1,%s,%s,%s,1,1,1)
-                """, (usuario, senha, email, plano, empresa))
-
-                cursor.execute("""
-                UPDATE pagamentos SET status='pago'
-                WHERE pagamento_id=%s
-                """, (pagamento_id,))
-
-                conn.commit()
-
+            conn.commit()
             devolver_conexao(conn)
 
             return "APROVADO"
 
         return "aguardando"
 
-    except Exception as e:
+    except:
         return "erro"
