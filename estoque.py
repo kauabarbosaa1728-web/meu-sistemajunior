@@ -380,19 +380,44 @@ def entrada():
     cursor = conn.cursor()
     msg = ""
 
+    # 🔥 CRIA TABELA DE HISTÓRICO SE NÃO EXISTIR
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS entradas (
+        id SERIAL PRIMARY KEY,
+        produto TEXT,
+        quantidade INT,
+        categoria TEXT,
+        fornecedor TEXT,
+        valor NUMERIC,
+        usuario TEXT,
+        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    conn.commit()
+
     if request.method == "POST":
         produto = request.form.get("produto")
         qtd = request.form.get("qtd")
         categoria = request.form.get("categoria")
+        fornecedor = request.form.get("fornecedor")
+        valor = request.form.get("valor")
 
         if produto and qtd and categoria:
             try:
                 qtd = int(qtd)
+                valor = float(valor or 0)
 
+                # 🔥 adiciona no estoque
                 cursor.execute("""
                 INSERT INTO estoque (produto, quantidade, categoria, valor)
                 VALUES (%s,%s,%s,%s)
-                """, (produto, qtd, categoria, 0))
+                """, (produto, qtd, categoria, valor))
+
+                # 🔥 salva no histórico
+                cursor.execute("""
+                INSERT INTO entradas (produto, quantidade, categoria, fornecedor, valor, usuario)
+                VALUES (%s,%s,%s,%s,%s,%s)
+                """, (produto, qtd, categoria, fornecedor, valor, session["user"]))
 
                 conn.commit()
                 registrar_log(session["user"], "entrada_estoque", produto)
@@ -403,21 +428,55 @@ def entrada():
                 conn.rollback()
                 msg = f"❌ Erro: {e}"
 
+    # 🔥 HISTÓRICO
+    cursor.execute("""
+    SELECT produto, quantidade, fornecedor, valor, usuario, data
+    FROM entradas
+    ORDER BY id DESC LIMIT 10
+    """)
+    historico = cursor.fetchall()
+
+    tabela = ""
+    for h in historico:
+        tabela += f"""
+        <tr>
+        <td>{h[0]}</td>
+        <td>{h[1]}</td>
+        <td>{h[2]}</td>
+        <td>R$ {float(h[3] or 0):,.2f}</td>
+        <td>{h[4]}</td>
+        <td>{h[5]}</td>
+        </tr>
+        """
+
     devolver_conexao(conn)
 
     return container(f"""
     <div class="card">
     <h2>➕ ENTRADA DE PRODUTOS</h2>
 
-    <form method="POST">
+    <form method="POST" style="display:flex; flex-direction:column; gap:10px;">
         <input name="produto" placeholder="Produto">
-        <input name="qtd" placeholder="Qtd">
+        <input name="qtd" placeholder="Quantidade">
         <input name="categoria" placeholder="Categoria">
+        <input name="fornecedor" placeholder="Fornecedor">
+        <input name="valor" placeholder="Valor (R$)">
         <button>Adicionar</button>
     </form>
 
     <p>{msg}</p>
 
     <a href="/estoque">⬅ Voltar para estoque</a>
+    </div>
+
+    <div class="card">
+    <h2>📊 HISTÓRICO DE ENTRADAS</h2>
+
+    <table>
+    <tr>
+    <th>Produto</th><th>Qtd</th><th>Fornecedor</th><th>Valor</th><th>User</th><th>Data</th>
+    </tr>
+    {tabela}
+    </table>
     </div>
     """)
