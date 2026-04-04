@@ -121,7 +121,9 @@ def editar_estoque(id):
         return redirect("/")
 
     status = verificar_pagamento(session["user"])
-    if status == "bloqueado":
+
+    # 🔥 CORREÇÃO AQUI (libera admin)
+    if status == "bloqueado" and session.get("cargo") != "admin":
         return "<h1 style='color:red'>🚫 Sistema bloqueado</h1>"
 
     conn = conectar()
@@ -129,23 +131,46 @@ def editar_estoque(id):
 
     if request.method == "POST":
         produto = request.form.get("produto")
-        qtd = int(request.form.get("qtd"))
+        qtd = request.form.get("qtd")
         categoria = request.form.get("categoria")
 
-        cursor.execute("""
-        UPDATE estoque SET produto=%s, quantidade=%s, categoria=%s
-        WHERE id=%s
-        """, (produto, qtd, categoria, id))
+        try:
+            qtd = int(qtd)
 
-        conn.commit()
-        registrar_log(session["user"], "editar_estoque", produto)
-        devolver_conexao(conn)
-        return redirect("/estoque")
+            cursor.execute("""
+            UPDATE estoque SET produto=%s, quantidade=%s, categoria=%s
+            WHERE id=%s
+            """, (produto, qtd, categoria, id))
+
+            conn.commit()
+            registrar_log(session["user"], "editar_estoque", produto)
+
+            devolver_conexao(conn)
+            return redirect("/estoque")
+
+        except Exception as e:
+            conn.rollback()
+            return container(f"""
+            <div class="card">
+            <h2 style='color:red'>❌ Erro ao atualizar</h2>
+            <p>{e}</p>
+            <a href="/estoque">⬅ Voltar</a>
+            </div>
+            """)
 
     cursor.execute("SELECT produto, quantidade, categoria FROM estoque WHERE id=%s", (id,))
     dado = cursor.fetchone()
 
     devolver_conexao(conn)
+
+    # 🔥 proteção caso não encontre o produto
+    if not dado:
+        return container("""
+        <div class="card">
+        <h2 style='color:red'>❌ Produto não encontrado</h2>
+        <a href="/estoque">⬅ Voltar</a>
+        </div>
+        """)
 
     return container(f"""
     <div class="card">
@@ -159,7 +184,6 @@ def editar_estoque(id):
     </form>
     </div>
     """)
-
 # ================= EXCLUIR =================
 @estoque_bp.route("/excluir_estoque/<int:id>")
 def excluir_estoque(id):
