@@ -86,7 +86,7 @@ def bloquear_sistema():
     usuario = session["user"]
 
     status = verificar_pagamento(usuario)
-    ativo = verificar_vencimento(usuario)
+    ativo = True
 
     if status == "bloqueado" or not ativo:
         return """
