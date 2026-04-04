@@ -85,7 +85,11 @@ def bloquear_sistema():
 
     usuario = session["user"]
 
-    status = verificar_pagamento(usuario)
+status = verificar_pagamento(usuario)
+
+print("STATUS REAL:", status)
+
+if status != "pago":
     ativo = True
 
     if status == "bloqueado" or not ativo:
