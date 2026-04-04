@@ -74,10 +74,11 @@ def usuarios():
                 conn.commit()
                 mensagem = "Usuário criado com sucesso."
                 registrar_log(session["user"], "criar_usuario", f"Usuário criado: {user} | Cargo: {cargo} | Plano: {plano}")
-            except Exception:
+            except:
                 conn.rollback()
                 mensagem = "Não foi possível criar o usuário. Talvez ele já exista."
 
+        # 🔥 BUSCAR USUÁRIOS
         cursor.execute("""
         SELECT usuario, cargo, online, ativo, email, plano, nome_empresa,
                pode_estoque, pode_transferencia, pode_historico,
@@ -87,10 +88,18 @@ def usuarios():
         """)
         dados = cursor.fetchall()
 
+        # 🔥 BUSCAR STATUS DE PAGAMENTO
+        cursor.execute("SELECT usuario, status FROM pagamentos")
+        pagamentos = dict(cursor.fetchall())
+
         tabela = ""
         for u, c, o, ativo, email, plano, nome_empresa, pe, pt, ph, pu, ped, pex, pl in dados:
             status_online = "🟢 Online" if o else "🔴 Offline"
             status_ativo = "✅ Ativo" if ativo else "⛔ Inativo"
+
+            status_pagamento = pagamentos.get(u, "bloqueado")
+            cor = "#00ff00" if status_pagamento == "pago" else "red"
+            texto_status = "PAGO" if status_pagamento == "pago" else "BLOQUEADO"
 
             permissoes = []
             if pe: permissoes.append("Estoque")
@@ -109,6 +118,29 @@ def usuarios():
                 acoes += f'<a href="/alterar_senha/{u}" class="btn-warning">Trocar senha</a>'
                 acoes += f'<a href="/mudar_plano/{u}" class="btn-edit">Mudar plano</a>'
                 acoes += f'<a href="/excluir_usuario/{u}" class="btn-danger" onclick="return confirm(\'Deseja excluir este usuário?\')">Excluir</a>'
+
+                # 🔥 BOTÕES NOVOS
+                acoes += f'''
+                <br><br>
+                <a href="/liberar_usuario/{u}" style="
+                background:#00ff00;
+                padding:5px 10px;
+                color:#000;
+                border-radius:5px;
+                text-decoration:none;
+                font-weight:bold;
+                ">💸 Liberar</a>
+
+                <a href="/bloquear_usuario/{u}" style="
+                background:red;
+                padding:5px 10px;
+                color:#fff;
+                border-radius:5px;
+                text-decoration:none;
+                margin-left:5px;
+                font-weight:bold;
+                ">🔒 Bloquear</a>
+                '''
             else:
                 acoes = "Protegido"
 
@@ -120,6 +152,7 @@ def usuarios():
                 <td>{nome_empresa or '-'}</td>
                 <td>{plano or '-'}</td>
                 <td>{status_online}<br>{status_ativo}</td>
+                <td style="color:{cor};font-weight:bold;">{texto_status}</td>
                 <td>{texto_permissoes}</td>
                 <td>{acoes}</td>
             </tr>
@@ -129,22 +162,71 @@ def usuarios():
         <div class="card">
             <h2>👤 USUÁRIOS</h2>
 
-            <form method="POST">
-                <input name="user" placeholder="Usuário" required>
-                <input name="senha" placeholder="Senha" required>
-                <input name="email" placeholder="E-mail">
-                <input name="nome_empresa" placeholder="Empresa">
+            <p>{mensagem}</p>
 
-                <select name="cargo" required>
-                    <option value="operador">operador</option>
-                    <option value="admin">admin</option>
-                </select>
+            <table>
+                <tr>
+                    <th>Usuário</th>
+                    <th>Cargo</th>
+                    <th>Email</th>
+                    <th>Empresa</th>
+                    <th>Plano</th>
+                    <th>Status</th>
+                    <th>Pagamento</th>
+                    <th>Permissões</th>
+                    <th>Ações</th>
+                </tr>
+                {tabela}
+            </table>
+        </div>
+        """)
 
-                <select name="plano">
-                    <option value="basico">basico</option>
-                    <option value="profissional">profissional</option>
-                    <option value="premium">premium</option>
-                </select>
+    finally:
+        if conn:
+            devolver_conexao(conn)
+
+
+# ================= LIBERAR =================
+@usuarios_bp.route("/liberar_usuario/<usuario>")
+def liberar_usuario(usuario):
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT INTO pagamentos (usuario, status, data)
+    VALUES (%s, 'pago', NOW())
+    ON CONFLICT (usuario) DO UPDATE
+    SET status='pago', data=NOW()
+    """, (usuario,))
+
+    conn.commit()
+    devolver_conexao(conn)
+
+    return redirect("/usuarios")
+
+
+# ================= BLOQUEAR =================
+@usuarios_bp.route("/bloquear_usuario/<usuario>")
+def bloquear_usuario(usuario):
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    UPDATE pagamentos
+    SET status='bloqueado'
+    WHERE usuario=%s
+    """, (usuario,))
+
+    conn.commit()
+    devolver_conexao(conn)
+
+    return redirect("/usuarios")
 
                 <div class="permissoes-box">
                     <label class="perm-item"><input type="checkbox" name="ativo" value="1" checked>Usuário ativo</label>
