@@ -78,12 +78,12 @@ def usuarios():
                 <a href="/mudar_plano/{u}">Plano</a> |
                 <a href="/excluir_usuario/{u}">Excluir</a><br><br>
 
-                <form action="/liberar_usuario/{u}" method="POST" style="display:inline;">
+                <form action="/usuarios/liberar_usuario/{u}" method="POST" style="display:inline;">
                     <input type="number" name="dias" placeholder="Dias" required style="width:60px;">
                     <button style="background:#00ff00;color:#000;">💸 Liberar</button>
                 </form>
 
-                <form action="/bloquear_usuario/{u}" method="POST" style="display:inline;">
+                <form action="/usuarios/bloquear_usuario/{u}" method="POST" style="display:inline;">
                     <input type="number" name="dias" placeholder="Dias" required style="width:60px;">
                     <button style="background:red;color:#fff;">🔒 Bloquear</button>
                 </form>
