@@ -67,9 +67,7 @@ def verificar_vencimento(usuario):
 # ================= BLOQUEIO GLOBAL =================
 @app.before_request
 def bloquear_sistema():
-    rotas_livres = [
-        "/", "/login", "/criar_pagamento", "/webhook", "/pagar"
-    ]
+    rotas_livres = ["/", "/login", "/criar_pagamento", "/webhook", "/pagar"]
 
     if "user" not in session:
         return
@@ -85,20 +83,12 @@ def bloquear_sistema():
 
     usuario = session["user"]
 
-status = verificar_pagamento(usuario)
+    status = verificar_pagamento(usuario)
 
-print("STATUS REAL:", status)
+    print("STATUS REAL:", status)
 
-if status != "pago":
-    ativo = True
-
-    @app.before_request
-def bloquear_sistema():
-    ...
     if status != "pago":
         return """
-        🚫 Sistema bloqueado
-        """
         <style>
             body {
                 background: #000;
