@@ -3,6 +3,11 @@ from werkzeug.security import generate_password_hash
 from banco import conectar, devolver_conexao, registrar_log, permissoes_por_plano
 from layout import container, acesso_negado
 
+from flask import Blueprint, request, redirect, session
+from banco import conectar, devolver_conexao, registrar_log
+from layout import container, acesso_negado
+from werkzeug.security import generate_password_hash
+
 usuarios_bp = Blueprint("usuarios_bp", __name__)
 
 @usuarios_bp.route("/usuarios", methods=["GET", "POST"])
@@ -19,6 +24,7 @@ def usuarios():
         cursor = conn.cursor()
         mensagem = ""
 
+        # ================= CRIAR USUARIO =================
         if request.method == "POST":
             try:
                 user = request.form["user"].strip()
@@ -71,14 +77,16 @@ def usuarios():
                     pode_excluir_estoque,
                     pode_logs
                 ))
+
                 conn.commit()
                 mensagem = "Usuário criado com sucesso."
-                registrar_log(session["user"], "criar_usuario", f"Usuário criado: {user} | Cargo: {cargo} | Plano: {plano}")
+                registrar_log(session["user"], "criar_usuario", f"{user}")
+
             except:
                 conn.rollback()
-                mensagem = "Não foi possível criar o usuário. Talvez ele já exista."
+                mensagem = "Erro ao criar usuário."
 
-        # 🔥 BUSCAR USUÁRIOS
+        # ================= BUSCAR USUARIOS =================
         cursor.execute("""
         SELECT usuario, cargo, online, ativo, email, plano, nome_empresa,
                pode_estoque, pode_transferencia, pode_historico,
@@ -88,12 +96,14 @@ def usuarios():
         """)
         dados = cursor.fetchall()
 
-        # 🔥 BUSCAR STATUS DE PAGAMENTO
+        # ================= BUSCAR PAGAMENTOS =================
         cursor.execute("SELECT usuario, status FROM pagamentos")
         pagamentos = dict(cursor.fetchall())
 
         tabela = ""
+
         for u, c, o, ativo, email, plano, nome_empresa, pe, pt, ph, pu, ped, pex, pl in dados:
+
             status_online = "🟢 Online" if o else "🔴 Offline"
             status_ativo = "✅ Ativo" if ativo else "⛔ Inativo"
 
@@ -114,32 +124,14 @@ def usuarios():
 
             acoes = ""
             if u != "admin":
-                acoes += f'<a href="/editar_usuario/{u}" class="btn-edit">Editar</a>'
-                acoes += f'<a href="/alterar_senha/{u}" class="btn-warning">Trocar senha</a>'
-                acoes += f'<a href="/mudar_plano/{u}" class="btn-edit">Mudar plano</a>'
-                acoes += f'<a href="/excluir_usuario/{u}" class="btn-danger" onclick="return confirm(\'Deseja excluir este usuário?\')">Excluir</a>'
+                acoes += f'<a href="/editar_usuario/{u}">Editar</a> | '
+                acoes += f'<a href="/alterar_senha/{u}">Senha</a> | '
+                acoes += f'<a href="/excluir_usuario/{u}">Excluir</a>'
 
-                # 🔥 BOTÕES NOVOS
                 acoes += f'''
                 <br><br>
-                <a href="/liberar_usuario/{u}" style="
-                background:#00ff00;
-                padding:5px 10px;
-                color:#000;
-                border-radius:5px;
-                text-decoration:none;
-                font-weight:bold;
-                ">💸 Liberar</a>
-
-                <a href="/bloquear_usuario/{u}" style="
-                background:red;
-                padding:5px 10px;
-                color:#fff;
-                border-radius:5px;
-                text-decoration:none;
-                margin-left:5px;
-                font-weight:bold;
-                ">🔒 Bloquear</a>
+                <a href="/liberar_usuario/{u}" style="background:#00ff00;color:#000;padding:5px;">💸 Liberar</a>
+                <a href="/bloquear_usuario/{u}" style="background:red;color:#fff;padding:5px;">🔒 Bloquear</a>
                 '''
             else:
                 acoes = "Protegido"
@@ -150,7 +142,7 @@ def usuarios():
                 <td>{c}</td>
                 <td>{email or '-'}</td>
                 <td>{nome_empresa or '-'}</td>
-                <td>{plano or '-'}</td>
+                <td>{plano}</td>
                 <td>{status_online}<br>{status_ativo}</td>
                 <td style="color:{cor};font-weight:bold;">{texto_status}</td>
                 <td>{texto_permissoes}</td>
@@ -161,8 +153,71 @@ def usuarios():
         return container(f"""
         <div class="card">
             <h2>👤 USUÁRIOS</h2>
-
             <p>{mensagem}</p>
+
+            <table border="1" style="width:100%;text-align:center;">
+                <tr>
+                    <th>Usuário</th>
+                    <th>Cargo</th>
+                    <th>Email</th>
+                    <th>Empresa</th>
+                    <th>Plano</th>
+                    <th>Status</th>
+                    <th>Pagamento</th>
+                    <th>Permissões</th>
+                    <th>Ações</th>
+                </tr>
+
+                {tabela}
+
+            </table>
+        </div>
+        """)
+
+    finally:
+        if conn:
+            devolver_conexao(conn)
+
+
+# ================= LIBERAR =================
+@usuarios_bp.route("/liberar_usuario/<usuario>")
+def liberar_usuario(usuario):
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT INTO pagamentos (usuario, status, data)
+    VALUES (%s, 'pago', NOW())
+    ON CONFLICT (usuario) DO UPDATE
+    SET status='pago', data=NOW()
+    """, (usuario,))
+
+    conn.commit()
+    devolver_conexao(conn)
+
+    return redirect("/usuarios")
+
+
+# ================= BLOQUEAR =================
+@usuarios_bp.route("/bloquear_usuario/<usuario>")
+def bloquear_usuario(usuario):
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    UPDATE pagamentos SET status='bloqueado' WHERE usuario=%s
+    """, (usuario,))
+
+    conn.commit()
+    devolver_conexao(conn)
+
+    return redirect("/usuarios")
 
             <table>
                 <tr>
