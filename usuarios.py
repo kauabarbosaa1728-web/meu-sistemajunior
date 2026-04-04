@@ -1,13 +1,12 @@
 from flask import Blueprint, request, redirect, session
 from werkzeug.security import generate_password_hash
-from banco import conectar, devolver_conexao, registrar_log, permissoes_por_plano
+from banco import conectar, devolver_conexao, registrar_log
 from layout import container, acesso_negado
 from datetime import datetime, timedelta
 
 usuarios_bp = Blueprint("usuarios_bp", __name__)
 
 # ================= USUÁRIOS =================
-@usuarios_bp.route("", methods=["GET", "POST"])
 @usuarios_bp.route("/", methods=["GET", "POST"])
 def usuarios():
     if "user" not in session:
@@ -22,6 +21,7 @@ def usuarios():
         cursor = conn.cursor()
         mensagem = ""
 
+        # CRIAR USUARIO
         if request.method == "POST":
             try:
                 user = request.form["user"].strip()
@@ -51,6 +51,7 @@ def usuarios():
                 conn.rollback()
                 mensagem = "Erro ao criar usuário."
 
+        # BUSCAR DADOS
         cursor.execute("""
         SELECT usuario, cargo, online, ativo, email, plano, nome_empresa
         FROM usuarios
@@ -70,21 +71,19 @@ def usuarios():
             cor = "#00ff00" if status_pagamento == "pago" else "red"
             texto_status = "PAGO" if status_pagamento == "pago" else "BLOQUEADO"
 
-            acoes = ""
             if u != "admin":
-                acoes += f'<a href="/editar_usuario/{u}">Editar</a> | '
-                acoes += f'<a href="/alterar_senha/{u}">Senha</a> | '
-                acoes += f'<a href="/mudar_plano/{u}">Plano</a> | '
-                acoes += f'<a href="/excluir_usuario/{u}">Excluir</a><br><br>'
+                acoes = f'''
+                <a href="/editar_usuario/{u}">Editar</a> |
+                <a href="/alterar_senha/{u}">Senha</a> |
+                <a href="/mudar_plano/{u}">Plano</a> |
+                <a href="/excluir_usuario/{u}">Excluir</a><br><br>
 
-                # 🔥 BOTÕES COM DIAS
-                acoes += f'''
-                <form action="/usuarios/liberar_usuario/{u}" method="POST" style="display:inline;">
+                <form action="/liberar_usuario/{u}" method="POST" style="display:inline;">
                     <input type="number" name="dias" placeholder="Dias" required style="width:60px;">
                     <button style="background:#00ff00;color:#000;">💸 Liberar</button>
                 </form>
 
-                <form action="/usuarios/bloquear_usuario/{u}" method="POST" style="display:inline;">
+                <form action="/bloquear_usuario/{u}" method="POST" style="display:inline;">
                     <input type="number" name="dias" placeholder="Dias" required style="width:60px;">
                     <button style="background:red;color:#fff;">🔒 Bloquear</button>
                 </form>
@@ -155,12 +154,6 @@ def usuarios():
 # ================= LIBERAR =================
 @usuarios_bp.route("/liberar_usuario/<usuario>", methods=["POST"])
 def liberar_usuario(usuario):
-    if "user" not in session:
-        return redirect("/")
-
-    if session.get("cargo") != "admin":
-        return acesso_negado()
-
     dias = int(request.form.get("dias", 0))
     vencimento = datetime.now() + timedelta(days=dias)
 
@@ -183,12 +176,6 @@ def liberar_usuario(usuario):
 # ================= BLOQUEAR =================
 @usuarios_bp.route("/bloquear_usuario/<usuario>", methods=["POST"])
 def bloquear_usuario(usuario):
-    if "user" not in session:
-        return redirect("/")
-
-    if session.get("cargo") != "admin":
-        return acesso_negado()
-
     dias = int(request.form.get("dias", 0))
     vencimento = datetime.now() + timedelta(days=dias)
 
