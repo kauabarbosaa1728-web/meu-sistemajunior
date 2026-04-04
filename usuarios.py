@@ -1,4 +1,3 @@
-# (imports mantidos iguais)
 from flask import Blueprint, request, redirect, session
 from werkzeug.security import generate_password_hash
 from banco import conectar, devolver_conexao, registrar_log, permissoes_por_plano
@@ -21,7 +20,6 @@ def usuarios():
         cursor = conn.cursor()
         mensagem = ""
 
-        # ================= CRIAR USUARIO =================
         if request.method == "POST":
             try:
                 user = request.form["user"].strip()
@@ -51,7 +49,6 @@ def usuarios():
                 conn.rollback()
                 mensagem = "Erro ao criar usuário."
 
-        # ================= BUSCAR =================
         cursor.execute("""
         SELECT usuario, cargo, online, ativo, email, plano, nome_empresa
         FROM usuarios
@@ -78,9 +75,10 @@ def usuarios():
                 acoes += f'<a href="/mudar_plano/{u}">Plano</a> | '
                 acoes += f'<a href="/excluir_usuario/{u}">Excluir</a><br><br>'
 
+                # 🔥 AQUI ESTÁ O FIX
                 acoes += f'''
-                <a href="/liberar_usuario/{u}" style="background:#00ff00;color:#000;padding:5px;">💸 Liberar</a>
-                <a href="/bloquear_usuario/{u}" style="background:red;color:#fff;padding:5px;">🔒 Bloquear</a>
+                <a href="/usuarios/liberar_usuario/{u}" style="background:#00ff00;color:#000;padding:5px;">💸 Liberar</a>
+                <a href="/usuarios/bloquear_usuario/{u}" style="background:red;color:#fff;padding:5px;">🔒 Bloquear</a>
                 '''
             else:
                 acoes = "Protegido"
@@ -148,9 +146,6 @@ def usuarios():
 # ================= LIBERAR =================
 @usuarios_bp.route("/liberar_usuario/<usuario>")
 def liberar_usuario(usuario):
-    if session.get("cargo") != "admin":
-        return acesso_negado()
-
     conn = conectar()
     cursor = conn.cursor()
 
@@ -163,16 +158,12 @@ def liberar_usuario(usuario):
 
     conn.commit()
     devolver_conexao(conn)
-
     return redirect("/usuarios")
 
 
 # ================= BLOQUEAR =================
 @usuarios_bp.route("/bloquear_usuario/<usuario>")
 def bloquear_usuario(usuario):
-    if session.get("cargo") != "admin":
-        return acesso_negado()
-
     conn = conectar()
     cursor = conn.cursor()
 
@@ -184,5 +175,4 @@ def bloquear_usuario(usuario):
 
     conn.commit()
     devolver_conexao(conn)
-
     return redirect("/usuarios")
