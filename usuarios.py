@@ -255,3 +255,56 @@ def excluir_usuario(usuario):
     devolver_conexao(conn)
 
     return redirect("/usuarios")
+
+# ================= FALLBACK ROTAS (ANTI-404) =================
+
+@usuarios_bp.route("/usuarios/editar_usuario/<usuario>")
+def editar_usuario_fallback(usuario):
+    return redirect("/usuarios")
+
+
+@usuarios_bp.route("/usuarios/alterar_senha/<usuario>", methods=["POST"])
+def alterar_senha_fallback(usuario):
+    nova = request.form.get("senha")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    UPDATE usuarios SET senha=%s WHERE usuario=%s
+    """, (generate_password_hash(nova), usuario))
+
+    conn.commit()
+    devolver_conexao(conn)
+
+    return redirect("/usuarios")
+
+
+@usuarios_bp.route("/usuarios/mudar_plano/<usuario>", methods=["POST"])
+def mudar_plano_fallback(usuario):
+    novo_plano = request.form.get("plano")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    UPDATE usuarios SET plano=%s WHERE usuario=%s
+    """, (novo_plano, usuario))
+
+    conn.commit()
+    devolver_conexao(conn)
+
+    return redirect("/usuarios")
+
+@usuarios_bp.route("/usuarios/excluir_usuario/<usuario>", methods=["POST"])
+def excluir_usuario_fallback(usuario):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM usuarios WHERE usuario=%s", (usuario,))
+    cursor.execute("DELETE FROM pagamentos WHERE usuario=%s", (usuario,))
+
+    conn.commit()
+    devolver_conexao(conn)
+
+    return redirect("/usuarios")
