@@ -331,3 +331,69 @@ def historico():
     </table>
     </div>
     """)
+    # ================= ENTRADA DE PRODUTOS =================
+@estoque_bp.route("/entrada", methods=["GET", "POST"])
+def entrada():
+    if "user" not in session:
+        return redirect("/")
+
+    # 🔥 BLOQUEIO DE PAGAMENTO
+    status = verificar_pagamento(session["user"])
+
+    if session.get("cargo") != "admin":
+        if status == "bloqueado":
+            return """
+            <h1 style='color:red;text-align:center;margin-top:50px;'>
+            🚫 Sistema bloqueado<br><br>
+            Efetue o pagamento para continuar
+            </h1>
+            """
+
+    if not tem_permissao("pode_estoque"):
+        return acesso_negado()
+
+    conn = conectar()
+    cursor = conn.cursor()
+    msg = ""
+
+    if request.method == "POST":
+        produto = request.form.get("produto")
+        qtd = request.form.get("qtd")
+        categoria = request.form.get("categoria")
+
+        if produto and qtd and categoria:
+            try:
+                qtd = int(qtd)
+
+                cursor.execute("""
+                INSERT INTO estoque (produto, quantidade, categoria, valor)
+                VALUES (%s,%s,%s,%s)
+                """, (produto, qtd, categoria, 0))
+
+                conn.commit()
+                registrar_log(session["user"], "entrada_estoque", produto)
+
+                msg = "✅ Produto adicionado com sucesso"
+
+            except Exception as e:
+                conn.rollback()
+                msg = f"❌ Erro: {e}"
+
+    devolver_conexao(conn)
+
+    return container(f"""
+    <div class="card">
+    <h2>➕ ENTRADA DE PRODUTOS</h2>
+
+    <form method="POST">
+        <input name="produto" placeholder="Produto">
+        <input name="qtd" placeholder="Qtd">
+        <input name="categoria" placeholder="Categoria">
+        <button>Adicionar</button>
+    </form>
+
+    <p>{msg}</p>
+
+    <a href="/estoque">⬅ Voltar para estoque</a>
+    </div>
+    """)
