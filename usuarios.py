@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 usuarios_bp = Blueprint("usuarios_bp", __name__)
 
 # ================= USUÁRIOS =================
-@usuarios_bp.route("/", methods=["GET", "POST"])
+@usuarios_bp.route("/usuarios", methods=["GET", "POST"])
 def usuarios():
     if "user" not in session:
         return redirect("/")
@@ -135,8 +135,51 @@ def usuarios():
     """)
 
 
+# ================= EDITAR =================
+@usuarios_bp.route("/usuarios/editar_usuario/<usuario>", methods=["GET", "POST"])
+def editar_usuario(usuario):
+    return redirect("/usuarios")  # simples por enquanto
+
+
+# ================= ALTERAR SENHA =================
+@usuarios_bp.route("/usuarios/alterar_senha/<usuario>", methods=["GET", "POST"])
+def alterar_senha(usuario):
+    if request.method == "POST":
+        nova = request.form.get("senha")
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE usuarios SET senha=%s WHERE usuario=%s
+        """, (generate_password_hash(nova), usuario))
+
+        conn.commit()
+        devolver_conexao(conn)
+
+    return redirect("/usuarios")
+
+
+# ================= MUDAR PLANO =================
+@usuarios_bp.route("/usuarios/mudar_plano/<usuario>", methods=["GET", "POST"])
+def mudar_plano(usuario):
+    if request.method == "POST":
+        novo_plano = request.form.get("plano")
+
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE usuarios SET plano=%s WHERE usuario=%s
+        """, (novo_plano, usuario))
+
+        conn.commit()
+        devolver_conexao(conn)
+
+    return redirect("/usuarios")
+
+
 # ================= LIBERAR =================
-@usuarios_bp.route("/liberar_usuario/<usuario>", methods=["POST"])
+@usuarios_bp.route("/usuarios/liberar_usuario/<usuario>", methods=["POST"])
 def liberar_usuario(usuario):
     dias = int(request.form.get("dias", 0))
     vencimento = datetime.now() + timedelta(days=dias)
@@ -158,7 +201,7 @@ def liberar_usuario(usuario):
 
 
 # ================= BLOQUEAR =================
-@usuarios_bp.route("/bloquear_usuario/<usuario>", methods=["POST"])
+@usuarios_bp.route("/usuarios/bloquear_usuario/<usuario>", methods=["POST"])
 def bloquear_usuario(usuario):
     dias = int(request.form.get("dias", 0))
     vencimento = datetime.now() + timedelta(days=dias)
@@ -180,7 +223,7 @@ def bloquear_usuario(usuario):
 
 
 # ================= EXCLUIR =================
-@usuarios_bp.route("/excluir_usuario/<usuario>")
+@usuarios_bp.route("/usuarios/excluir_usuario/<usuario>")
 def excluir_usuario(usuario):
     conn = conectar()
     cursor = conn.cursor()
