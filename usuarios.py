@@ -75,7 +75,7 @@ def usuarios():
                 acoes += f'<a href="/mudar_plano/{u}">Plano</a> | '
                 acoes += f'<a href="/excluir_usuario/{u}">Excluir</a><br><br>'
 
-                # 🔥 AQUI ESTÁ O FIX
+                # 🔥 BOTÕES (FUNCIONANDO AGORA)
                 acoes += f'''
                 <a href="/usuarios/liberar_usuario/{u}" style="background:#00ff00;color:#000;padding:5px;">💸 Liberar</a>
                 <a href="/usuarios/bloquear_usuario/{u}" style="background:red;color:#fff;padding:5px;">🔒 Bloquear</a>
@@ -144,35 +144,61 @@ def usuarios():
 
 
 # ================= LIBERAR =================
-@usuarios_bp.route("/liberar_usuario/<usuario>")
+@usuarios_bp.route("/usuarios/liberar_usuario/<usuario>")
 def liberar_usuario(usuario):
-    conn = conectar()
-    cursor = conn.cursor()
+    if "user" not in session:
+        return redirect("/")
 
-    cursor.execute("""
-    INSERT INTO pagamentos (usuario, status, data)
-    VALUES (%s, 'pago', NOW())
-    ON CONFLICT (usuario) DO UPDATE
-    SET status='pago', data=NOW()
-    """, (usuario,))
+    if session.get("cargo") != "admin":
+        return acesso_negado()
 
-    conn.commit()
-    devolver_conexao(conn)
+    conn = None
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        INSERT INTO pagamentos (usuario, status, data)
+        VALUES (%s, 'pago', NOW())
+        ON CONFLICT (usuario) DO UPDATE
+        SET status='pago', data=NOW()
+        """, (usuario,))
+
+        conn.commit()
+        registrar_log(session["user"], "LIBEROU USUARIO", usuario)
+
+    finally:
+        if conn:
+            devolver_conexao(conn)
+
     return redirect("/usuarios")
 
 
 # ================= BLOQUEAR =================
-@usuarios_bp.route("/bloquear_usuario/<usuario>")
+@usuarios_bp.route("/usuarios/bloquear_usuario/<usuario>")
 def bloquear_usuario(usuario):
-    conn = conectar()
-    cursor = conn.cursor()
+    if "user" not in session:
+        return redirect("/")
 
-    cursor.execute("""
-    UPDATE pagamentos
-    SET status='bloqueado'
-    WHERE usuario=%s
-    """, (usuario,))
+    if session.get("cargo") != "admin":
+        return acesso_negado()
 
-    conn.commit()
-    devolver_conexao(conn)
+    conn = None
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE pagamentos
+        SET status='bloqueado'
+        WHERE usuario=%s
+        """, (usuario,))
+
+        conn.commit()
+        registrar_log(session["user"], "BLOQUEOU USUARIO", usuario)
+
+    finally:
+        if conn:
+            devolver_conexao(conn)
+
     return redirect("/usuarios")
