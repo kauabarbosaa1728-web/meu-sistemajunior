@@ -38,12 +38,8 @@ def devolver_conexao(conn):
 # ================= LOGS =================
 def registrar_log(usuario, acao, detalhes=""):
     conn = None
-    cursor = None
     try:
         conn = conectar()
-        if not conn:
-            return
-
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -58,9 +54,8 @@ def registrar_log(usuario, acao, detalhes=""):
         if conn:
             conn.rollback()
     finally:
-        if cursor:
-            cursor.close()
-        devolver_conexao(conn)
+        if conn:
+            devolver_conexao(conn)
 
 
 # ================= PERMISSÕES =================
@@ -103,13 +98,8 @@ def permissoes_por_plano(plano):
 # ================= CRIAR BANCO =================
 def criar_banco():
     conn = None
-    cursor = None
     try:
         conn = conectar()
-        if not conn:
-            print("❌ Sem conexão com banco")
-            return
-
         cursor = conn.cursor()
 
         # ================= USUARIOS =================
@@ -133,19 +123,26 @@ def criar_banco():
         )
         """)
 
-        # ================= PAGAMENTOS =================
+        # ================= PAGAMENTOS (CORRIGIDO) =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS pagamentos (
             id SERIAL PRIMARY KEY,
-            usuario TEXT,
+            usuario TEXT UNIQUE,
             email TEXT,
             senha TEXT,
             nome_empresa TEXT,
             plano TEXT,
             status TEXT,
             pagamento_id TEXT,
-            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            vencimento TIMESTAMP
         )
+        """)
+
+        # 🔥 GARANTE QUE A COLUNA EXISTE
+        cursor.execute("""
+        ALTER TABLE pagamentos
+        ADD COLUMN IF NOT EXISTS vencimento TIMESTAMP
         """)
 
         # ================= ESTOQUE =================
@@ -182,7 +179,7 @@ def criar_banco():
         )
         """)
 
-        # ================= ENTRADAS (NOVO) =================
+        # ================= ENTRADAS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS entradas (
             id SERIAL PRIMARY KEY,
@@ -197,9 +194,7 @@ def criar_banco():
 
         # ================= ADMIN =================
         cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", ("admin",))
-        admin = cursor.fetchone()
-
-        if not admin:
+        if not cursor.fetchone():
             cursor.execute("""
             INSERT INTO usuarios (
                 usuario, senha, cargo, online, ativo,
@@ -228,11 +223,11 @@ def criar_banco():
         if conn:
             conn.rollback()
     finally:
-        if cursor:
-            cursor.close()
-        devolver_conexao(conn)
-        from datetime import datetime
+        if conn:
+            devolver_conexao(conn)
 
+
+# ================= VERIFICAR PAGAMENTO =================
 def verificar_pagamento(usuario):
     conn = None
     try:
@@ -245,7 +240,6 @@ def verificar_pagamento(usuario):
 
         dado = cursor.fetchone()
 
-        # ❌ Sem registro → bloqueado
         if not dado:
             return "bloqueado"
 
@@ -253,25 +247,16 @@ def verificar_pagamento(usuario):
 
         from datetime import datetime
 
-        # 🔥 SE ESTIVER PAGO
         if status == "pago":
+            if vencimento and datetime.now() > vencimento:
+                cursor.execute("""
+                UPDATE pagamentos SET status='bloqueado' WHERE usuario=%s
+                """, (usuario,))
+                conn.commit()
+                return "bloqueado"
 
-            # ✅ SE NÃO TEM VENCIMENTO → LIBERA
-            if not vencimento:
-                return "pago"
+            return "pago"
 
-            # ✅ SE AINDA NÃO VENCEU → LIBERA
-            if datetime.now() <= vencimento:
-                return "pago"
-
-            # ❌ SE VENCEU → BLOQUEIA
-            cursor.execute("""
-            UPDATE pagamentos SET status='bloqueado' WHERE usuario=%s
-            """, (usuario,))
-            conn.commit()
-            return "bloqueado"
-
-        # ❌ QUALQUER OUTRO STATUS
         return "bloqueado"
 
     except Exception as e:
