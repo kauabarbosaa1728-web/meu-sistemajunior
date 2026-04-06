@@ -3,7 +3,7 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash
 import os
 
-from banco import criar_banco, verificar_pagamento, conectar, devolver_conexao, registrar_log
+from banco import criar_banco, verificar_pagamento, conectar, devolver_conexao
 from layout import acesso_negado
 
 from auth import auth_bp
@@ -12,83 +12,51 @@ from estoque import estoque_bp
 from usuarios import usuarios_bp
 from pagamento import pagamento_routes
 from logs import logs_bp
-
-# ================= IA =================
 from ia_routes import ia_bp
 
 app = Flask(__name__)
 app.secret_key = "segredo123"
 
 # ================= BANCO =================
-criar_banco()
-
-
-# ================= VERIFICAR VENCIMENTO =================
-def verificar_vencimento(usuario):
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        SELECT vencimento FROM pagamentos WHERE usuario=%s
-        """, (usuario,))
-
-        dado = cursor.fetchone()
-
-        if not dado:
-            return False
-
-        vencimento = dado[0]
-
-        if vencimento and datetime.now() > vencimento:
-            cursor.execute("""
-            UPDATE pagamentos SET status='bloqueado' WHERE usuario=%s
-            """, (usuario,))
-            conn.commit()
-            return False
-
-        return True
-
-    except Exception as e:
-        print("Erro vencimento:", e)
-        return False
-
-    finally:
-        if conn:
-            devolver_conexao(conn)
+try:
+    criar_banco()
+except Exception as e:
+    print("Erro ao iniciar banco:", e)
 
 
 # ================= BLOQUEIO GLOBAL =================
 @app.before_request
 def bloquear_sistema():
-    rotas_livres = ["/", "/login", "/criar_pagamento", "/webhook", "/pagar"]
+    try:
+        rotas_livres = ["/", "/login", "/cadastro", "/criar_pagamento", "/webhook", "/pagar"]
 
-    if request.path in rotas_livres:
-        return
+        if request.path in rotas_livres:
+            return
 
-    if "user" not in session:
-        return redirect("/")
+        if "user" not in session:
+            return redirect("/")
 
-    usuario = session.get("user")
-    cargo = session.get("cargo")
+        usuario = session.get("user")
+        cargo = session.get("cargo")
 
-    # 🔥 LIBERA ADMIN
-    if cargo == "admin":
-        return
+        # 🔥 ADMIN LIBERADO
+        if cargo == "admin":
+            return
 
-    # 🔒 VERIFICA PAGAMENTO
-    status = verificar_pagamento(usuario)
+        # 🔒 VERIFICA PAGAMENTO
+        status = verificar_pagamento(usuario)
 
-    print("STATUS DEBUG:", status)
+        print("STATUS DEBUG:", status)
 
-    if str(status).strip().lower() != "pago":
-        return """
-        <h1 style='color:red;text-align:center;margin-top:50px;'>
-        🚫 Sistema bloqueado<br><br>
-        Efetue o pagamento para continuar
-        </h1>
-        """
+        if str(status).strip().lower() != "pago":
+            return """
+            <h1 style='color:red;text-align:center;margin-top:50px;'>
+            🚫 Sistema bloqueado<br><br>
+            Efetue o pagamento para continuar
+            </h1>
+            """
+    except Exception as e:
+        print("Erro no bloqueio:", e)
 
 
 # ================= ROTAS =================
