@@ -77,18 +77,12 @@ def bloquear_sistema():
     if cargo == "admin":
         return
 
-    # 🔒 BLOQUEIO NORMAL
-   status = verificar_pagamento(usuario)
+    # 🔒 VERIFICA PAGAMENTO
+    status = verificar_pagamento(usuario)
 
-print("STATUS DEBUG:", status)
+    print("STATUS DEBUG:", status)
 
-if str(status).strip().lower() != "pago":
-    return """
-    <h1 style='color:red;text-align:center;margin-top:50px;'>
-    🚫 Sistema bloqueado<br><br>
-    Efetue o pagamento para continuar
-    </h1>
-    """
+    if str(status).strip().lower() != "pago":
         return """
         <h1 style='color:red;text-align:center;margin-top:50px;'>
         🚫 Sistema bloqueado<br><br>
