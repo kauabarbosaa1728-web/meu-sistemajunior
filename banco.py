@@ -226,52 +226,6 @@ def criar_banco():
             devolver_conexao(conn)
 
 
-# ================= VERIFICAR PAGAMENTO (CORRIGIDO) =================
+# ================= VERIFICAR PAGAMENTO (DESATIVADO) =================
 def verificar_pagamento(usuario):
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
-
-        # 🔥 PEGA SEMPRE O ÚLTIMO REGISTRO
-        cursor.execute("""
-        SELECT status, vencimento 
-        FROM pagamentos 
-        WHERE usuario=%s
-        ORDER BY id DESC
-        LIMIT 1
-        """, (usuario,))
-
-        dado = cursor.fetchone()
-
-        if not dado:
-            return "bloqueado"
-
-        status, vencimento = dado
-
-        from datetime import datetime
-
-        if status == "pago":
-            if vencimento:
-                if datetime.now() <= vencimento:
-                    return "pago"
-                else:
-                    cursor.execute("""
-                    UPDATE pagamentos 
-                    SET status='bloqueado' 
-                    WHERE usuario=%s
-                    """, (usuario,))
-                    conn.commit()
-                    return "bloqueado"
-
-            return "pago"
-
-        return "bloqueado"
-
-    except Exception as e:
-        print("Erro verificar pagamento:", e)
-        return "bloqueado"
-
-    finally:
-        if conn:
-            devolver_conexao(conn)
+    return "pago"
