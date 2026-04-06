@@ -24,39 +24,10 @@ except Exception as e:
     print("Erro ao iniciar banco:", e)
 
 
-# ================= BLOQUEIO GLOBAL =================
+# ================= BLOQUEIO GLOBAL (DESATIVADO TOTAL) =================
 @app.before_request
 def bloquear_sistema():
-    try:
-        rotas_livres = ["/", "/login", "/cadastro", "/criar_pagamento", "/webhook", "/pagar"]
-
-        if request.path in rotas_livres:
-            return
-
-        if "user" not in session:
-            return redirect("/")
-
-        usuario = session.get("user")
-        cargo = session.get("cargo")
-
-        # 🔥 ADMIN LIBERADO
-        if cargo == "admin":
-            return
-
-        # 🔒 VERIFICA PAGAMENTO
-        status = verificar_pagamento(usuario)
-
-        print("STATUS DEBUG:", status)
-
-        if str(status).strip().lower() != "pago":
-            return """
-            <h1 style='color:red;text-align:center;margin-top:50px;'>
-            🚫 Sistema bloqueado<br><br>
-            Efetue o pagamento para continuar
-            </h1>
-            """
-    except Exception as e:
-        print("Erro no bloqueio:", e)
+    return
 
 
 # ================= ROTAS =================
@@ -122,8 +93,3 @@ def alterar_senha_direto(usuario):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
-# ================= BLOQUEIO GLOBAL (DESATIVADO TOTAL) =================
-@app.before_request
-def bloquear_sistema():
-    return
