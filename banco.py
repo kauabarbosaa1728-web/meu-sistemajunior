@@ -123,7 +123,7 @@ def criar_banco():
         )
         """)
 
-        # ================= PAGAMENTOS (CORRIGIDO) =================
+        # ================= PAGAMENTOS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS pagamentos (
             id SERIAL PRIMARY KEY,
@@ -139,7 +139,6 @@ def criar_banco():
         )
         """)
 
-        # 🔥 GARANTE QUE A COLUNA EXISTE
         cursor.execute("""
         ALTER TABLE pagamentos
         ADD COLUMN IF NOT EXISTS vencimento TIMESTAMP
@@ -227,15 +226,20 @@ def criar_banco():
             devolver_conexao(conn)
 
 
-# ================= VERIFICAR PAGAMENTO =================
+# ================= VERIFICAR PAGAMENTO (CORRIGIDO) =================
 def verificar_pagamento(usuario):
     conn = None
     try:
         conn = conectar()
         cursor = conn.cursor()
 
+        # 🔥 PEGA SEMPRE O ÚLTIMO REGISTRO
         cursor.execute("""
-        SELECT status, vencimento FROM pagamentos WHERE usuario=%s
+        SELECT status, vencimento 
+        FROM pagamentos 
+        WHERE usuario=%s
+        ORDER BY id DESC
+        LIMIT 1
         """, (usuario,))
 
         dado = cursor.fetchone()
@@ -248,12 +252,17 @@ def verificar_pagamento(usuario):
         from datetime import datetime
 
         if status == "pago":
-            if vencimento and datetime.now() > vencimento:
-                cursor.execute("""
-                UPDATE pagamentos SET status='bloqueado' WHERE usuario=%s
-                """, (usuario,))
-                conn.commit()
-                return "bloqueado"
+            if vencimento:
+                if datetime.now() <= vencimento:
+                    return "pago"
+                else:
+                    cursor.execute("""
+                    UPDATE pagamentos 
+                    SET status='bloqueado' 
+                    WHERE usuario=%s
+                    """, (usuario,))
+                    conn.commit()
+                    return "bloqueado"
 
             return "pago"
 
