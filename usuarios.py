@@ -154,7 +154,46 @@ def usuarios():
     """)
 
 # ================= LIBERAR =================
-@usuarios_bp.route("/usuarios/liberar_usuario/<usuario>", methods=["POST"])
+@usuarios_bp.route("@usuarios_bp.route("/usuarios/liberar_usuario/<usuario>", methods=["POST"])
+def liberar_usuario(usuario):
+    if "user" not in session:
+        return redirect("/")
+
+    if session.get("cargo") != "admin":
+        return acesso_negado()
+
+    dias = int(request.form.get("dias", 30))
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+        from datetime import datetime, timedelta
+        vencimento = datetime.now() + timedelta(days=dias)
+
+        # 🔥 ATUALIZA PAGAMENTO
+        cursor.execute("""
+        UPDATE pagamentos 
+        SET status='pago', vencimento=%s
+        WHERE usuario=%s
+        """, (vencimento, usuario))
+
+        # 🔥 LIBERA USUÁRIO (AQUI ESTAVA FALTANDO)
+        cursor.execute("""
+        UPDATE usuarios 
+        SET ativo=1 
+        WHERE usuario=%s
+        """, (usuario,))
+
+        conn.commit()
+        registrar_log(session["user"], "liberar_usuario", usuario)
+
+    except Exception as e:
+        conn.rollback()
+        print("Erro ao liberar:", e)
+
+    devolver_conexao(conn)
+    return redirect("/usuarios")", methods=["POST"])
 def liberar_usuario(usuario):
     try:
         dias = request.form.get("dias")
