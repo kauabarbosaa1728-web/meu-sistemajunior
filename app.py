@@ -69,6 +69,40 @@ def verificar_vencimento(usuario):
 def bloquear_sistema():
     rotas_livres = ["/", "/login", "/criar_pagamento", "/webhook", "/pagar"]
 
+    if request.path in rotas_livres:
+        return
+
+    if "user" not in session:
+        return redirect("/")
+
+    usuario = session.get("user")
+    cargo = session.get("cargo")
+
+    print("DEBUG USER:", usuario)
+    print("DEBUG CARGO:", cargo)
+    print("DEBUG PATH:", request.path)
+
+    # 🔥 LIBERA VOCÊ SEMPRE (ANTI BUG)
+    if usuario in ["kaua", "kaua@gmail.com"]:
+        return
+
+    # 🔥 LIBERA ADMIN
+    if cargo == "admin":
+        return
+
+    status = verificar_pagamento(usuario)
+
+    print("STATUS REAL:", status)
+
+    if status != "pago":
+        return """
+        <h1 style='color:red;text-align:center;margin-top:50px;'>
+        🚫 Sistema bloqueado<br><br>
+        Efetue o pagamento para continuar
+        </h1>
+        """
+    rotas_livres = ["/", "/login", "/criar_pagamento", "/webhook", "/pagar"]
+
     if "user" not in session:
         return
 
