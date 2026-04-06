@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 pagamento_routes = Blueprint("pagamento", __name__)
 
-sdk = mercadopago.SDK("APP_USR-6569039713831543-033108-32073b03704b3b93eac080da1fe1d0f7-1249023990")
+sdk = mercadopago.SDK("SEU_TOKEN_AQUI")
 
 
 # ================= VALORES =================
@@ -81,7 +81,6 @@ def criar_pagamento():
         conn = conectar()
         cursor = conn.cursor()
 
-        # 🔥 AGORA COM VENCIMENTO (IMPORTANTE)
         vencimento = datetime.now() + timedelta(days=30)
 
         cursor.execute("""
@@ -100,7 +99,6 @@ def criar_pagamento():
 
         return f"""
         <body style="margin:0;background:#000;color:#d1d5db;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;">
-        
             <div style="width:420px;background:#0a0a0a;padding:30px;border-radius:14px;border:1px solid #2a2a2a;text-align:center;">
                 
                 <h2>Pagamento PIX</h2>
@@ -155,16 +153,26 @@ def verificar_pagamento_auto():
 
             vencimento = datetime.now() + timedelta(days=30)
 
+            # Atualiza pagamento
             cursor.execute("""
             UPDATE pagamentos 
             SET status='pago', data=NOW(), vencimento=%s
             WHERE pagamento_id=%s
             """, (vencimento, pagamento_id))
 
+            # 🔥 CRIA USUÁRIO SE NÃO EXISTIR (COM PERMISSÕES)
             cursor.execute("""
-            UPDATE usuarios SET ativo=1
-            WHERE usuario = (
-                SELECT usuario FROM pagamentos WHERE pagamento_id=%s
+            INSERT INTO usuarios (
+                usuario, senha, cargo, ativo, plano,
+                pode_estoque, pode_transferencia, pode_historico,
+                pode_usuarios, pode_logs, pode_editar_estoque, pode_excluir_estoque
+            )
+            SELECT usuario, '123', 'operador', 1, plano,
+                   1,1,1,0,0,0,0
+            FROM pagamentos
+            WHERE pagamento_id=%s
+            AND NOT EXISTS (
+                SELECT 1 FROM usuarios WHERE usuarios.usuario = pagamentos.usuario
             )
             """, (pagamento_id,))
 
