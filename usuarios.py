@@ -34,44 +34,24 @@ def usuarios():
             VALUES (%s,%s,%s,0,%s,%s,%s)
             """, (user, generate_password_hash(senha), cargo, email, plano, nome_empresa))
 
-            # 🔥 CRIA REGISTRO DE PAGAMENTO JUNTO (IMPORTANTE)
-            cursor.execute("""
-            INSERT INTO pagamentos (usuario, status, data, vencimento)
-            VALUES (%s, 'bloqueado', NOW(), NOW())
-            ON CONFLICT (usuario)
-            DO NOTHING
-            """, (user,))
-
             conn.commit()
-            mensagem = "Usuário criado (precisa pagar ou liberar)."
+            mensagem = "Usuário criado."
 
         except Exception as e:
             conn.rollback()
             mensagem = f"Erro ao criar usuário: {e}"
 
-    # LISTAR USUÁRIOS
+    # LISTAR
     cursor.execute("""
     SELECT usuario, cargo, online, ativo, email, plano, nome_empresa
     FROM usuarios ORDER BY usuario
     """)
     dados = cursor.fetchall()
 
-    # 🔥 PEGA O ÚLTIMO PAGAMENTO DE CADA USUÁRIO
-    cursor.execute("""
-    SELECT DISTINCT ON (usuario) usuario, status
-    FROM pagamentos
-    ORDER BY usuario, id DESC
-    """)
-    pagamentos = dict(cursor.fetchall())
-
     tabela = ""
 
     for u, c, o, ativo, email, plano, nome_empresa in dados:
         status_online = "🟢 Online" if o else "🔴 Offline"
-
-        status_pagamento = pagamentos.get(u, "bloqueado")
-        cor = "#00ff00" if status_pagamento == "pago" else "red"
-        texto_status = "PAGO" if status_pagamento == "pago" else "BLOQUEADO"
 
         if u != "admin":
             acoes = f"""
@@ -92,17 +72,6 @@ def usuarios():
             <form action="/usuarios/excluir_usuario/{u}" method="POST" style="display:inline;">
                 <button style="color:red;">Excluir</button>
             </form>
-
-            <br><br>
-
-            <form action="/usuarios/liberar_usuario/{u}" method="POST" style="display:inline;">
-                <input type="number" name="dias" placeholder="Dias" required style="width:60px;">
-                <button style="background:#00ff00;color:#000;">💸 Liberar</button>
-            </form>
-
-            <form action="/usuarios/bloquear_usuario/{u}" method="POST" style="display:inline;">
-                <button style="background:red;color:#fff;">🔒 Bloquear</button>
-            </form>
             """
         else:
             acoes = "Protegido"
@@ -115,7 +84,6 @@ def usuarios():
             <td>{nome_empresa or '-'}</td>
             <td>{plano}</td>
             <td>{status_online}</td>
-            <td style="color:{cor};font-weight:bold;">{texto_status}</td>
             <td>{acoes}</td>
         </tr>
         """
@@ -156,73 +124,9 @@ def usuarios():
                 <th>Empresa</th>
                 <th>Plano</th>
                 <th>Status</th>
-                <th>Pagamento</th>
                 <th>Ações</th>
             </tr>
             {tabela}
         </table>
     </div>
     """)
-
-
-# ================= LIBERAR =================
-@usuarios_bp.route("/usuarios/liberar_usuario/<usuario>", methods=["POST"])
-def liberar_usuario(usuario):
-    if "user" not in session:
-        return redirect("/")
-
-    if session.get("cargo") != "admin":
-        return acesso_negado()
-
-    dias = int(request.form.get("dias", 30))
-    vencimento = datetime.now() + timedelta(days=dias)
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-        INSERT INTO pagamentos (usuario, status, data, vencimento)
-        VALUES (%s, 'pago', NOW(), %s)
-        ON CONFLICT (usuario)
-        DO UPDATE SET status='pago', vencimento=%s
-        """, (usuario, vencimento, vencimento))
-
-        cursor.execute("UPDATE usuarios SET ativo=1 WHERE usuario=%s", (usuario,))
-
-        conn.commit()
-        registrar_log(session["user"], "liberar_usuario", usuario)
-
-    except Exception as e:
-        conn.rollback()
-        print("Erro liberar:", e)
-
-    devolver_conexao(conn)
-    return redirect("/usuarios")
-
-
-# ================= BLOQUEAR =================
-@usuarios_bp.route("/usuarios/bloquear_usuario/<usuario>", methods=["POST"])
-def bloquear_usuario(usuario):
-    conn = conectar()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-        INSERT INTO pagamentos (usuario, status, data, vencimento)
-        VALUES (%s, 'bloqueado', NOW(), NOW())
-        ON CONFLICT (usuario)
-        DO UPDATE SET status='bloqueado'
-        """, (usuario,))
-
-        cursor.execute("UPDATE usuarios SET ativo=0 WHERE usuario=%s", (usuario,))
-
-        conn.commit()
-        registrar_log(session["user"], "bloquear_usuario", usuario)
-
-    except Exception as e:
-        conn.rollback()
-        print("Erro bloquear:", e)
-
-    devolver_conexao(conn)
-    return redirect("/usuarios")
