@@ -80,19 +80,12 @@ def bloquear_sistema():
 
     print("DEBUG USER:", usuario)
     print("DEBUG CARGO:", cargo)
-    print("DEBUG PATH:", request.path)
-
-    # 🔥 LIBERA VOCÊ SEMPRE (ANTI BUG)
-    if usuario in ["kaua", "kaua@gmail.com"]:
-        return
 
     # 🔥 LIBERA ADMIN
     if cargo == "admin":
         return
 
     status = verificar_pagamento(usuario)
-
-    print("STATUS REAL:", status)
 
     if status != "pago":
         return """
