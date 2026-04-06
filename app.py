@@ -78,9 +78,17 @@ def bloquear_sistema():
         return
 
     # 🔒 BLOQUEIO NORMAL
-    status = verificar_pagamento(usuario)
+   status = verificar_pagamento(usuario)
 
-    if status != "pago":
+print("STATUS DEBUG:", status)
+
+if str(status).strip().lower() != "pago":
+    return """
+    <h1 style='color:red;text-align:center;margin-top:50px;'>
+    🚫 Sistema bloqueado<br><br>
+    Efetue o pagamento para continuar
+    </h1>
+    """
         return """
         <h1 style='color:red;text-align:center;margin-top:50px;'>
         🚫 Sistema bloqueado<br><br>
