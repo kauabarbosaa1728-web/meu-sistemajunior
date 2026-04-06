@@ -22,12 +22,6 @@ app.secret_key = "segredo123"
 criar_banco()
 
 
-# ================= LIBERAÇÃO MANUAL =================
-def usuario_liberado_manual():
-    usuario = session.get("user")
-    return usuario in ["kaua", "kaua@gmail.com"]
-
-
 # ================= VERIFICAR VENCIMENTO =================
 def verificar_vencimento(usuario):
     conn = None
@@ -67,14 +61,13 @@ def verificar_vencimento(usuario):
 # ================= BLOQUEIO GLOBAL =================
 @app.before_request
 def bloquear_sistema():
-  rotas_livres = [
-    "/", "/login", "/criar_pagamento", "/webhook", "/pagar",
-    "/excluir_estoque"
-]
+    rotas_livres = ["/", "/login", "/criar_pagamento", "/webhook", "/pagar"]
 
+    # libera rotas livres
     if request.path in rotas_livres:
         return
 
+    # se não estiver logado
     if "user" not in session:
         return redirect("/")
 
@@ -83,12 +76,16 @@ def bloquear_sistema():
 
     print("DEBUG USER:", usuario)
     print("DEBUG CARGO:", cargo)
+    print("DEBUG PATH:", request.path)
 
     # 🔥 LIBERA ADMIN
     if cargo == "admin":
         return
 
+    # 🔒 bloqueio normal
     status = verificar_pagamento(usuario)
+
+    print("STATUS:", status)
 
     if status != "pago":
         return """
@@ -96,74 +93,6 @@ def bloquear_sistema():
         🚫 Sistema bloqueado<br><br>
         Efetue o pagamento para continuar
         </h1>
-        """
-    rotas_livres = ["/", "/login", "/criar_pagamento", "/webhook", "/pagar"]
-
-    if "user" not in session:
-        return
-
-    if request.path in rotas_livres:
-        return
-
-    if session.get("cargo") == "admin":
-        return
-
-    if usuario_liberado_manual():
-        return
-
-    usuario = session["user"]
-
-    status = verificar_pagamento(usuario)
-
-    print("STATUS REAL:", status)
-
-    if status != "pago":
-        return """
-        <style>
-            body {
-                background: #000;
-                color: #0f0;
-                font-family: 'Courier New', monospace;
-                display:flex;
-                justify-content:center;
-                align-items:center;
-                height:100vh;
-                margin:0;
-            }
-
-            .box {
-                text-align:center;
-                background:#111;
-                padding:50px;
-                border-radius:10px;
-                box-shadow: 0 0 20px #0f0;
-            }
-
-            h1 { color:red; }
-
-            button {
-                margin-top:20px;
-                padding:15px 30px;
-                background:#0f0;
-                border:none;
-                font-size:18px;
-                cursor:pointer;
-                border-radius:5px;
-            }
-
-            button:hover {
-                background:#00cc00;
-            }
-        </style>
-
-        <div class="box">
-            <h1>🚫 Sistema bloqueado</h1>
-            <p>Seu acesso expirou ou está bloqueado</p>
-
-            <a href="/pagar">
-                <button>💰 Pagar agora</button>
-            </a>
-        </div>
         """
 
 
@@ -177,7 +106,7 @@ app.register_blueprint(logs_bp)
 app.register_blueprint(ia_bp)
 
 
-# ================= ROTAS DIRETAS (ANTI-404) =================
+# ================= ROTAS DIRETAS =================
 @app.route("/usuarios/excluir_usuario/<usuario>", methods=["POST"])
 def excluir_usuario_direto(usuario):
     conn = conectar()
