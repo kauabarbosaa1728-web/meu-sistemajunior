@@ -15,20 +15,11 @@ def estoque():
     if "user" not in session:
         return redirect("/")
 
-    # 🔥 BLOQUEIO DE PAGAMENTO
-    if session.get("cargo") != "admin":
-    status = verificar_pagamento(session["user"])
-
-    if status != "pago":
-        return """
-        <h1 style='color:red;text-align:center;margin-top:50px;'>
-        🚫 Sistema bloqueado
-        </h1>
-        """
     aviso = ""
 
-    # 🔥 NÃO BLOQUEIA ADMIN
+    # 🔥 BLOQUEIO DE PAGAMENTO (CORRETO)
     if session.get("cargo") != "admin":
+        status = verificar_pagamento(session["user"])
 
         if status == "bloqueado":
             return """
@@ -41,6 +32,7 @@ def estoque():
         elif status == "aviso":
             aviso = "<div style='color:yellow;text-align:center;'>⚠️ Seu plano está vencendo!</div>"
 
+    # 🔒 PERMISSÃO
     if not tem_permissao("pode_estoque"):
         return acesso_negado()
 
@@ -48,6 +40,7 @@ def estoque():
     cursor = conn.cursor()
     msg = ""
 
+    # ================= ADICIONAR =================
     if request.method == "POST":
         produto = request.form.get("produto")
         qtd = request.form.get("qtd")
@@ -74,6 +67,7 @@ def estoque():
                 conn.rollback()
                 msg = f"❌ Erro: {e}"
 
+    # ================= LISTAGEM =================
     cursor.execute("SELECT id, produto, quantidade, categoria, valor FROM estoque ORDER BY id DESC")
     dados = cursor.fetchall()
 
@@ -207,10 +201,14 @@ def excluir_estoque(id):
     if "user" not in session:
         return redirect("/")
 
-    status = verificar_pagamento(session["user"])
-    if status == "bloqueado":
-        return "<h1 style='color:red'>🚫 Sistema bloqueado</h1>"
+    # 🔥 NÃO BLOQUEIA ADMIN
+    if session.get("cargo") != "admin":
+        status = verificar_pagamento(session["user"])
 
+        if status == "bloqueado":
+            return "<h1 style='color:red'>🚫 Sistema bloqueado</h1>"
+
+    # 🔒 PERMISSÃO
     if not tem_permissao("pode_excluir_estoque"):
         return acesso_negado()
 
