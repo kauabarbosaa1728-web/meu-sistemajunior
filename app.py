@@ -122,3 +122,8 @@ def alterar_senha_direto(usuario):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
+# ================= BLOQUEIO GLOBAL (DESATIVADO TOTAL) =================
+@app.before_request
+def bloquear_sistema():
+    return
