@@ -1,6 +1,6 @@
 from flask import Blueprint, request, redirect, session
 from werkzeug.security import generate_password_hash
-from banco import conectar, devolver_conexao
+from banco import conectar, devolver_conexao, registrar_log
 from layout import container, acesso_negado
 from datetime import datetime, timedelta
 
@@ -30,11 +30,12 @@ def usuarios():
 
             cursor.execute("""
             INSERT INTO usuarios (usuario, senha, cargo, ativo, email, plano, nome_empresa)
-            VALUES (%s,%s,%s,1,%s,%s,%s)
+            VALUES (%s,%s,%s,0,%s,%s,%s)
             """, (user, generate_password_hash(senha), cargo, email, plano, nome_empresa))
 
             conn.commit()
-            mensagem = "Usuário criado com sucesso."
+            mensagem = "Usuário criado (precisa pagar ou liberar)."
+
         except Exception as e:
             conn.rollback()
             mensagem = f"Erro ao criar usuário: {e}"
@@ -89,7 +90,6 @@ def usuarios():
             </form>
 
             <form action="/usuarios/bloquear_usuario/{u}" method="POST" style="display:inline;">
-                <input type="number" name="dias" placeholder="Dias" required style="width:60px;">
                 <button style="background:red;color:#fff;">🔒 Bloquear</button>
             </form>
             """
@@ -154,53 +154,9 @@ def usuarios():
     """)
 
 # ================= LIBERAR =================
-@usuarios_bp.route("@usuarios_bp.route("/usuarios/liberar_usuario/<usuario>", methods=["POST"])
+@usuarios_bp.route("/usuarios/liberar_usuario/<usuario>", methods=["POST"])
 def liberar_usuario(usuario):
-    if "user" not in session:
-        return redirect("/")
-
-    if session.get("cargo") != "admin":
-        return acesso_negado()
-
     dias = int(request.form.get("dias", 30))
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    try:
-        from datetime import datetime, timedelta
-        vencimento = datetime.now() + timedelta(days=dias)
-
-        # 🔥 ATUALIZA PAGAMENTO
-        cursor.execute("""
-        UPDATE pagamentos 
-        SET status='pago', vencimento=%s
-        WHERE usuario=%s
-        """, (vencimento, usuario))
-
-        # 🔥 LIBERA USUÁRIO (AQUI ESTAVA FALTANDO)
-        cursor.execute("""
-        UPDATE usuarios 
-        SET ativo=1 
-        WHERE usuario=%s
-        """, (usuario,))
-
-        conn.commit()
-        registrar_log(session["user"], "liberar_usuario", usuario)
-
-    except Exception as e:
-        conn.rollback()
-        print("Erro ao liberar:", e)
-
-    devolver_conexao(conn)
-    return redirect("/usuarios")", methods=["POST"])
-def liberar_usuario(usuario):
-    try:
-        dias = request.form.get("dias")
-        dias = int(dias) if dias else 0
-    except:
-        dias = 0
-
     vencimento = datetime.now() + timedelta(days=dias)
 
     conn = conectar()
@@ -214,40 +170,42 @@ def liberar_usuario(usuario):
         DO UPDATE SET status='pago', vencimento=%s
         """, (usuario, vencimento, vencimento))
 
-        conn.commit()
-    except Exception as e:
-        print("Erro liberar:", e)
-    finally:
-        devolver_conexao(conn)
+        # 🔥 LIBERA LOGIN
+        cursor.execute("UPDATE usuarios SET ativo=1 WHERE usuario=%s", (usuario,))
 
+        conn.commit()
+        registrar_log(session["user"], "liberar_usuario", usuario)
+
+    except Exception as e:
+        conn.rollback()
+        print("Erro liberar:", e)
+
+    devolver_conexao(conn)
     return redirect("/usuarios")
 
 # ================= BLOQUEAR =================
 @usuarios_bp.route("/usuarios/bloquear_usuario/<usuario>", methods=["POST"])
 def bloquear_usuario(usuario):
-    try:
-        dias = request.form.get("dias")
-        dias = int(dias) if dias else 0
-    except:
-        dias = 0
-
-    vencimento = datetime.now() + timedelta(days=dias)
-
     conn = conectar()
     cursor = conn.cursor()
 
     try:
         cursor.execute("""
         INSERT INTO pagamentos (usuario, status, data, vencimento)
-        VALUES (%s, 'bloqueado', NOW(), %s)
+        VALUES (%s, 'bloqueado', NOW(), NOW())
         ON CONFLICT (usuario)
-        DO UPDATE SET status='bloqueado', vencimento=%s
-        """, (usuario, vencimento, vencimento))
+        DO UPDATE SET status='bloqueado'
+        """, (usuario,))
+
+        # 🔥 BLOQUEIA LOGIN
+        cursor.execute("UPDATE usuarios SET ativo=0 WHERE usuario=%s", (usuario,))
 
         conn.commit()
-    except Exception as e:
-        print("Erro bloquear:", e)
-    finally:
-        devolver_conexao(conn)
+        registrar_log(session["user"], "bloquear_usuario", usuario)
 
+    except Exception as e:
+        conn.rollback()
+        print("Erro bloquear:", e)
+
+    devolver_conexao(conn)
     return redirect("/usuarios")
