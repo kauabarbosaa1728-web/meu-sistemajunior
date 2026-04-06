@@ -26,24 +26,41 @@ def carregar_permissoes(usuario):
 
         if dado:
             session["cargo"] = dado[0]
-            session["pode_estoque"] = bool(dado[1])
-            session["pode_transferencia"] = bool(dado[2])
-            session["pode_historico"] = bool(dado[3])
-            session["pode_usuarios"] = bool(dado[4])
-            session["pode_editar_estoque"] = bool(dado[5])
-            session["pode_excluir_estoque"] = bool(dado[6])
-            session["pode_logs"] = bool(dado[7])
+
+            # 🔥 SE FOR ADMIN → LIBERA TUDO
+            if dado[0] == "admin":
+                session["pode_estoque"] = True
+                session["pode_transferencia"] = True
+                session["pode_historico"] = True
+                session["pode_usuarios"] = True
+                session["pode_editar_estoque"] = True
+                session["pode_excluir_estoque"] = True
+                session["pode_logs"] = True
+            else:
+                session["pode_estoque"] = bool(dado[1])
+                session["pode_transferencia"] = bool(dado[2])
+                session["pode_historico"] = bool(dado[3])
+                session["pode_usuarios"] = bool(dado[4])
+                session["pode_editar_estoque"] = bool(dado[5])
+                session["pode_excluir_estoque"] = bool(dado[6])
+                session["pode_logs"] = bool(dado[7])
+
             session["ativo"] = bool(dado[8])
             session["email"] = dado[9] or ""
             session["plano"] = dado[10] or ""
             session["nome_empresa"] = dado[11] or ""
+
     finally:
         devolver_conexao(conn)
 
+
 def tem_permissao(nome):
+    # 🔥 ADMIN SEMPRE LIBERADO (SEGURANÇA EXTRA)
     if session.get("cargo") == "admin":
         return True
+
     return bool(session.get(nome, False))
+
 
 def acesso_negado():
     return container("""
@@ -53,6 +70,7 @@ def acesso_negado():
         <p><a href="/painel">⬅ Voltar para o painel</a></p>
     </div>
     """)
+
 
 def gerar_barras_3d(dados, altura_max=220, modo="quantidade"):
     if not dados:
@@ -103,6 +121,7 @@ def gerar_barras_3d(dados, altura_max=220, modo="quantidade"):
         </div>
         """
     return barras
+
 
 def topo():
     return """
