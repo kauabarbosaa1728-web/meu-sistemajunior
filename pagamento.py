@@ -1,7 +1,7 @@
 from flask import Blueprint, request, session
 import mercadopago
 from banco import conectar, devolver_conexao
-from werkzeug.security import generate_password_hash
+from datetime import datetime, timedelta
 
 pagamento_routes = Blueprint("pagamento", __name__)
 
@@ -84,7 +84,9 @@ def criar_pagamento():
         cursor.execute("""
         INSERT INTO pagamentos (usuario, plano, status, pagamento_id)
         VALUES (%s,%s,'pendente',%s)
-        """, (usuario, plano, pagamento_id))
+        ON CONFLICT (usuario)
+        DO UPDATE SET plano=%s, status='pendente', pagamento_id=%s
+        """, (usuario, plano, pagamento_id, plano, pagamento_id))
 
         conn.commit()
         devolver_conexao(conn)
@@ -148,10 +150,21 @@ def verificar_pagamento_auto():
             conn = conectar()
             cursor = conn.cursor()
 
+            # 🔥 DEFINE VENCIMENTO (30 DIAS)
+            vencimento = datetime.now() + timedelta(days=30)
+
             cursor.execute("""
             UPDATE pagamentos 
-            SET status='pago', data=NOW()
+            SET status='pago', data=NOW(), vencimento=%s
             WHERE pagamento_id=%s
+            """, (vencimento, pagamento_id))
+
+            # 🔥 LIBERA USUÁRIO
+            cursor.execute("""
+            UPDATE usuarios SET ativo=1
+            WHERE usuario = (
+                SELECT usuario FROM pagamentos WHERE pagamento_id=%s
+            )
             """, (pagamento_id,))
 
             conn.commit()
@@ -161,5 +174,6 @@ def verificar_pagamento_auto():
 
         return "aguardando"
 
-    except:
+    except Exception as e:
+        print("Erro verificar:", e)
         return "erro"
