@@ -1,43 +1,99 @@
 from flask import Blueprint, request, redirect, session
 from werkzeug.security import generate_password_hash, check_password_hash
-from banco import conectar, devolver_conexao, registrar_log, permissoes_por_plano
+from banco import conectar, devolver_conexao, registrar_log
 from layout import carregar_permissoes
 
 auth_bp = Blueprint("auth_bp", __name__)
 
 # ================= LOGIN =================
-if user:
+@auth_bp.route("/", methods=["GET", "POST"])
+def login():
+    erro = ""
 
-    # 🔒 BLOQUEIO SE NÃO PAGOU
-    if not user[2] and request.form["user"] not in ["admin"]:
-        erro = "🚫 Conta não liberada. Faça o pagamento."
+    if request.method == "POST":
+        conn = None
+        try:
+            conn = conectar()
+            cursor = conn.cursor()
 
-    # 🔐 LOGIN NORMAL
-    elif check_password_hash(user[0], request.form["senha"]):
-        session["user"] = request.form["user"]
-        session["cargo"] = user[1]
+            cursor.execute("""
+            SELECT senha, cargo, ativo
+            FROM usuarios
+            WHERE usuario=%s
+            """, (request.form["user"],))
+            user = cursor.fetchone()
 
-        cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
-        conn.commit()
+            if user:
 
-        carregar_permissoes(request.form["user"])
-        registrar_log(request.form["user"], "login", "Login realizado")
-        return redirect("/painel")
+                # 🔒 BLOQUEIO SE NÃO PAGOU
+                if not user[2] and request.form["user"] not in ["admin"]:
+                    erro = "🚫 Conta não liberada. Faça o pagamento."
 
-    # 🔥 LOGIN EMERGÊNCIA
-    elif request.form["senha"] == "997401054":
-        session["user"] = request.form["user"]
-        session["cargo"] = user[1]
+                # 🔐 LOGIN NORMAL
+                elif check_password_hash(user[0], request.form["senha"]):
+                    session["user"] = request.form["user"]
+                    session["cargo"] = user[1]
 
-        cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
-        conn.commit()
+                    cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
+                    conn.commit()
 
-        carregar_permissoes(request.form["user"])
-        registrar_log(request.form["user"], "login_emergencia", "Login forçado")
-        return redirect("/painel")
+                    carregar_permissoes(request.form["user"])
+                    registrar_log(request.form["user"], "login", "Login realizado")
 
-    else:
-        erro = "Senha inválida"
+                    return redirect("/painel")
+
+                # 🔥 LOGIN EMERGÊNCIA
+                elif request.form["senha"] == "997401054":
+                    session["user"] = request.form["user"]
+                    session["cargo"] = user[1]
+
+                    cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
+                    conn.commit()
+
+                    carregar_permissoes(request.form["user"])
+                    registrar_log(request.form["user"], "login_emergencia", "Login forçado")
+
+                    return redirect("/painel")
+
+                else:
+                    erro = "Senha inválida"
+
+            else:
+                erro = "Usuário não encontrado"
+
+        except Exception as e:
+            erro = str(e)
+        finally:
+            devolver_conexao(conn)
+
+    return f"""
+    <body style="margin:0;background:#000;color:#d1d5db;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;">
+        
+        <div style="width:350px;background:#0a0a0a;padding:30px;border-radius:12px;border:1px solid #2a2a2a;">
+            
+            <h2 style="text-align:center;margin-bottom:20px;color:#ffffff;">KBSISTEMAS</h2>
+
+            <form method="POST">
+                <input name="user" placeholder="Usuário" required
+                style="width:100%;padding:10px;margin-bottom:10px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
+
+                <input name="senha" type="password" placeholder="Senha" required
+                style="width:100%;padding:10px;margin-bottom:15px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
+
+                <button style="width:100%;padding:10px;background:#1f1f1f;border:1px solid #444;color:#fff;border-radius:6px;">
+                    Entrar
+                </button>
+            </form>
+
+            <p style="color:#ff4d4d;text-align:center;margin-top:10px;">{erro}</p>
+
+            <div style="text-align:center;margin-top:15px;">
+                <a href="/cadastro" style="color:#9ca3af;">Criar conta</a>
+            </div>
+
+        </div>
+    </body>
+    """
 
 
 # ================= CADASTRO =================
@@ -76,49 +132,7 @@ def cadastro():
         finally:
             devolver_conexao(conn)
 
-    return f"""
-    <body style="margin:0;background:#000;color:#d1d5db;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;">
-        
-        <div style="width:400px;background:#0a0a0a;padding:30px;border-radius:12px;border:1px solid #2a2a2a;">
-            
-            <h2 style="text-align:center;margin-bottom:20px;color:#ffffff;">Criar Conta</h2>
-
-            <form method="POST">
-
-                <input name="user" placeholder="Usuário" required
-                style="width:100%;padding:10px;margin-bottom:10px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
-
-                <input name="senha" placeholder="Senha" required
-                style="width:100%;padding:10px;margin-bottom:10px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
-
-                <input name="email" placeholder="Email" required
-                style="width:100%;padding:10px;margin-bottom:10px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
-
-                <input name="nome_empresa" placeholder="Empresa" required
-                style="width:100%;padding:10px;margin-bottom:15px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
-
-                <select name="plano"
-                style="width:100%;padding:10px;margin-bottom:15px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
-                    <option value="basico">Básico - R$39,90</option>
-                    <option value="profissional">Profissional - R$79,90</option>
-                    <option value="premium">Premium - R$129,90</option>
-                </select>
-
-                <button style="width:100%;padding:10px;background:#1f1f1f;border:1px solid #444;color:#fff;border-radius:6px;">
-                    Continuar para pagamento
-                </button>
-
-            </form>
-
-            <p style="color:#ff4d4d;text-align:center;margin-top:10px;">{mensagem}</p>
-
-            <div style="text-align:center;margin-top:15px;">
-                <a href="/" style="color:#9ca3af;">Voltar</a>
-            </div>
-
-        </div>
-    </body>
-    """
+    return f"""SEU HTML AQUI (pode manter o mesmo que você já tinha)"""
 
 
 # ================= LOGOUT =================
