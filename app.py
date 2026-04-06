@@ -67,7 +67,10 @@ def verificar_vencimento(usuario):
 # ================= BLOQUEIO GLOBAL =================
 @app.before_request
 def bloquear_sistema():
-    rotas_livres = ["/", "/login", "/criar_pagamento", "/webhook", "/pagar"]
+  rotas_livres = [
+    "/", "/login", "/criar_pagamento", "/webhook", "/pagar",
+    "/excluir_estoque"
+]
 
     if request.path in rotas_livres:
         return
