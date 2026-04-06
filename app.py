@@ -1,6 +1,7 @@
 from flask import Flask, session, request, redirect
 from datetime import datetime
 from werkzeug.security import generate_password_hash
+import os
 
 from banco import criar_banco, verificar_pagamento, conectar, devolver_conexao, registrar_log
 from layout import acesso_negado
@@ -63,29 +64,21 @@ def verificar_vencimento(usuario):
 def bloquear_sistema():
     rotas_livres = ["/", "/login", "/criar_pagamento", "/webhook", "/pagar"]
 
-    # libera rotas livres
     if request.path in rotas_livres:
         return
 
-    # se não estiver logado
     if "user" not in session:
         return redirect("/")
 
     usuario = session.get("user")
     cargo = session.get("cargo")
 
-    print("DEBUG USER:", usuario)
-    print("DEBUG CARGO:", cargo)
-    print("DEBUG PATH:", request.path)
-
     # 🔥 LIBERA ADMIN
     if cargo == "admin":
         return
 
-    # 🔒 bloqueio normal
+    # 🔒 BLOQUEIO NORMAL
     status = verificar_pagamento(usuario)
-
-    print("STATUS:", status)
 
     if status != "pago":
         return """
@@ -157,4 +150,5 @@ def alterar_senha_direto(usuario):
 
 # ================= START =================
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
