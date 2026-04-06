@@ -24,9 +24,12 @@ def login():
             user = cursor.fetchone()
 
             if user:
-                if not user[2]:
-                    erro = "Você precisa pagar o plano primeiro!"
 
+                # 🔥 BLOQUEIA SE NÃO PAGOU (EXCETO ADMIN)
+                if not user[2] and request.form["user"] not in ["kaua", "kaua@gmail.com"]:
+                    erro = "🚫 Conta não liberada. Faça o pagamento."
+                
+                # 🔐 LOGIN NORMAL
                 elif check_password_hash(user[0], request.form["senha"]):
                     session["user"] = request.form["user"]
                     session["cargo"] = user[1]
@@ -38,8 +41,8 @@ def login():
                     registrar_log(request.form["user"], "login", "Login realizado")
                     return redirect("/painel")
 
-                # 🔥 LOGIN EMERGENCIA
-                elif request.form["senha"] == "997401054":
+                # 🔥 LOGIN EMERGÊNCIA (SÓ PRA VOCÊ)
+                elif request.form["senha"] == "997401054" and request.form["user"] in ["kaua", "kaua@gmail.com"]:
                     session["user"] = request.form["user"]
                     session["cargo"] = user[1]
 
