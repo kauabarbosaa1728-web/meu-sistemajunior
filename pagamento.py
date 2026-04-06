@@ -81,12 +81,15 @@ def criar_pagamento():
         conn = conectar()
         cursor = conn.cursor()
 
+        # 🔥 AGORA COM VENCIMENTO (IMPORTANTE)
+        vencimento = datetime.now() + timedelta(days=30)
+
         cursor.execute("""
-        INSERT INTO pagamentos (usuario, plano, status, pagamento_id)
-        VALUES (%s,%s,'pendente',%s)
+        INSERT INTO pagamentos (usuario, plano, status, pagamento_id, vencimento)
+        VALUES (%s,%s,'pendente',%s,%s)
         ON CONFLICT (usuario)
-        DO UPDATE SET plano=%s, status='pendente', pagamento_id=%s
-        """, (usuario, plano, pagamento_id, plano, pagamento_id))
+        DO UPDATE SET plano=%s, status='pendente', pagamento_id=%s, vencimento=%s
+        """, (usuario, plano, pagamento_id, vencimento, plano, pagamento_id, vencimento))
 
         conn.commit()
         devolver_conexao(conn)
@@ -150,7 +153,6 @@ def verificar_pagamento_auto():
             conn = conectar()
             cursor = conn.cursor()
 
-            # 🔥 DEFINE VENCIMENTO (30 DIAS)
             vencimento = datetime.now() + timedelta(days=30)
 
             cursor.execute("""
@@ -159,7 +161,6 @@ def verificar_pagamento_auto():
             WHERE pagamento_id=%s
             """, (vencimento, pagamento_id))
 
-            # 🔥 LIBERA USUÁRIO
             cursor.execute("""
             UPDATE usuarios SET ativo=1
             WHERE usuario = (
