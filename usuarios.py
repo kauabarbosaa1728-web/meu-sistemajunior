@@ -19,7 +19,7 @@ def usuarios():
     cursor = conn.cursor()
     mensagem = ""
 
-    # CRIAR USUÁRIO
+    # ================= CRIAR USUÁRIO =================
     if request.method == "POST":
         try:
             user = request.form["user"].strip()
@@ -29,19 +29,48 @@ def usuarios():
             nome_empresa = request.form.get("nome_empresa", "").strip()
             plano = request.form.get("plano", "basico").strip().lower()
 
+            # 🔥 PERMISSÕES (CHECKBOX)
+            pode_estoque = 1 if request.form.get("pode_estoque") else 0
+            pode_transferencia = 1 if request.form.get("pode_transferencia") else 0
+            pode_historico = 1 if request.form.get("pode_historico") else 0
+            pode_usuarios = 1 if request.form.get("pode_usuarios") else 0
+            pode_logs = 1 if request.form.get("pode_logs") else 0
+            pode_editar_estoque = 1 if request.form.get("pode_editar_estoque") else 0
+            pode_excluir_estoque = 1 if request.form.get("pode_excluir_estoque") else 0
+
             cursor.execute("""
-            INSERT INTO usuarios (usuario, senha, cargo, ativo, email, plano, nome_empresa)
-            VALUES (%s,%s,%s,0,%s,%s,%s)
-            """, (user, generate_password_hash(senha), cargo, email, plano, nome_empresa))
+            INSERT INTO usuarios (
+                usuario, senha, cargo, ativo, email, plano, nome_empresa,
+                pode_estoque, pode_transferencia, pode_historico,
+                pode_usuarios, pode_logs, pode_editar_estoque, pode_excluir_estoque
+            )
+            VALUES (%s,%s,%s,0,%s,%s,%s,
+                    %s,%s,%s,
+                    %s,%s,%s,%s)
+            """, (
+                user,
+                generate_password_hash(senha),
+                cargo,
+                email,
+                plano,
+                nome_empresa,
+                pode_estoque,
+                pode_transferencia,
+                pode_historico,
+                pode_usuarios,
+                pode_logs,
+                pode_editar_estoque,
+                pode_excluir_estoque
+            ))
 
             conn.commit()
-            mensagem = "Usuário criado."
+            mensagem = "Usuário criado com permissões."
 
         except Exception as e:
             conn.rollback()
             mensagem = f"Erro ao criar usuário: {e}"
 
-    # LISTAR
+    # ================= LISTAR =================
     cursor.execute("""
     SELECT usuario, cargo, online, ativo, email, plano, nome_empresa
     FROM usuarios ORDER BY usuario
@@ -110,6 +139,21 @@ def usuarios():
                 <option value="profissional">profissional</option>
                 <option value="premium">premium</option>
             </select>
+
+            <br><br>
+
+            <!-- 🔥 PERMISSÕES -->
+            <div style="display:flex; gap:15px; flex-wrap:wrap;">
+                <label><input type="checkbox" name="pode_estoque"> Estoque</label>
+                <label><input type="checkbox" name="pode_transferencia"> Transferência</label>
+                <label><input type="checkbox" name="pode_historico"> Histórico</label>
+                <label><input type="checkbox" name="pode_usuarios"> Usuários</label>
+                <label><input type="checkbox" name="pode_logs"> Logs</label>
+                <label><input type="checkbox" name="pode_editar_estoque"> Editar Estoque</label>
+                <label><input type="checkbox" name="pode_excluir_estoque"> Excluir Estoque</label>
+            </div>
+
+            <br>
 
             <button>Criar</button>
         </form>
