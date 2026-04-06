@@ -34,6 +34,14 @@ def usuarios():
             VALUES (%s,%s,%s,0,%s,%s,%s)
             """, (user, generate_password_hash(senha), cargo, email, plano, nome_empresa))
 
+            # 🔥 CRIA REGISTRO DE PAGAMENTO JUNTO (IMPORTANTE)
+            cursor.execute("""
+            INSERT INTO pagamentos (usuario, status, data, vencimento)
+            VALUES (%s, 'bloqueado', NOW(), NOW())
+            ON CONFLICT (usuario)
+            DO NOTHING
+            """, (user,))
+
             conn.commit()
             mensagem = "Usuário criado (precisa pagar ou liberar)."
 
@@ -48,7 +56,12 @@ def usuarios():
     """)
     dados = cursor.fetchall()
 
-    cursor.execute("SELECT usuario, status FROM pagamentos")
+    # 🔥 PEGA O ÚLTIMO PAGAMENTO DE CADA USUÁRIO
+    cursor.execute("""
+    SELECT DISTINCT ON (usuario) usuario, status
+    FROM pagamentos
+    ORDER BY usuario, id DESC
+    """)
     pagamentos = dict(cursor.fetchall())
 
     tabela = ""
@@ -151,6 +164,7 @@ def usuarios():
     </div>
     """)
 
+
 # ================= LIBERAR =================
 @usuarios_bp.route("/usuarios/liberar_usuario/<usuario>", methods=["POST"])
 def liberar_usuario(usuario):
@@ -174,7 +188,6 @@ def liberar_usuario(usuario):
         DO UPDATE SET status='pago', vencimento=%s
         """, (usuario, vencimento, vencimento))
 
-        # 🔥 LIBERA USUÁRIO
         cursor.execute("UPDATE usuarios SET ativo=1 WHERE usuario=%s", (usuario,))
 
         conn.commit()
