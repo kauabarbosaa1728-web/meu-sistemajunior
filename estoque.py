@@ -126,8 +126,80 @@ def estoque():
     """)
 
 # ================= EDITAR =================
+# ================= EDITAR =================
 @estoque_bp.route("/editar_estoque/<int:id>", methods=["GET", "POST"])
 def editar_estoque(id):
+    if "user" not in session:
+        return redirect("/")
+
+    status = verificar_pagamento(session["user"])
+
+    # 🔥 LIBERA ADMIN
+    if status == "bloqueado" and session.get("cargo") != "admin":
+        return "<h1 style='color:red'>🚫 Sistema bloqueado</h1>"
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+        produto = request.form.get("produto")
+        qtd = request.form.get("qtd")
+        categoria = request.form.get("categoria")
+        valor = request.form.get("valor")  # 🔥 NOVO
+
+        try:
+            qtd = int(qtd)
+            valor = float(valor or 0)
+
+            cursor.execute("""
+            UPDATE estoque 
+            SET produto=%s, quantidade=%s, categoria=%s, valor=%s
+            WHERE id=%s
+            """, (produto, qtd, categoria, valor, id))
+
+            conn.commit()
+            registrar_log(session["user"], "editar_estoque", produto)
+
+            devolver_conexao(conn)
+            return redirect("/estoque")
+
+        except Exception as e:
+            conn.rollback()
+            return container(f"""
+            <div class="card">
+            <h2 style='color:red'>❌ Erro ao atualizar</h2>
+            <p>{e}</p>
+            <a href="/estoque">⬅ Voltar</a>
+            </div>
+            """)
+
+    # 🔥 AGORA BUSCA VALOR TAMBÉM
+    cursor.execute("SELECT produto, quantidade, categoria, valor FROM estoque WHERE id=%s", (id,))
+    dado = cursor.fetchone()
+
+    devolver_conexao(conn)
+
+    if not dado:
+        return container("""
+        <div class="card">
+        <h2 style='color:red'>❌ Produto não encontrado</h2>
+        <a href="/estoque">⬅ Voltar</a>
+        </div>
+        """)
+
+    return container(f"""
+    <div class="card">
+    <h2>✏️ EDITAR PRODUTO</h2>
+
+    <form method="POST" style="display:flex; gap:10px; flex-wrap:wrap;">
+        <input name="produto" value="{dado[0]}" placeholder="Produto">
+        <input name="qtd" value="{dado[1]}" placeholder="Quantidade">
+        <input name="categoria" value="{dado[2]}" placeholder="Categoria">
+        <input name="valor" value="{float(dado[3] or 0):.2f}" placeholder="Valor (R$)"> <!-- 🔥 NOVO -->
+        <button>Salvar</button>
+    </form>
+    </div>
+    """)
     if "user" not in session:
         return redirect("/")
 
