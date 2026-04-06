@@ -19,6 +19,7 @@ def usuarios():
     cursor = conn.cursor()
     mensagem = ""
 
+    # CRIAR USUÁRIO
     if request.method == "POST":
         try:
             user = request.form["user"].strip()
@@ -40,6 +41,7 @@ def usuarios():
             conn.rollback()
             mensagem = f"Erro ao criar usuário: {e}"
 
+    # LISTAR USUÁRIOS
     cursor.execute("""
     SELECT usuario, cargo, online, ativo, email, plano, nome_empresa
     FROM usuarios ORDER BY usuario
@@ -60,10 +62,6 @@ def usuarios():
 
         if u != "admin":
             acoes = f"""
-            <form action="/usuarios/editar_usuario/{u}" method="GET" style="display:inline;">
-                <button>Editar</button>
-            </form>
-
             <form action="/usuarios/alterar_senha/{u}" method="POST" style="display:inline;">
                 <input type="password" name="senha" placeholder="Nova senha" required style="width:120px;">
                 <button>Senha</button>
@@ -162,35 +160,6 @@ def liberar_usuario(usuario):
     if session.get("cargo") != "admin":
         return acesso_negado()
 
-    from datetime import datetime, timedelta
-
-    try:
-        dias = int(request.form.get("dias", 30))
-    except:
-        dias = 30
-
-    vencimento = datetime.now() + timedelta(days=dias)
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-        INSERT INTO pagamentos (usuario, status, data, vencimento)
-        VALUES (%s, 'pago', NOW(), %s)
-        ON CONFLICT (usuario)
-        DO UPDATE SET status='pago', vencimento=%s
-        """, (usuario, vencimento, vencimento))
-
-        conn.commit()
-
-    except Exception as e:
-        print("Erro ao liberar:", e)
-        conn.rollback()
-
-    devolver_conexao(conn)
-    return redirect("/usuarios")
-def liberar_usuario(usuario):
     dias = int(request.form.get("dias", 30))
     vencimento = datetime.now() + timedelta(days=dias)
 
@@ -205,7 +174,7 @@ def liberar_usuario(usuario):
         DO UPDATE SET status='pago', vencimento=%s
         """, (usuario, vencimento, vencimento))
 
-        # 🔥 LIBERA LOGIN
+        # 🔥 LIBERA USUÁRIO
         cursor.execute("UPDATE usuarios SET ativo=1 WHERE usuario=%s", (usuario,))
 
         conn.commit()
@@ -217,6 +186,7 @@ def liberar_usuario(usuario):
 
     devolver_conexao(conn)
     return redirect("/usuarios")
+
 
 # ================= BLOQUEAR =================
 @usuarios_bp.route("/usuarios/bloquear_usuario/<usuario>", methods=["POST"])
@@ -232,7 +202,6 @@ def bloquear_usuario(usuario):
         DO UPDATE SET status='bloqueado'
         """, (usuario,))
 
-        # 🔥 BLOQUEIA LOGIN
         cursor.execute("UPDATE usuarios SET ativo=0 WHERE usuario=%s", (usuario,))
 
         conn.commit()
