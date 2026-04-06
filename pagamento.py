@@ -71,6 +71,10 @@ def criar_pagamento():
         }
 
         pagamento = sdk.payment().create(payment_data)
+
+        if not pagamento or "response" not in pagamento:
+            return "❌ erro ao gerar pagamento"
+
         resposta = pagamento.get("response", {})
 
         if "id" not in resposta:
@@ -132,6 +136,7 @@ def criar_pagamento():
         """
 
     except Exception as e:
+        print("ERRO:", e)
         return f"❌ ERRO: {str(e)}"
 
 
@@ -153,26 +158,16 @@ def verificar_pagamento_auto():
 
             vencimento = datetime.now() + timedelta(days=30)
 
-            # Atualiza pagamento
             cursor.execute("""
             UPDATE pagamentos 
             SET status='pago', data=NOW(), vencimento=%s
             WHERE pagamento_id=%s
             """, (vencimento, pagamento_id))
 
-            # 🔥 CRIA USUÁRIO SE NÃO EXISTIR (COM PERMISSÕES)
             cursor.execute("""
-            INSERT INTO usuarios (
-                usuario, senha, cargo, ativo, plano,
-                pode_estoque, pode_transferencia, pode_historico,
-                pode_usuarios, pode_logs, pode_editar_estoque, pode_excluir_estoque
-            )
-            SELECT usuario, '123', 'operador', 1, plano,
-                   1,1,1,0,0,0,0
-            FROM pagamentos
-            WHERE pagamento_id=%s
-            AND NOT EXISTS (
-                SELECT 1 FROM usuarios WHERE usuarios.usuario = pagamentos.usuario
+            UPDATE usuarios SET ativo=1
+            WHERE usuario = (
+                SELECT usuario FROM pagamentos WHERE pagamento_id=%s
             )
             """, (pagamento_id,))
 
