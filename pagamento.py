@@ -82,23 +82,30 @@ def criar_pagamento():
 
         pagamento_id = resposta["id"]
 
-        # ================= SALVAR NO BANCO =================
+        # ================= BANCO =================
         conn = None
         try:
             conn = conectar()
             cursor = conn.cursor()
 
-            # 🔥 BUSCAR DADOS DO USUARIO
-            cursor.execute("""
-            SELECT email, nome_empresa FROM usuarios WHERE usuario=%s
-            """, (usuario,))
+            # 🔥 VERIFICA SE USUARIO EXISTE
+            cursor.execute("SELECT email, nome_empresa FROM usuarios WHERE usuario=%s", (usuario,))
             dados = cursor.fetchone()
 
             if not dados:
-                return "Usuário não encontrado"
+                # 🔥 CRIA USUARIO AUTOMATICO
+                cursor.execute("""
+                INSERT INTO usuarios (usuario, senha, email, nome_empresa, cargo, ativo)
+                VALUES (%s, %s, %s, %s, 'operador', 0)
+                """, (usuario, "temp", "temp@email.com", "Empresa"))
 
-            email = dados[0]
-            nome_empresa = dados[1]
+                conn.commit()
+
+                email = "temp@email.com"
+                nome_empresa = "Empresa"
+            else:
+                email = dados[0]
+                nome_empresa = dados[1]
 
             vencimento = datetime.now() + timedelta(days=30)
 
@@ -108,6 +115,7 @@ def criar_pagamento():
             """, (usuario, email, nome_empresa, plano, pagamento_id, vencimento))
 
             conn.commit()
+
         finally:
             if conn:
                 devolver_conexao(conn)
