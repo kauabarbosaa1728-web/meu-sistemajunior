@@ -81,32 +81,39 @@ def criar_pagamento():
         conn = conectar()
         cursor = conn.cursor()
 
-        # 🔥 BUSCAR DADOS DO USUARIO
+        # 🔥 BUSCAR USUARIO
         cursor.execute("""
         SELECT email, nome_empresa FROM usuarios WHERE usuario=%s
         """, (usuario,))
         dados = cursor.fetchone()
 
         if not dados:
-            # cria usuario minimo
             email = "temp@email.com"
             nome_empresa = "Empresa"
 
             cursor.execute("""
             INSERT INTO usuarios (usuario, senha, email, nome_empresa, cargo, ativo)
             VALUES (%s, %s, %s, %s, 'operador', 0)
-            """, (usuario, "temp", email, nome_empresa))
+            """, (usuario, "temp123", email, nome_empresa))
         else:
-            email = dados[0]
-            nome_empresa = dados[1]
+            email = dados[0] or "temp@email.com"
+            nome_empresa = dados[1] or "Empresa"
 
         vencimento = datetime.now() + timedelta(days=30)
 
-        # 🔥 INSERT COMPLETO (AGORA SEM ERRO)
+        # 🔥 INSERT COMPLETO (SEM ERRO)
         cursor.execute("""
-        INSERT INTO pagamentos (usuario, email, nome_empresa, plano, status, pagamento_id, vencimento)
-        VALUES (%s,%s,%s,%s,'pendente',%s,%s)
-        """, (usuario, email, nome_empresa, plano, pagamento_id, vencimento))
+        INSERT INTO pagamentos (usuario, email, senha, nome_empresa, plano, status, pagamento_id, vencimento)
+        VALUES (%s,%s,%s,%s,%s,'pendente',%s,%s)
+        """, (
+            usuario,
+            email,
+            "temp123",  # 🔥 resolve erro de senha
+            nome_empresa,
+            plano,
+            pagamento_id,
+            vencimento
+        ))
 
         conn.commit()
         devolver_conexao(conn)
@@ -120,6 +127,8 @@ def criar_pagamento():
             <div style="background:#0a0a0a;padding:30px;border-radius:10px;width:400px;text-align:center;">
                 
                 <h2>💳 Pagamento PIX</h2>
+                <p>Plano: {plano}</p>
+                <p>Valor: R$ {valor}</p>
 
                 <img src="data:image/png;base64,{qr["qr_code_base64"]}" style="width:220px;margin:20px;">
 
@@ -128,17 +137,17 @@ def criar_pagamento():
                 </textarea>
 
                 <button onclick="copiar()" style="margin-top:10px;padding:10px;background:#00ff00;">
-                    Copiar PIX
+                    📋 Copiar PIX
                 </button>
 
-                <h3 id="status">Aguardando pagamento...</h3>
+                <h3 id="status">⏳ Aguardando pagamento...</h3>
 
                 <script>
                 function copiar() {{
                     let pix = document.getElementById("pix");
                     pix.select();
                     document.execCommand("copy");
-                    alert("Copiado!");
+                    alert("PIX copiado!");
                 }}
 
                 async function verificar() {{
@@ -146,7 +155,7 @@ def criar_pagamento():
                     let t = await r.text();
 
                     if (t.includes("APROVADO")) {{
-                        document.getElementById("status").innerHTML = "PAGO!";
+                        document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO!";
                         setTimeout(() => window.location.href="/painel", 2000);
                     }}
                 }}
@@ -160,3 +169,45 @@ def criar_pagamento():
 
     except Exception as e:
         return f"❌ ERRO: {str(e)}"
+
+
+# ================= VERIFICAR PAGAMENTO =================
+@pagamento_routes.route("/verificar_pagamento_auto")
+def verificar_pagamento_auto():
+    try:
+        pagamento_id = session.get("pagamento_id")
+
+        if not pagamento_id:
+            return "erro"
+
+        pagamento = sdk.payment().get(pagamento_id)
+        status = pagamento["response"]["status"]
+
+        if status == "approved":
+            conn = conectar()
+            cursor = conn.cursor()
+
+            vencimento = datetime.now() + timedelta(days=30)
+
+            cursor.execute("""
+            UPDATE pagamentos 
+            SET status='pago', data=NOW(), vencimento=%s
+            WHERE pagamento_id=%s
+            """, (vencimento, pagamento_id))
+
+            cursor.execute("""
+            UPDATE usuarios SET ativo=1
+            WHERE usuario = (
+                SELECT usuario FROM pagamentos WHERE pagamento_id=%s
+            )
+            """, (pagamento_id,))
+
+            conn.commit()
+            devolver_conexao(conn)
+
+            return "APROVADO"
+
+        return "aguardando"
+
+    except:
+        return "erro"
