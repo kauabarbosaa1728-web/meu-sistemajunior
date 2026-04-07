@@ -38,7 +38,7 @@ def pagar():
 
 
 # ================= GERAR PIX =================
-@pagamento_routes.route("/gerar_pix", methods=["POST"])
+@pagamento_routes.route("/criar_pagamento", methods=["POST"])
 def gerar_pix():
     usuario = session.get("user")
     plano = request.form.get("plano")
