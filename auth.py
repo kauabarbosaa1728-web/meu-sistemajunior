@@ -48,7 +48,8 @@ def login():
         except Exception as e:
             erro = str(e)
         finally:
-            devolver_conexao(conn)
+            if conn:
+                devolver_conexao(conn)
 
     return f"""
     <body style="margin:0;background:#000;color:#d1d5db;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;">
@@ -91,11 +92,11 @@ def cadastro():
             conn = conectar()
             cursor = conn.cursor()
 
-            usuario = request.form["user"]
-            senha = request.form["senha"]
-            email = request.form["email"]
-            nome_empresa = request.form["nome_empresa"]
-            plano = request.form["plano"]
+            usuario = request.form.get("user")
+            senha = request.form.get("senha")
+            email = request.form.get("email")
+            nome_empresa = request.form.get("nome_empresa")
+            plano = request.form.get("plano")
 
             cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", (usuario,))
             if cursor.fetchone():
@@ -114,12 +115,30 @@ def cadastro():
         except Exception as e:
             mensagem = str(e)
         finally:
-            devolver_conexao(conn)
+            if conn:
+                devolver_conexao(conn)
 
-    return """
-    <h1 style="color:white;text-align:center;margin-top:50px;">
-    Tela de cadastro funcionando
-    </h1>
+    return f"""
+    <body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;">
+        <form method="POST" style="background:#111;padding:30px;border-radius:10px;">
+            <h2>Criar Conta</h2>
+
+            <input name="user" placeholder="Usuário" required><br><br>
+            <input name="senha" type="password" placeholder="Senha" required><br><br>
+            <input name="email" placeholder="Email" required><br><br>
+            <input name="nome_empresa" placeholder="Nome da empresa" required><br><br>
+
+            <select name="plano">
+                <option value="basico">Básico</option>
+                <option value="profissional">Profissional</option>
+                <option value="premium">Premium</option>
+            </select><br><br>
+
+            <button type="submit">Continuar</button>
+
+            <p style="color:red;">{mensagem}</p>
+        </form>
+    </body>
     """
 
 
