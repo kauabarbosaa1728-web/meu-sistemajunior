@@ -82,20 +82,23 @@ def criar_pagamento():
 
         pagamento_id = resposta["id"]
 
-        conn = conectar()
-        cursor = conn.cursor()
+        # 🔥 SALVA NO BANCO (SEM ON CONFLICT)
+        conn = None
+        try:
+            conn = conectar()
+            cursor = conn.cursor()
 
-        vencimento = datetime.now() + timedelta(days=30)
+            vencimento = datetime.now() + timedelta(days=30)
 
-        cursor.execute("""
-        INSERT INTO pagamentos (usuario, plano, status, pagamento_id, vencimento)
-        VALUES (%s,%s,'pendente',%s,%s)
-        ON CONFLICT (usuario)
-        DO UPDATE SET plano=%s, status='pendente', pagamento_id=%s, vencimento=%s
-        """, (usuario, plano, pagamento_id, vencimento, plano, pagamento_id, vencimento))
+            cursor.execute("""
+            INSERT INTO pagamentos (usuario, plano, status, pagamento_id, vencimento)
+            VALUES (%s,%s,'pendente',%s,%s)
+            """, (usuario, plano, pagamento_id, vencimento))
 
-        conn.commit()
-        devolver_conexao(conn)
+            conn.commit()
+        finally:
+            if conn:
+                devolver_conexao(conn)
 
         session["pagamento_id"] = pagamento_id
 
@@ -111,13 +114,24 @@ def criar_pagamento():
 
                 <img src="data:image/png;base64,{qr.get("qr_code_base64", "")}" style="width:220px;margin:20px 0;">
 
-                <textarea style="width:100%;background:#111;color:#fff;border:1px solid #333;padding:10px;">
+                <textarea id="pix" style="width:100%;background:#111;color:#fff;border:1px solid #333;padding:10px;">
 {qr.get("qr_code", "")}
                 </textarea>
+
+                <button onclick="copiar()" style="margin-top:10px;padding:10px;background:#00ff00;border:none;cursor:pointer;">
+                    📋 Copiar código PIX
+                </button>
 
                 <h3 id="status">⏳ Aguardando pagamento...</h3>
 
                 <script>
+                function copiar() {{
+                    const pix = document.getElementById("pix");
+                    pix.select();
+                    document.execCommand("copy");
+                    alert("PIX copiado!");
+                }}
+
                 async function verificar() {{
                     const res = await fetch('/verificar_pagamento_auto');
                     const txt = await res.text();
@@ -153,26 +167,30 @@ def verificar_pagamento_auto():
         status = pagamento["response"]["status"]
 
         if status == "approved":
-            conn = conectar()
-            cursor = conn.cursor()
+            conn = None
+            try:
+                conn = conectar()
+                cursor = conn.cursor()
 
-            vencimento = datetime.now() + timedelta(days=30)
+                vencimento = datetime.now() + timedelta(days=30)
 
-            cursor.execute("""
-            UPDATE pagamentos 
-            SET status='pago', data=NOW(), vencimento=%s
-            WHERE pagamento_id=%s
-            """, (vencimento, pagamento_id))
+                cursor.execute("""
+                UPDATE pagamentos 
+                SET status='pago', data=NOW(), vencimento=%s
+                WHERE pagamento_id=%s
+                """, (vencimento, pagamento_id))
 
-            cursor.execute("""
-            UPDATE usuarios SET ativo=1
-            WHERE usuario = (
-                SELECT usuario FROM pagamentos WHERE pagamento_id=%s
-            )
-            """, (pagamento_id,))
+                cursor.execute("""
+                UPDATE usuarios SET ativo=1
+                WHERE usuario = (
+                    SELECT usuario FROM pagamentos WHERE pagamento_id=%s
+                )
+                """, (pagamento_id,))
 
-            conn.commit()
-            devolver_conexao(conn)
+                conn.commit()
+            finally:
+                if conn:
+                    devolver_conexao(conn)
 
             return "APROVADO"
 
