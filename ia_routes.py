@@ -9,6 +9,35 @@ ia_bp = Blueprint("ia_bp", __name__)
 # ================= OPENAI =================
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# ================= FUNÇÃO FALLBACK (GRÁTIS) =================
+def resposta_local(pergunta):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    pergunta = pergunta.lower()
+
+    if "quantos produtos" in pergunta:
+        cursor.execute("SELECT COUNT(*) FROM estoque")
+        total = cursor.fetchone()[0]
+        devolver_conexao(conn)
+        return f"📦 Você tem {total} produtos cadastrados."
+
+    elif "quantidade total" in pergunta:
+        cursor.execute("SELECT COALESCE(SUM(quantidade),0) FROM estoque")
+        total = cursor.fetchone()[0]
+        devolver_conexao(conn)
+        return f"📊 Quantidade total no estoque: {total}"
+
+    elif "listar produtos" in pergunta:
+        cursor.execute("SELECT produto FROM estoque LIMIT 10")
+        produtos = [p[0] for p in cursor.fetchall()]
+        devolver_conexao(conn)
+        return "📝 Produtos: " + ", ".join(produtos)
+
+    devolver_conexao(conn)
+    return "🤖 IA gratuita: não entendi, tente perguntar sobre estoque."
+
+
 # ================= IA CHAT =================
 @ia_bp.route("/ia", methods=["GET", "POST"])
 def ia():
@@ -32,7 +61,8 @@ def ia():
             resposta = resposta_openai.choices[0].message.content
 
         except Exception as e:
-            resposta = f"Erro: {str(e)}"
+            # 🔥 FALLBACK AUTOMÁTICO
+            resposta = resposta_local(pergunta)
 
         session["chat"].append({"role": "user", "content": pergunta})
         session["chat"].append({"role": "assistant", "content": resposta})
