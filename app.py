@@ -24,6 +24,12 @@ except Exception as e:
     print("Erro ao iniciar banco:", e)
 
 
+# ================= PING (MANTER RENDER ONLINE) =================
+@app.route("/ping")
+def ping():
+    return "ok"
+
+
 # ================= BLOQUEIO GLOBAL (DESATIVADO TOTAL) =================
 @app.before_request
 def bloquear_sistema():
