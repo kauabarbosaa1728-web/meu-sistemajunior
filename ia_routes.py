@@ -3,42 +3,56 @@ from openai import OpenAI
 from banco import conectar, devolver_conexao
 import os
 
-# ================= BLUEPRINT =================
 ia_bp = Blueprint("ia_bp", __name__)
 
-# ================= OPENAI =================
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# ================= FUNÇÃO FALLBACK (GRÁTIS) =================
-def resposta_local(pergunta):
+# ================= CONTEXTO DO SISTEMA =================
+def contexto_sistema():
     conn = conectar()
     cursor = conn.cursor()
 
+    cursor.execute("SELECT COUNT(*) FROM estoque")
+    total_produtos = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COALESCE(SUM(quantidade),0) FROM estoque")
+    total_qtd = cursor.fetchone()[0]
+
+    devolver_conexao(conn)
+
+    return f"""
+    Você é uma IA do sistema KBSISTEMAS.
+    Responda de forma simples, amigável e direta.
+
+    Dados atuais:
+    - Total de produtos: {total_produtos}
+    - Quantidade total: {total_qtd}
+
+    Se perguntarem algo do sistema, use esses dados.
+    """
+
+# ================= FALLBACK INTELIGENTE =================
+def resposta_local(pergunta):
     pergunta = pergunta.lower()
 
+    if "oi" in pergunta or "ola" in pergunta:
+        return "👋 Fala! Como posso te ajudar no sistema?"
+
+    if "tudo bem" in pergunta:
+        return "Tudo certo 😎 e com você?"
+
     if "quantos produtos" in pergunta:
+        conn = conectar()
+        cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM estoque")
         total = cursor.fetchone()[0]
         devolver_conexao(conn)
         return f"📦 Você tem {total} produtos cadastrados."
 
-    elif "quantidade total" in pergunta:
-        cursor.execute("SELECT COALESCE(SUM(quantidade),0) FROM estoque")
-        total = cursor.fetchone()[0]
-        devolver_conexao(conn)
-        return f"📊 Quantidade total no estoque: {total}"
-
-    elif "listar produtos" in pergunta:
-        cursor.execute("SELECT produto FROM estoque LIMIT 10")
-        produtos = [p[0] for p in cursor.fetchall()]
-        devolver_conexao(conn)
-        return "📝 Produtos: " + ", ".join(produtos)
-
-    devolver_conexao(conn)
-    return "🤖 IA gratuita: não entendi, tente perguntar sobre estoque."
+    return "🤖 Tenta perguntar sobre estoque ou algo do sistema 😉"
 
 
-# ================= IA CHAT =================
+# ================= IA =================
 @ia_bp.route("/ia", methods=["GET", "POST"])
 def ia():
     if "user" not in session:
@@ -51,17 +65,20 @@ def ia():
         pergunta = request.form.get("pergunta")
 
         try:
+            mensagens = [
+                {"role": "system", "content": contexto_sistema()}
+            ] + session["chat"] + [
+                {"role": "user", "content": pergunta}
+            ]
+
             resposta_openai = client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=session["chat"] + [
-                    {"role": "user", "content": pergunta}
-                ]
+                messages=mensagens
             )
 
             resposta = resposta_openai.choices[0].message.content
 
-        except Exception as e:
-            # 🔥 FALLBACK AUTOMÁTICO
+        except Exception:
             resposta = resposta_local(pergunta)
 
         session["chat"].append({"role": "user", "content": pergunta})
