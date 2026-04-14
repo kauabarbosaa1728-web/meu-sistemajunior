@@ -191,6 +191,18 @@ def criar_banco():
         )
         """)
 
+        # ================= FINANCEIRO 🔥 =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS financeiro (
+            id SERIAL PRIMARY KEY,
+            tipo VARCHAR(10),
+            valor DECIMAL(10,2),
+            descricao TEXT,
+            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            usuario TEXT
+        )
+        """)
+
         # ================= ADMIN =================
         cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", ("admin",))
         if not cursor.fetchone():
@@ -226,6 +238,6 @@ def criar_banco():
             devolver_conexao(conn)
 
 
-# ================= VERIFICAR PAGAMENTO (DESATIVADO) =================
+# ================= VERIFICAR PAGAMENTO =================
 def verificar_pagamento(usuario):
     return "pago"
