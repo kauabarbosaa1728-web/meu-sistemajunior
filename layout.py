@@ -33,15 +33,83 @@ def topo():
 
 def container(c):
     return f"""
+    <html>
     <head>
         <title>KBSISTEMAS</title>
         <link rel="icon" type="image/png" href="/static/logo.png">
         <link rel="shortcut icon" href="/static/logo.png">
-        <meta http-equiv="Cache-Control" content="public, max-age=300">
+
+        <style>
+        body {{
+            margin: 0;
+            font-family: Arial;
+            background: #000;
+            color: #d1d5db;
+        }}
+
+        .navbar {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #0a0a0a;
+            border-bottom: 1px solid #2a2a2a;
+        }}
+
+        .logo-area {{
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }}
+
+        .logo {{
+            width: 35px;
+            height: 35px;
+            border-radius: 8px;
+        }}
+
+        .logo-text {{
+            font-weight: bold;
+            font-size: 18px;
+        }}
+
+        .menu a {{
+            margin-right: 10px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #ccc;
+        }}
+
+        .menu a:hover {{
+            background: #1a1a1a;
+            color: #fff;
+        }}
+
+        .logout {{
+            color: red !important;
+        }}
+
+        .card {{
+            background: #0b0b0b;
+            border: 1px solid #2c2c2c;
+            padding: 20px;
+            border-radius: 10px;
+        }}
+
+        .erro {{
+            color: #f87171;
+        }}
+
+        </style>
     </head>
-    """ + topo() + f"""
-    <!-- TODO O RESTO DO SEU HTML/CSS/JS FICA AQUI IGUAL -->
-    <div class="overlay" id="mainContent">
-        {c}
-    </div>
+
+    <body>
+        {topo()}
+
+        <div style="padding:20px;">
+            {c}
+        </div>
+    </body>
+    </html>
     """
