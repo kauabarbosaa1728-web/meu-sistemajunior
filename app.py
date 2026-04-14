@@ -13,7 +13,8 @@ from usuarios import usuarios_bp
 from pagamento import pagamento_routes
 from logs import logs_bp
 from ia_routes import ia_bp
-from financeiro import financeiro_bp  # 🔥 ADICIONADO
+from financeiro import financeiro_bp
+from vendas import vendas_bp  # 🔥 ADICIONADO
 
 app = Flask(__name__)
 app.secret_key = "segredo123"
@@ -45,7 +46,8 @@ app.register_blueprint(estoque_bp)
 app.register_blueprint(pagamento_routes)
 app.register_blueprint(logs_bp)
 app.register_blueprint(ia_bp)
-app.register_blueprint(financeiro_bp)  # 🔥 ADICIONADO
+app.register_blueprint(financeiro_bp)
+app.register_blueprint(vendas_bp)  # 🔥 ADICIONADO
 
 
 # ================= ROTAS DIRETAS =================
