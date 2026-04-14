@@ -17,7 +17,6 @@ def estoque():
 
     aviso = ""
 
-    # 🔥 BLOQUEIO DE PAGAMENTO (CORRETO)
     if session.get("cargo") != "admin":
         status = verificar_pagamento(session["user"])
 
@@ -32,13 +31,164 @@ def estoque():
         elif status == "aviso":
             aviso = "<div style='color:yellow;text-align:center;'>⚠️ Seu plano está vencendo!</div>"
 
-    # 🔒 PERMISSÃO
     if not tem_permissao("pode_estoque"):
         return acesso_negado()
 
     conn = conectar()
     cursor = conn.cursor()
     msg = ""
+
+    # ================= ADICIONAR =================
+    if request.method == "POST":
+        produto = request.form.get("produto")
+        qtd = request.form.get("qtd")
+        categoria = request.form.get("categoria")
+        fornecedor = request.form.get("fornecedor")
+        valor = request.form.get("valor")
+
+        if produto and qtd and categoria:
+            try:
+                qtd = int(qtd)
+                valor = float(valor or 0)
+
+                cursor.execute("""
+                INSERT INTO estoque (produto, quantidade, categoria, valor)
+                VALUES (%s,%s,%s,%s)
+                """, (produto, qtd, categoria, valor))
+
+                conn.commit()
+                registrar_log(session["user"], "add_estoque", f"{produto} ({qtd})")
+
+                msg = "✅ Adicionado"
+
+            except Exception as e:
+                conn.rollback()
+                msg = f"❌ Erro: {e}"
+
+    # ================= LISTAGEM =================
+    cursor.execute("SELECT id, produto, quantidade, categoria, valor FROM estoque ORDER BY id DESC")
+    dados = cursor.fetchall()
+
+    total_qtd = sum([d[2] for d in dados])
+    total_valor = sum([d[2] * float(d[4] or 0) for d in dados])
+
+    tabela = ""
+    for i, p, q, c, v in dados:
+        tabela += f"""
+        <tr>
+        <td>{i}</td>
+        <td>{p}</td>
+        <td>{q}</td>
+        <td>{c}</td>
+        <td>R$ {float(v or 0):,.2f}</td>
+        <td>
+        <a href='/editar_estoque/{i}'>✏️</a>
+        <a href='/excluir_estoque/{i}' onclick="return confirm('Tem certeza?')">🗑️</a>
+        </td>
+        </tr>
+        """
+
+    devolver_conexao(conn)
+
+    return container(f"""
+    {aviso}
+
+    <h2 style="margin-bottom:20px;">📦 ESTOQUE</h2>
+
+    <!-- RESUMO -->
+    <div style="background:#111;padding:15px;border-radius:8px;margin-bottom:20px;">
+        <b>Quantidade total:</b> {total_qtd} &nbsp;&nbsp; | &nbsp;&nbsp;
+        <b>Custo total:</b> R$ {total_valor:,.2f}
+    </div>
+
+    <div class="grid">
+
+        <!-- FORM -->
+        <div class="box">
+            <h3>➕ Novo Produto</h3>
+
+            <form method="POST">
+                <input name="produto" placeholder="Produto" required>
+                <input name="qtd" placeholder="Quantidade" required>
+                <input name="categoria" placeholder="Categoria">
+                <input name="fornecedor" placeholder="Fornecedor">
+                <input name="valor" placeholder="Valor (R$)">
+                <button>Adicionar</button>
+            </form>
+
+            <p>{msg}</p>
+        </div>
+
+        <!-- TABELA -->
+        <div class="box">
+            <h3>📋 Produtos</h3>
+
+            <table>
+            <tr>
+            <th>ID</th>
+            <th>Produto</th>
+            <th>Qtd</th>
+            <th>Categoria</th>
+            <th>Valor</th>
+            <th></th>
+            </tr>
+            {tabela}
+            </table>
+        </div>
+
+    </div>
+
+    <style>
+
+    .grid {{
+        display:grid;
+        grid-template-columns:320px 1fr;
+        gap:20px;
+    }}
+
+    input {{
+        width:100%;
+        padding:10px;
+        margin-bottom:10px;
+        background:#111;
+        border:1px solid #333;
+        color:white;
+        border-radius:6px;
+    }}
+
+    button {{
+        width:100%;
+        padding:10px;
+        background:#3b82f6;
+        border:none;
+        border-radius:6px;
+        color:white;
+        cursor:pointer;
+    }}
+
+    table {{
+        width:100%;
+        border-collapse:collapse;
+        font-size:14px;
+    }}
+
+    th {{
+        background:#1a1a1a;
+        padding:10px;
+        text-align:left;
+    }}
+
+    td {{
+        padding:10px;
+        border-top:1px solid #333;
+    }}
+
+    tr:hover {{
+        background:#111;
+    }}
+
+    </style>
+    """)
 
     # ================= ADICIONAR =================
     if request.method == "POST":
