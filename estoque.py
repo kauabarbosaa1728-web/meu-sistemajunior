@@ -575,45 +575,100 @@ def historico():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    SELECT produto, quantidade, 'TRANSFERÊNCIA', origem, destino, usuario, data FROM transferencias
-    UNION ALL
-    SELECT produto, quantidade, 'ENTRADA', 'fornecedor', fornecedor, usuario, data FROM entradas
+    busca = request.args.get("busca", "")
+
+    # 🔥 LOGS COMPLETOS
+    cursor.execute(f"""
+    SELECT usuario, acao, detalhes, data
+    FROM logs
+    WHERE usuario ILIKE %s OR acao ILIKE %s OR detalhes ILIKE %s
     ORDER BY data DESC
-    """)
+    LIMIT 100
+    """, (f"%{busca}%", f"%{busca}%", f"%{busca}%"))
 
     dados = cursor.fetchall()
 
     tabela = ""
-    for p, q, tipo, o, d, u, data in dados:
-        cor = "#00ff00" if tipo == "ENTRADA" else "#ff4444"
+    for u, acao, det, data in dados:
         tabela += f"""
         <tr>
-        <td>{p}</td>
-        <td>{q}</td>
-        <td style="color:{cor}">{tipo}</td>
-        <td>{o}</td>
-        <td>{d}</td>
-        <td>{u}</td>
-        <td>{data}</td>
+            <td>{u}</td>
+            <td>{acao}</td>
+            <td>{det}</td>
+            <td>{data.strftime("%d/%m/%Y %H:%M:%S")}</td>
         </tr>
         """
+
+    if not tabela:
+        tabela = "<tr><td colspan='4'>Nenhum registro encontrado</td></tr>"
 
     devolver_conexao(conn)
 
     return container(f"""
-    <div class="card">
-    <h2>📊 HISTÓRICO</h2>
+    <h2 style="margin-bottom:20px;">📜 Histórico do Sistema</h2>
 
-    <table>
-    <tr>
-    <th>Produto</th><th>Qtd</th><th>Tipo</th><th>Origem</th><th>Destino</th><th>User</th><th>Data</th>
-    </tr>
-    {tabela}
-    </table>
+    <!-- BUSCA -->
+    <form method="GET" style="margin-bottom:20px;">
+        <input name="busca" placeholder="Buscar usuário, ação..." value="{busca}">
+        <button>Buscar</button>
+    </form>
+
+    <!-- TABELA -->
+    <div class="box">
+        <table>
+            <tr>
+                <th>Usuário</th>
+                <th>Ação</th>
+                <th>Detalhes</th>
+                <th>Data</th>
+            </tr>
+            {tabela}
+        </table>
     </div>
-    """)
 
+    <style>
+
+    input {{
+        padding:10px;
+        width:300px;
+        background:#111;
+        border:1px solid #333;
+        color:white;
+        border-radius:6px;
+    }}
+
+    button {{
+        padding:10px;
+        background:#3b82f6;
+        border:none;
+        color:white;
+        border-radius:6px;
+        cursor:pointer;
+    }}
+
+    table {{
+        width:100%;
+        border-collapse:collapse;
+        font-size:14px;
+    }}
+
+    th {{
+        background:#1a1a1a;
+        padding:10px;
+        text-align:left;
+    }}
+
+    td {{
+        padding:10px;
+        border-top:1px solid #333;
+    }}
+
+    tr:hover {{
+        background:#111;
+    }}
+
+    </style>
+    """)
 # ================= ENTRADA DE PRODUTOS =================
 @estoque_bp.route("/entrada", methods=["GET", "POST"])
 def entrada():
