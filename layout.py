@@ -16,17 +16,44 @@ def topo():
             <span class="logo-text">KBSISTEMAS</span>
         </div>
 
-        <div class="menu">
-            <a href="/painel" data-nav="true">Painel</a>
-            <a href="/estoque" data-nav="true">Estoque</a>
-            <a href="/financeiro" data-nav="true">💰 Financeiro</a>
-            <a href="/transferencia" data-nav="true">Transferência</a>
-            <a href="/historico" data-nav="true">Histórico</a>
-            <a href="/usuarios" data-nav="true">Usuários</a>
-            <a href="/logs" data-nav="true">Logs</a>
-            <a href="/ia" data-nav="true">🤖 IA</a>
-            <a href="/logout" class="logout">Sair</a>
-        </div>
+        <ul class="menu">
+
+            <li><a href="/painel" data-nav="true">Painel</a></li>
+
+            <li>
+                Estoque
+                <ul class="submenu">
+                    <li><a href="/estoque" data-nav="true">Ver Estoque</a></li>
+                    <li><a href="/transferencia" data-nav="true">Transferência</a></li>
+                </ul>
+            </li>
+
+            <li>
+                Financeiro
+                <ul class="submenu">
+                    <li><a href="/financeiro" data-nav="true">💰 Financeiro</a></li>
+                </ul>
+            </li>
+
+            <li>
+                Relatórios
+                <ul class="submenu">
+                    <li><a href="/historico" data-nav="true">Histórico</a></li>
+                </ul>
+            </li>
+
+            <li>
+                Sistema
+                <ul class="submenu">
+                    <li><a href="/usuarios" data-nav="true">Usuários</a></li>
+                    <li><a href="/logs" data-nav="true">Logs</a></li>
+                    <li><a href="/ia" data-nav="true">🤖 IA</a></li>
+                </ul>
+            </li>
+
+            <li><a href="/logout" class="logout">Sair</a></li>
+
+        </ul>
     </div>
     """
 
@@ -47,6 +74,7 @@ def container(c):
             color: #d1d5db;
         }}
 
+        /* NAVBAR */
         .navbar {{
             display: flex;
             justify-content: space-between;
@@ -73,23 +101,65 @@ def container(c):
             font-size: 18px;
         }}
 
-        .menu a {{
-            margin-right: 10px;
+        /* MENU PRINCIPAL */
+        .menu {{
+            list-style: none;
+            display: flex;
+            gap: 15px;
+            margin: 0;
+            padding: 0;
+        }}
+
+        .menu li {{
+            position: relative;
             padding: 6px 10px;
             border-radius: 8px;
-            text-decoration: none;
+            cursor: pointer;
             color: #ccc;
         }}
 
-        .menu a:hover {{
+        .menu li:hover {{
             background: #1a1a1a;
             color: #fff;
+        }}
+
+        .menu a {{
+            text-decoration: none;
+            color: inherit;
+        }}
+
+        /* SUBMENU */
+        .submenu {{
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #111;
+            list-style: none;
+            padding: 0;
+            min-width: 180px;
+            border: 1px solid #2a2a2a;
+            z-index: 999;
+        }}
+
+        .submenu li {{
+            padding: 10px;
+            border-bottom: 1px solid #222;
+        }}
+
+        .submenu li:hover {{
+            background: #222;
+        }}
+
+        .menu li:hover > .submenu {{
+            display: block;
         }}
 
         .logout {{
             color: red !important;
         }}
 
+        /* CARD */
         .card {{
             background: #0b0b0b;
             border: 1px solid #2c2c2c;
