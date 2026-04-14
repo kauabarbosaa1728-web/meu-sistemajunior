@@ -74,10 +74,11 @@ def painel():
         if not tabela_top:
             tabela_top = "<tr><td colspan='3'>Sem dados</td></tr>"
 
-        # ===== CALENDÁRIO DINÂMICO =====
+        # ===== CALENDÁRIO =====
         now = datetime.now()
         ano = now.year
         mes = now.month
+        nome_mes = calendar.month_name[mes].capitalize()
 
         cal = calendar.monthcalendar(ano, mes)
 
@@ -89,64 +90,72 @@ def painel():
                 else:
                     calendario_html += f"""
                     <div class="day">
-                        <span>{dia}</span>
-                        <div class="c aberto">Aberto: {dia % 5}</div>
-                        <div class="c encerrado">Encerrado: {dia * 2}</div>
-                        <div class="c execucao">Execução: {dia % 3}</div>
-                        <div class="c pendente">Pendente: {dia % 2}</div>
-                        <div class="c total">Total: {dia * 3}</div>
+                        <div class="numero">{dia}</div>
+                        <div class="c aberto">A: {dia % 5}</div>
+                        <div class="c encerrado">E: {dia * 2}</div>
+                        <div class="c execucao">Ex: {dia % 3}</div>
+                        <div class="c pendente">P: {dia % 2}</div>
+                        <div class="c total">T: {dia * 3}</div>
                     </div>
                     """
 
-        # ===== HTML =====
         return container(f"""
 
-        <div class="dashboard">
+        <div class="wrap">
 
-            <!-- ESQUERDA -->
-            <div class="left">
-
-                <div class="box">
-                    <h3>📊 Resumo</h3>
-                    <p>📦 Produtos: <b>{total_produtos}</b></p>
-                    <p>🔢 Quantidade: <b>{total_qtd}</b></p>
-                    <p>🔄 Movimentações: <b>{total_transferencias}</b></p>
-                    <p>🟢 Online: <b>{usuarios_online}</b></p>
-                </div>
-
-                <div class="box">
-                    <h3>📊 Categorias</h3>
-                    {barras_categoria}
-                </div>
-
-                <div class="box">
-                    <h3>📈 Transferências</h3>
-                    {barras_transferencia}
-                </div>
-
+            <!-- TOPO -->
+            <div class="topo-box">
+                <h2>🖥️ Painel</h2>
+                <span>{nome_mes} de {ano}</span>
             </div>
 
-            <!-- DIREITA -->
-            <div class="right">
+            <div class="dashboard">
 
-                <div class="box">
-                    <h2>🏆 Top produtos</h2>
-                    <table>
-                        <tr>
-                            <th>Produto</th>
-                            <th>Quantidade</th>
-                            <th>Categoria</th>
-                        </tr>
-                        {tabela_top}
-                    </table>
+                <!-- ESQUERDA -->
+                <div class="left">
+
+                    <div class="box">
+                        <h3>📊 Resumo</h3>
+                        <p>Produtos: <b>{total_produtos}</b></p>
+                        <p>Quantidade: <b>{total_qtd}</b></p>
+                        <p>Movimentações: <b>{total_transferencias}</b></p>
+                        <p>Online: <b>{usuarios_online}</b></p>
+                    </div>
+
+                    <div class="box">
+                        <h3>Categorias</h3>
+                        {barras_categoria}
+                    </div>
+
+                    <div class="box">
+                        <h3>Transferências</h3>
+                        {barras_transferencia}
+                    </div>
+
                 </div>
 
-                <div class="box">
-                    <h3>📅 Calendário - {mes}/{ano}</h3>
+                <!-- DIREITA -->
+                <div class="right">
 
-                    <div class="calendar">
-                        {calendario_html}
+                    <div class="box">
+                        <h3>🏆 Top produtos</h3>
+                        <table>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Quantidade</th>
+                                <th>Categoria</th>
+                            </tr>
+                            {tabela_top}
+                        </table>
                     </div>
+
+                    <div class="box">
+                        <h3>📅 Calendário - {nome_mes}/{ano}</h3>
+                        <div class="calendar">
+                            {calendario_html}
+                        </div>
+                    </div>
+
                 </div>
 
             </div>
@@ -155,20 +164,32 @@ def painel():
 
         <style>
 
+        .wrap {{
+            max-width: 1400px;
+            margin: auto;
+        }}
+
+        .topo-box {{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:20px;
+        }}
+
         .dashboard {{
             display:flex;
             gap:20px;
         }}
 
-        .left {{ width:30%; }}
-        .right {{ width:70%; }}
+        .left {{ width:28%; }}
+        .right {{ width:72%; }}
 
         .box {{
             background:#0b0b0b;
             border:1px solid #2c2c2c;
             padding:15px;
             border-radius:10px;
-            margin-bottom:15px;
+            margin-bottom:20px;
         }}
 
         table {{
@@ -176,14 +197,12 @@ def painel():
             border-collapse:collapse;
         }}
 
-        th {{
-            background:#222;
-        }}
-
-        td, th {{
-            padding:8px;
+        th, td {{
+            padding:10px;
             border:1px solid #333;
         }}
+
+        th {{ background:#222; }}
 
         /* CALENDÁRIO */
         .calendar {{
@@ -194,14 +213,13 @@ def painel():
 
         .day {{
             background:#111;
-            padding:8px;
             border:1px solid #333;
-            font-size:12px;
+            padding:6px;
+            font-size:11px;
         }}
 
-        .day span {{
+        .numero {{
             font-weight:bold;
-            display:block;
             margin-bottom:5px;
         }}
 
