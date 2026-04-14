@@ -1,7 +1,7 @@
 from flask import Blueprint, request, redirect, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from banco import conectar, devolver_conexao, registrar_log
-from layout import carregar_permissoes
+from permissoes import carregar_permissoes
 
 auth_bp = Blueprint("auth_bp", __name__)
 
