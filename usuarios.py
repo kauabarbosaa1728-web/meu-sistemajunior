@@ -4,10 +4,8 @@ from banco import conectar, devolver_conexao, registrar_log
 from layout import container, acesso_negado
 from datetime import datetime, timedelta
 
-# 🔥 ESSA LINHA É OBRIGATÓRIA (RESOLVE O ERRO)
 usuarios_bp = Blueprint("usuarios_bp", __name__)
 
-# ================= USUÁRIOS =================
 @usuarios_bp.route("/usuarios", methods=["GET", "POST"])
 def usuarios():
     if "user" not in session:
@@ -20,7 +18,7 @@ def usuarios():
     cursor = conn.cursor()
     mensagem = ""
 
-    # ================= CRIAR USUÁRIO =================
+    # ================= CRIAR =================
     if request.method == "POST":
         try:
             user = request.form["user"].strip()
@@ -81,28 +79,30 @@ def usuarios():
 
     for u, c, o, ativo, email, plano, nome_empresa in dados:
 
-        status = f"<span class='on'>🟢 Online</span>" if o else f"<span class='off'>🔴 Offline</span>"
+        status = f"<span class='badge on'>Online</span>" if o else f"<span class='badge off'>Offline</span>"
 
         if u != "admin":
             acoes = f"""
             <div class="acoes">
+
                 <form action="/usuarios/alterar_senha/{u}" method="POST">
-                    <input type="password" name="senha" placeholder="Nova senha" required>
-                    <button class="btn">Senha</button>
+                    <input type="password" name="senha" placeholder="Senha">
+                    <button class="btn small">Salvar</button>
                 </form>
 
                 <form action="/usuarios/mudar_plano/{u}" method="POST">
                     <select name="plano">
-                        <option value="basico">basico</option>
-                        <option value="profissional">profissional</option>
-                        <option value="premium">premium</option>
+                        <option value="basico">Básico</option>
+                        <option value="profissional">Profissional</option>
+                        <option value="premium">Premium</option>
                     </select>
-                    <button class="btn">Plano</button>
+                    <button class="btn small">OK</button>
                 </form>
 
                 <form action="/usuarios/excluir_usuario/{u}" method="POST">
-                    <button class="btn danger">Excluir</button>
+                    <button class="btn danger small">Excluir</button>
                 </form>
+
             </div>
             """
         else:
@@ -123,11 +123,13 @@ def usuarios():
     devolver_conexao(conn)
 
     return container(f"""
+
     <div class="wrap">
-        <h2>👤 Usuários</h2>
+
+        <h2 class="title">👤 Usuários</h2>
 
         <div class="box">
-            <h3>Criar novo usuário</h3>
+            <h3>Criar usuário</h3>
 
             <form method="POST" class="form-grid">
                 <input name="user" placeholder="Usuário" required>
@@ -156,27 +158,103 @@ def usuarios():
                     <label><input type="checkbox" name="pode_excluir_estoque"> Excluir</label>
                 </div>
 
-                <button class="btn full">Criar usuário</button>
+                <button class="btn primary full">Criar</button>
             </form>
 
-            <p>{mensagem}</p>
+            <p class="msg">{mensagem}</p>
         </div>
 
         <div class="box">
             <h3>Lista de usuários</h3>
 
+            <div class="table-wrap">
             <table>
-                <tr>
-                    <th>Usuário</th>
-                    <th>Cargo</th>
-                    <th>Email</th>
-                    <th>Empresa</th>
-                    <th>Plano</th>
-                    <th>Status</th>
-                    <th>Ações</th>
-                </tr>
-                {tabela}
+                <thead>
+                    <tr>
+                        <th>Usuário</th>
+                        <th>Cargo</th>
+                        <th>Email</th>
+                        <th>Empresa</th>
+                        <th>Plano</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {tabela}
+                </tbody>
             </table>
+            </div>
         </div>
+
     </div>
+
+    <style>
+
+    .wrap {{ max-width:1200px; margin:auto; }}
+
+    .box {{
+        background:#0b0b0b;
+        border:1px solid #2c2c2c;
+        padding:20px;
+        border-radius:12px;
+        margin-bottom:20px;
+    }}
+
+    .form-grid {{
+        display:grid;
+        grid-template-columns:repeat(3,1fr);
+        gap:10px;
+    }}
+
+    input, select {{
+        padding:10px;
+        background:#111;
+        border:1px solid #333;
+        color:white;
+        border-radius:6px;
+    }}
+
+    .permissoes {{
+        grid-column:span 3;
+        display:flex;
+        flex-wrap:wrap;
+        gap:10px;
+    }}
+
+    .btn {{
+        padding:8px 10px;
+        border:none;
+        border-radius:6px;
+        cursor:pointer;
+    }}
+
+    .small {{ font-size:12px; padding:5px; }}
+
+    .primary {{ background:#3b82f6; color:white; }}
+    .danger {{ background:#ef4444; color:white; }}
+
+    .full {{ grid-column:span 3; }}
+
+    .msg {{ color:#22c55e; }}
+
+    table {{ width:100%; border-collapse:collapse; }}
+    th {{ background:#111; padding:10px; }}
+    td {{ padding:10px; border-top:1px solid #222; }}
+
+    .acoes {{ display:flex; gap:5px; flex-wrap:wrap; }}
+
+    .badge {{
+        padding:4px 8px;
+        border-radius:6px;
+        font-size:12px;
+        font-weight:bold;
+    }}
+
+    .on {{ background:#22c55e; color:black; }}
+    .off {{ background:#ef4444; color:white; }}
+
+    .protegido {{ color:#888; }}
+
+    </style>
     """)
