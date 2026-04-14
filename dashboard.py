@@ -1,9 +1,9 @@
 from flask import Blueprint, session, redirect
 from banco import conectar, devolver_conexao
 from layout import container
-from permissoes import gerar_barras_3d
 from datetime import datetime
 import calendar
+import json
 
 dashboard_bp = Blueprint("dashboard_bp", __name__)
 
@@ -29,18 +29,16 @@ def painel():
         cursor.execute("SELECT COUNT(*) FROM usuarios WHERE online=1")
         usuarios_online = cursor.fetchone()[0]
 
-        # ===== GRÁFICOS =====
+        # ===== CATEGORIAS (GRÁFICO) =====
         cursor.execute("""
-        SELECT COALESCE(categoria, 'Sem categoria'), COALESCE(SUM(quantidade), 0)
+        SELECT COALESCE(categoria, 'Sem categoria'), SUM(quantidade)
         FROM estoque
         GROUP BY categoria
-        ORDER BY SUM(quantidade) DESC
-        LIMIT 8
         """)
         categorias = cursor.fetchall()
 
-        # 🔥 GRÁFICO AJUSTADO (SEM BUG DE TAMANHO)
-        barras_categoria = gerar_barras_3d(categorias, 110, "categoria")
+        nomes = [c[0] for c in categorias]
+        valores = [c[1] for c in categorias]
 
         # ===== CALENDÁRIO =====
         now = datetime.now()
@@ -49,16 +47,12 @@ def painel():
         nome_mes = calendar.month_name[mes].capitalize()
 
         cal = calendar.monthcalendar(ano, mes)
-
         dias_semana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
 
         calendario_html = ""
+        for d in dias_semana:
+            calendario_html += f"<div class='head'>{d}</div>"
 
-        # Cabeçalho
-        for dia_nome in dias_semana:
-            calendario_html += f"<div class='head'>{dia_nome}</div>"
-
-        # Dias
         for semana in cal:
             for dia in semana:
                 if dia == 0:
@@ -67,20 +61,15 @@ def painel():
                     calendario_html += f"""
                     <div class="day">
                         <div class="numero">{dia}</div>
-                        <div class="c aberto">A: {dia % 5}</div>
-                        <div class="c encerrado">E: {dia * 2}</div>
-                        <div class="c execucao">Ex: {dia % 3}</div>
-                        <div class="c pendente">P: {dia % 2}</div>
-                        <div class="c total">T: {dia * 3}</div>
+                        <div class="total">Mov: {dia}</div>
                     </div>
                     """
 
         html = f"""
         <div class="wrap">
 
-            <!-- TOPO -->
             <div class="topo">
-                <h2>🖥️ Painel do Sistema</h2>
+                <h2>📊 Dashboard</h2>
                 <span>{nome_mes} de {ano}</span>
             </div>
 
@@ -89,17 +78,17 @@ def painel():
                 <!-- ESQUERDA -->
                 <div class="left">
 
-                    <div class="box destaque">
-                        <h3>📊 Resumo Geral</h3>
-                        <p>📦 Produtos: <b>{total_produtos}</b></p>
-                        <p>🔢 Quantidade: <b>{total_qtd}</b></p>
-                        <p>🔄 Movimentações: <b>{total_transferencias}</b></p>
-                        <p>🟢 Online: <b>{usuarios_online}</b></p>
+                    <div class="box">
+                        <h3>Resumo</h3>
+                        <p>Produtos: {total_produtos}</p>
+                        <p>Quantidade: {total_qtd}</p>
+                        <p>Movimentações: {total_transferencias}</p>
+                        <p>Online: {usuarios_online}</p>
                     </div>
 
-                    <div class="box grafico-box">
-                        <h3>📊 Categorias</h3>
-                        {barras_categoria}
+                    <div class="box">
+                        <h3>Distribuição</h3>
+                        <canvas id="graficoPizza"></canvas>
                     </div>
 
                 </div>
@@ -107,9 +96,8 @@ def painel():
                 <!-- DIREITA -->
                 <div class="right">
 
-                    <div class="box calendario-box">
-                        <h3>📅 Calendário - {nome_mes}/{ano}</h3>
-
+                    <div class="box">
+                        <h3>📅 Calendário</h3>
                         <div class="calendar">
                             {calendario_html}
                         </div>
@@ -120,6 +108,30 @@ def painel():
             </div>
 
         </div>
+
+        <script>
+        // 🔥 GRÁFICO PIZZA
+        const ctx = document.getElementById('graficoPizza');
+
+        new Chart(ctx, {{
+            type: 'pie',
+            data: {{
+                labels: {json.dumps(nomes)},
+                datasets: [{{
+                    data: {json.dumps(valores)},
+                    backgroundColor: [
+                        '#3b82f6','#22c55e','#f59e0b','#ef4444',
+                        '#8b5cf6','#06b6d4','#84cc16','#f97316'
+                    ]
+                }}]
+            }}
+        }});
+
+        // 🔥 AUTO UPDATE
+        setTimeout(() => {{
+            location.reload();
+        }}, 5000);
+        </script>
 
         <style>
 
@@ -139,9 +151,8 @@ def painel():
             gap:20px;
         }}
 
-        /* 🔥 COLUNA AJUSTADA */
-        .left {{ width:22%; }}
-        .right {{ width:78%; }}
+        .left {{ width:25%; }}
+        .right {{ width:75%; }}
 
         .box {{
             background:#0b0b0b;
@@ -149,17 +160,6 @@ def painel():
             padding:15px;
             border-radius:10px;
             margin-bottom:20px;
-            overflow:hidden;
-        }}
-
-        .destaque {{
-            border-left:4px solid #3b82f6;
-        }}
-
-        /* 🔥 GRÁFICO CONTROLADO */
-        .grafico-box div {{
-            max-height:120px !important;
-            overflow:hidden;
         }}
 
         /* CALENDÁRIO */
@@ -179,23 +179,19 @@ def painel():
         .day {{
             background:#111;
             border:1px solid #333;
-            padding:5px;
-            min-height:85px;
-            font-size:11px;
+            padding:10px;
+            min-height:80px;
         }}
 
         .numero {{
             font-weight:bold;
-            margin-bottom:5px;
         }}
 
-        .c {{ padding:2px; margin-bottom:2px; }}
-
-        .aberto {{ background:#6b7280; }}
-        .encerrado {{ background:#22c55e; }}
-        .execucao {{ background:#f59e0b; }}
-        .pendente {{ background:#ef4444; }}
-        .total {{ background:#3b82f6; }}
+        .total {{
+            margin-top:5px;
+            font-size:12px;
+            color:#3b82f6;
+        }}
 
         .vazio {{
             background:transparent;
@@ -206,9 +202,6 @@ def painel():
         """
 
         return container(html)
-
-    except Exception as e:
-        return container(f"<div style='color:red;'>Erro: {e}</div>")
 
     finally:
         devolver_conexao(conn)
