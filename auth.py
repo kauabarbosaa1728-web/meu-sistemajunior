@@ -56,9 +56,9 @@ def login():
         <style>
             body {{
                 margin: 0;
-                background: #2f4553;
+                background: #000;
                 font-family: Arial;
-                color: #cbd5e1;
+                color: #fff;
             }}
 
             .container {{
@@ -78,21 +78,21 @@ def login():
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                border-right: 1px solid #4b5f6b;
+                border-right: 1px solid #222;
             }}
 
             .logo {{
-                font-size: 60px;
-                font-weight: bold;
-                color: #d1d5db;
-                letter-spacing: 5px;
+                font-size: 80px;
+                font-weight: 900;
+                color: #fff;
+                letter-spacing: 8px;
                 text-align: center;
             }}
 
             .logo span {{
                 display: block;
-                font-size: 20px;
-                letter-spacing: 3px;
+                font-size: 22px;
+                letter-spacing: 4px;
                 margin-top: 10px;
             }}
 
@@ -108,23 +108,28 @@ def login():
                 width: 100%;
                 padding: 12px;
                 margin-bottom: 15px;
-                border: 1px solid #4b5f6b;
+                border: 1px solid #333;
                 background: transparent;
-                color: #cbd5e1;
+                color: #fff;
                 border-radius: 5px;
+            }}
+
+            input:focus {{
+                outline: none;
+                border: 1px solid #555;
             }}
 
             button {{
                 padding: 12px;
-                background: #3b82f6;
-                border: none;
+                background: #111;
+                border: 1px solid #333;
                 color: white;
                 border-radius: 5px;
                 cursor: pointer;
             }}
 
             button:hover {{
-                background: #2563eb;
+                background: #222;
             }}
 
             .erro {{
@@ -139,7 +144,7 @@ def login():
                 width: 100%;
                 text-align: center;
                 font-size: 12px;
-                color: #94a3b8;
+                color: #666;
             }}
         </style>
     </head>
@@ -149,7 +154,7 @@ def login():
         <div class="container">
             <div class="box">
 
-                <!-- ESQUERDA -->
+                <!-- LOGO -->
                 <div class="left">
                     <div class="logo">
                         KB
@@ -157,7 +162,7 @@ def login():
                     </div>
                 </div>
 
-                <!-- DIREITA -->
+                <!-- LOGIN -->
                 <div class="right">
                     <form method="POST">
                         <input name="user" placeholder="Usuário" required>
@@ -168,7 +173,7 @@ def login():
                     <p class="erro">{erro}</p>
 
                     <div style="text-align:center;margin-top:10px;">
-                        <a href="/cadastro" style="color:#9ca3af;">Criar conta</a>
+                        <a href="/cadastro" style="color:#888;">Criar conta</a>
                     </div>
                 </div>
 
@@ -176,8 +181,7 @@ def login():
         </div>
 
         <div class="footer">
-            KB Manager ERP © 2026<br>
-            Sistema de Gestão Empresarial
+            KB Manager ERP © 2026
         </div>
 
     </body>
