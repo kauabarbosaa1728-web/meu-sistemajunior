@@ -1,7 +1,7 @@
 from flask import Blueprint, request, redirect, session
 from banco import conectar, devolver_conexao, registrar_log, verificar_pagamento
-from layout import container, acesso_negado, tem_permissao
-
+from layout import container, acesso_negado
+from permissoes import tem_permissao
 from reportlab.platypus import SimpleDocTemplate, Table
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
