@@ -1,6 +1,7 @@
 from flask import Blueprint, session, redirect
 from banco import conectar
-from layout import container, acesso_negado, tem_permissao
+from layout import container, acesso_negado
+from permissoes import tem_permissao
 
 logs_bp = Blueprint("logs_bp", __name__)
 
