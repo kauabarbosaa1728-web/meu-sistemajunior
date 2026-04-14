@@ -8,11 +8,10 @@ def container(c):
         <meta http-equiv="Cache-Control" content="public, max-age=300">
 
         <style>
-        @import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
 
         body {{
             margin: 0;
-            font-family: 'Share Tech Mono', monospace;
+            font-family: monospace;
             background: #000000;
             color: #d1d5db;
         }}
@@ -82,7 +81,7 @@ def container(c):
             border: 1px solid #3a3a3a;
             background: #111111;
             color: #e5e7eb;
-            font-family: 'Share Tech Mono', monospace;
+            font-family: monospace;
         }}
 
         textarea {{
@@ -137,8 +136,6 @@ def container(c):
             color: #e5e7eb;
         }}
 
-        /* 🔥 TUDO QUE ESTAVA FORA AGORA ESTÁ DENTRO */
-
         .cards {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -190,6 +187,7 @@ def container(c):
             border-radius:8px;
             border:1px solid #2f2f2f;
         }}
+
         </style>
     </head>
 
