@@ -150,6 +150,80 @@ def criar_banco():
             id SERIAL PRIMARY KEY,
             produto TEXT,
             quantidade INTEGER,
+            categoria TEXT,
+            valor DECIMAL(10,2)
+        )
+        """)
+
+        # ================= TRANSFERENCIAS =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS transferencias (
+            id SERIAL PRIMARY KEY,
+            produto TEXT,
+            quantidade INTEGER,
+            origem TEXT,
+            destino TEXT,
+            usuario TEXT,
+            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # ================= LOGS =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS logs (
+            id SERIAL PRIMARY KEY,
+            usuario TEXT,
+            acao TEXT,
+            detalhes TEXT,
+            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # ================= FINANCEIRO =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS financeiro (
+            id SERIAL PRIMARY KEY,
+            tipo VARCHAR(10),
+            valor DECIMAL(10,2),
+            descricao TEXT,
+            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            usuario TEXT
+        )
+        """)
+
+        # ================= VENDAS =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS vendas (
+            id SERIAL PRIMARY KEY,
+            produto TEXT,
+            quantidade INTEGER,
+            valor_total DECIMAL(10,2),
+            usuario TEXT,
+            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        conn.commit()
+        print("✅ BANCO OK")
+
+    except Exception as e:
+        print("❌ Erro ao criar banco:", e)
+        if conn:
+            conn.rollback()
+    finally:
+        if conn:
+            devolver_conexao(conn)
+
+
+# ================= VERIFICAR PAGAMENTO =================
+def verificar_pagamento(usuario):
+    return "pago"
+        # ================= ESTOQUE =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS estoque (
+            id SERIAL PRIMARY KEY,
+            produto TEXT,
+            quantidade INTEGER,
             categoria TEXT
         )
         """)
