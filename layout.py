@@ -12,42 +12,42 @@ def topo():
     return """
     <div class="navbar">
         <div class="logo-area">
-            <img src="/static/logo.png" class="logo" alt="Logo KBSISTEMAS">
+            <img src="/static/logo.png" class="logo">
             <span class="logo-text">KBSISTEMAS</span>
         </div>
 
         <ul class="menu">
 
-            <li><a href="/painel" data-nav="true">Painel</a></li>
+            <li><a href="/painel">Painel</a></li>
 
             <li>
                 Estoque
                 <ul class="submenu">
-                    <li><a href="/estoque" data-nav="true">Ver Estoque</a></li>
-                    <li><a href="/transferencia" data-nav="true">Transferência</a></li>
+                    <li><a href="/estoque">Ver Estoque</a></li>
+                    <li><a href="/transferencia">Transferência</a></li>
                 </ul>
             </li>
 
             <li>
                 Financeiro
                 <ul class="submenu">
-                    <li><a href="/financeiro" data-nav="true">💰 Financeiro</a></li>
+                    <li><a href="/financeiro">💰 Financeiro</a></li>
                 </ul>
             </li>
 
             <li>
                 Relatórios
                 <ul class="submenu">
-                    <li><a href="/historico" data-nav="true">Histórico</a></li>
+                    <li><a href="/historico">Histórico</a></li>
                 </ul>
             </li>
 
             <li>
                 Sistema
                 <ul class="submenu">
-                    <li><a href="/usuarios" data-nav="true">Usuários</a></li>
-                    <li><a href="/logs" data-nav="true">Logs</a></li>
-                    <li><a href="/ia" data-nav="true">🤖 IA</a></li>
+                    <li><a href="/usuarios">Usuários</a></li>
+                    <li><a href="/logs">Logs</a></li>
+                    <li><a href="/ia">🤖 IA</a></li>
                 </ul>
             </li>
 
@@ -63,13 +63,19 @@ def container(c):
     <html>
     <head>
         <title>KBSISTEMAS</title>
-        <link rel="icon" type="image/png" href="/static/logo.png">
-        <link rel="shortcut icon" href="/static/logo.png">
+        <link rel="icon" href="/static/logo.png">
+
+        <!-- 🔥 FONTE PROFISSIONAL -->
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+        <!-- 🔥 CHART JS -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
         <style>
+
         body {{
             margin: 0;
-            font-family: Arial;
+            font-family: 'Inter', Arial;
             background: #000;
             color: #d1d5db;
         }}
@@ -79,7 +85,7 @@ def container(c):
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
+            padding: 12px 25px;
             background: #0a0a0a;
             border-bottom: 1px solid #2a2a2a;
         }}
@@ -93,39 +99,38 @@ def container(c):
         .logo {{
             width: 35px;
             height: 35px;
-            border-radius: 8px;
+            border-radius: 6px;
         }}
 
         .logo-text {{
-            font-weight: bold;
-            font-size: 18px;
+            font-weight: 600;
+            font-size: 16px;
         }}
 
-        /* MENU PRINCIPAL */
+        /* MENU */
         .menu {{
             list-style: none;
             display: flex;
-            gap: 15px;
+            gap: 10px;
             margin: 0;
             padding: 0;
         }}
 
         .menu li {{
             position: relative;
-            padding: 6px 10px;
-            border-radius: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
             cursor: pointer;
-            color: #ccc;
+            font-size: 14px;
         }}
 
         .menu li:hover {{
             background: #1a1a1a;
-            color: #fff;
         }}
 
         .menu a {{
             text-decoration: none;
-            color: inherit;
+            color: #d1d5db;
         }}
 
         /* SUBMENU */
@@ -139,12 +144,13 @@ def container(c):
             padding: 0;
             min-width: 180px;
             border: 1px solid #2a2a2a;
-            z-index: 999;
+            border-radius: 6px;
+            overflow: hidden;
         }}
 
         .submenu li {{
             padding: 10px;
-            border-bottom: 1px solid #222;
+            font-size: 13px;
         }}
 
         .submenu li:hover {{
@@ -156,7 +162,14 @@ def container(c):
         }}
 
         .logout {{
-            color: red !important;
+            color: #ef4444 !important;
+        }}
+
+        /* CONTEÚDO */
+        .conteudo {{
+            padding: 25px;
+            max-width: 1400px;
+            margin: auto;
         }}
 
         /* CARD */
@@ -175,11 +188,13 @@ def container(c):
     </head>
 
     <body>
+
         {topo()}
 
-        <div style="padding:20px;">
+        <div class="conteudo">
             {c}
         </div>
+
     </body>
     </html>
     """
