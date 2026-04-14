@@ -499,10 +499,13 @@ def transferencia():
         else:
             msg = "❌ Estoque insuficiente"
 
+    # 🔥 AGORA COM DATA
     try:
         cursor.execute("""
-        SELECT produto, quantidade, destino, usuario 
-        FROM transferencias ORDER BY id DESC LIMIT 5
+        SELECT produto, quantidade, destino, usuario, data
+        FROM transferencias 
+        ORDER BY id DESC 
+        LIMIT 10
         """)
         historico = cursor.fetchall()
     except:
@@ -513,59 +516,144 @@ def transferencia():
 
     tabela = ""
     for h in historico:
+        data_formatada = h[4].strftime("%d/%m/%Y %H:%M") if h[4] else "-"
         tabela += f"""
         <tr>
         <td>{h[0]}</td>
         <td>{h[1]}</td>
         <td>{h[2]}</td>
         <td>{h[3]}</td>
+        <td>{data_formatada}</td>
         </tr>
         """
 
     devolver_conexao(conn)
 
     return container(f"""
-    <div class="card">
-    <h2>🔄 NOVA TRANSFERÊNCIA</h2>
+    <div class="wrap">
 
-    <form method="POST" style="display:grid;gap:10px;max-width:400px">
+        <h2 style="margin-bottom:20px;">🔄 Transferência</h2>
 
-        <label>Produto:</label>
-        <select name="produto" required>
-            {lista_produtos}
-        </select>
+        <div class="grid">
 
-        <label>Quantidade:</label>
-        <input name="qtd" type="number" min="1" required>
+            <!-- FORM -->
+            <div class="box">
+                <h3>Nova Transferência</h3>
 
-        <label>Destino (Usuário / Setor):</label>
-        <select name="destino" required>
-            <option value="saida">Saída</option>
-            <option value="lixo">Lixo Eletrônico</option>
-            {lista_usuarios}
-        </select>
+                <form method="POST">
 
-        <button style="margin-top:10px">🚀 Transferir</button>
-    </form>
+                    <label>Produto</label>
+                    <select name="produto" required>
+                        {lista_produtos}
+                    </select>
 
-    <p style="margin-top:15px">{msg}</p>
+                    <label>Quantidade</label>
+                    <input name="qtd" type="number" min="1" required>
 
-    <hr>
+                    <label>Destino</label>
+                    <select name="destino" required>
+                        <option value="saida">Saída</option>
+                        <option value="lixo">Lixo</option>
+                        {lista_usuarios}
+                    </select>
 
-    <h3>📜 Últimas Transferências</h3>
+                    <button>🚀 Transferir</button>
+                </form>
 
-    <table>
-    <tr>
-        <th>Produto</th>
-        <th>Qtd</th>
-        <th>Destino</th>
-        <th>Usuário</th>
-    </tr>
-    {tabela}
-    </table>
+                <p>{msg}</p>
+            </div>
+
+            <!-- HISTÓRICO -->
+            <div class="box">
+                <h3>📜 Histórico</h3>
+
+                <table>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Qtd</th>
+                        <th>Destino</th>
+                        <th>Usuário</th>
+                        <th>Data</th>
+                    </tr>
+                    {tabela}
+                </table>
+            </div>
+
+        </div>
+
     </div>
-    """)
 
+    <style>
+
+    .wrap {{
+        max-width: 1300px;
+        margin: auto;
+    }}
+
+    .grid {{
+        display:grid;
+        grid-template-columns:320px 1fr;
+        gap:20px;
+    }}
+
+    .box {{
+        background:#0b0b0b;
+        border:1px solid #2c2c2c;
+        padding:20px;
+        border-radius:10px;
+    }}
+
+    label {{
+        display:block;
+        margin-top:10px;
+        font-size:13px;
+        color:#aaa;
+    }}
+
+    input, select {{
+        width:100%;
+        padding:10px;
+        margin-top:5px;
+        background:#111;
+        border:1px solid #333;
+        color:white;
+        border-radius:6px;
+    }}
+
+    button {{
+        margin-top:15px;
+        width:100%;
+        padding:10px;
+        background:#3b82f6;
+        border:none;
+        border-radius:6px;
+        color:white;
+        cursor:pointer;
+    }}
+
+    table {{
+        width:100%;
+        border-collapse:collapse;
+        margin-top:10px;
+    }}
+
+    th {{
+        background:#1a1a1a;
+        padding:10px;
+        text-align:left;
+    }}
+
+    td {{
+        padding:10px;
+        border-top:1px solid #333;
+    }}
+
+    tr:hover {{
+        background:#111;
+    }}
+
+    </style>
+    """)
 # ================= HISTÓRICO =================
 @estoque_bp.route("/historico")
 def historico():
