@@ -44,7 +44,7 @@ app.register_blueprint(pagamento_routes)
 app.register_blueprint(logs_bp)
 app.register_blueprint(ia_bp)
 app.register_blueprint(financeiro_bp)
-app.register_blueprint(vendas_bp)
+# app.register_blueprint(vendas_bp)
 
 # ================= ROTAS DIRETAS =================
 @app.route("/usuarios/excluir_usuario/<usuario>", methods=["POST"])
