@@ -8,7 +8,7 @@ def container(c):
         <meta http-equiv="Cache-Control" content="public, max-age=300">
 
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        @import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
 
         body {{
             margin: 0;
@@ -136,314 +136,72 @@ def container(c):
             margin-bottom: 20px;
             color: #e5e7eb;
         }}
+
+        /* 🔥 TUDO QUE ESTAVA FORA AGORA ESTÁ DENTRO */
+
+        .cards {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }}
+
+        .mini-card {{
+            background: linear-gradient(180deg, #121212 0%, #070707 100%);
+            border: 1px solid #3a3a3a;
+            border-radius: 14px;
+            padding: 20px;
+            color: #e5e7eb;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+        }}
+
+        .mensagem {{ margin-top:10px; font-weight:bold; }}
+        .erro {{ color:#f87171; }}
+        .sucesso {{ color:#86efac; }}
+
+        .btn-danger {{ color:#f87171; border-color:#7f1d1d; }}
+        .btn-danger:hover {{ background:#2a1111; color:#fff; }}
+
+        .btn-warning {{ color:#facc15; border-color:#5a4a12; }}
+        .btn-warning:hover {{ background:#2a2410; color:#fff; }}
+
+        .btn-edit {{
+            color:#d1d5db;
+            border:1px solid #4a4a4a;
+            padding:6px 10px;
+            border-radius:8px;
+        }}
+
+        .btn-edit:hover {{
+            background:#1f1f1f;
+            color:#fff;
+        }}
+
+        .permissoes-box {{
+            display:grid;
+            grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+            gap:8px;
+            margin-top:10px;
+        }}
+
+        .perm-item {{
+            background:#111;
+            padding:8px;
+            border-radius:8px;
+            border:1px solid #2f2f2f;
+        }}
         </style>
     </head>
 
     <body>
         {topo()}
-        <div class="overlay">
+
+        <div class="page-loader" id="pageLoader"></div>
+
+        <div class="overlay" id="mainContent">
             {c}
         </div>
+
     </body>
     </html>
-    """
-    .cards {{
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 15px;
-        margin-top: 20px;
-    }}
-
-    .mini-card {{
-        background: linear-gradient(180deg, #121212 0%, #070707 100%);
-        border: 1px solid #3a3a3a;
-        border-radius: 14px;
-        padding: 20px;
-        color: #e5e7eb;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
-    }}
-
-    .mensagem {{
-        margin-top: 10px;
-        font-weight: bold;
-        color: #d1d5db;
-    }}
-
-    .erro {{
-        color: #f87171;
-        font-weight: bold;
-    }}
-
-    .sucesso {{
-        color: #86efac;
-        font-weight: bold;
-    }}
-
-    .btn-danger {{
-        color: #f87171;
-        border-color: #7f1d1d;
-    }}
-
-    .btn-danger:hover {{
-        background: #2a1111;
-        color: #ffffff;
-    }}
-
-    .btn-warning {{
-        color: #facc15;
-        border-color: #5a4a12;
-    }}
-
-    .btn-warning:hover {{
-        background: #2a2410;
-        color: #ffffff;
-    }}
-
-    .btn-edit {{
-        color: #d1d5db;
-        border: 1px solid #4a4a4a;
-        padding: 6px 10px;
-        border-radius: 8px;
-        display: inline-block;
-    }}
-
-    .btn-edit:hover {{
-        background: #1f1f1f;
-        color: #ffffff;
-        text-decoration: none;
-    }}
-
-    .permissoes-box {{
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 8px;
-        margin-top: 10px;
-    }}
-
-    .perm-item {{
-        background: #111111;
-        padding: 8px;
-        border-radius: 8px;
-        border: 1px solid #2f2f2f;
-    }}
-
-    .page-loader {{
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 2px;
-        width: 0%;
-        background: linear-gradient(90deg, #888888, #ffffff);
-        z-index: 9999;
-        transition: width 0.2s ease;
-    }}
-
-    .dashboard-grid {{
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        margin-top: 20px;
-    }}
-
-    .chart-3d-card {{
-        background: linear-gradient(180deg, #101010 0%, #060606 100%);
-        border: 1px solid #2d2d2d;
-        border-radius: 14px;
-        padding: 20px;
-    }}
-
-    .chart-title {{
-        font-size: 18px;
-        font-weight: bold;
-        color: #f3f4f6;
-        margin-bottom: 20px;
-    }}
-
-    .chart-3d-area {{
-        height: 320px;
-        display: flex;
-        align-items: flex-end;
-        gap: 18px;
-        padding: 15px 10px 5px 10px;
-        border-left: 1px solid #303030;
-        border-bottom: 1px solid #303030;
-        background:
-            repeating-linear-gradient(
-                to top,
-                rgba(255,255,255,0.03) 0px,
-                rgba(255,255,255,0.03) 1px,
-                transparent 1px,
-                transparent 52px
-            );
-        overflow-x: auto;
-        overflow-y: hidden;
-    }}
-
-    .bar-3d-item {{
-        min-width: 72px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 8px;
-    }}
-
-    .bar-value {{
-        font-size: 12px;
-        color: #f3f4f6;
-        font-weight: bold;
-    }}
-
-    .bar-3d-wrap {{
-        position: relative;
-        width: 34px;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-    }}
-
-    .bar-3d-front {{
-        width: 34px;
-        position: relative;
-        border-radius: 3px 3px 0 0;
-        box-shadow: inset -4px 0 0 rgba(0,0,0,0.15);
-    }}
-
-    .bar-3d-side {{
-        position: absolute;
-        right: -10px;
-        bottom: 0;
-        width: 10px;
-        transform: skewY(45deg);
-        transform-origin: left bottom;
-        border-radius: 0 3px 0 0;
-        opacity: 0.95;
-    }}
-
-    .bar-3d-top {{
-        position: absolute;
-        top: -10px;
-        left: 0;
-        width: 34px;
-        height: 10px;
-        transform: skewX(45deg);
-        transform-origin: left bottom;
-        border-radius: 3px 3px 0 0;
-        opacity: 0.95;
-    }}
-
-    .bar-label {{
-        font-size: 11px;
-        color: #d1d5db;
-        text-align: center;
-        max-width: 85px;
-        line-height: 1.25;
-        word-break: break-word;
-    }}
-
-    .sem-dados {{
-        color: #9ca3af;
-        padding: 20px 0;
-    }}
-
-    .ranking-table td, .ranking-table th {{
-        font-size: 13px;
-    }}
-
-    @media (max-width: 1100px) {{
-        .dashboard-grid {{
-            grid-template-columns: 1fr;
-        }}
-    }}
-
-    @media (max-width: 900px) {{
-        .navbar {{
-            flex-direction: column;
-            align-items: flex-start;
-        }}
-
-        .menu {{
-            width: 100%;
-        }}
-    }}
-    </style>
-
-    <div class="page-loader" id="pageLoader"></div>
-
-    <div class="overlay" id="mainContent">
-        {c}
-    </div>
-
-    <script>
-    (function() {{
-        const loader = document.getElementById("pageLoader");
-
-        function startLoader() {{
-            if (loader) {{
-                loader.style.width = "35%";
-            }}
-        }}
-
-        function finishLoader() {{
-            if (loader) {{
-                loader.style.width = "100%";
-                setTimeout(() => {{
-                    loader.style.width = "0%";
-                }}, 180);
-            }}
-        }}
-
-        async function navegar(url, salvarHistorico = true) {{
-            try {{
-                startLoader();
-                const resposta = await fetch(url, {{
-                    headers: {{
-                        "X-Requested-With": "fetch"
-                    }}
-                }});
-
-                const html = await resposta.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, "text/html");
-
-                const novoConteudo = doc.querySelector("#mainContent");
-                const novoTitulo = doc.querySelector("title");
-
-                if (novoConteudo) {{
-                    document.querySelector("#mainContent").innerHTML = novoConteudo.innerHTML;
-                }} else {{
-                    window.location.href = url;
-                    return;
-                }}
-
-                if (novoTitulo) {{
-                    document.title = novoTitulo.innerText;
-                }}
-
-                if (salvarHistorico) {{
-                    history.pushState({{ url: url }}, "", url);
-                }}
-
-                finishLoader();
-            }} catch (e) {{
-                window.location.href = url;
-            }}
-        }}
-
-        document.addEventListener("click", function(e) {{
-            const link = e.target.closest('a[data-nav="true"]');
-            if (!link) return;
-
-            const href = link.getAttribute("href");
-            if (!href || href.startsWith("http") || href.startsWith("#")) return;
-
-            e.preventDefault();
-            navegar(href, true);
-        }});
-
-        window.addEventListener("popstate", function() {{
-            navegar(location.pathname, false);
-        }});
-    }})();
-    </script>
     """
