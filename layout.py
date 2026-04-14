@@ -12,7 +12,7 @@ def topo():
     return """
     <div class="navbar">
         <div class="logo-area">
-            <img src="/static/logo.png" class="logo">
+            <img src="/static/logo.png" class="logo" alt="Logo KBSISTEMAS">
             <span class="logo-text">KBSISTEMAS</span>
         </div>
 
@@ -27,5 +27,21 @@ def topo():
             <a href="/ia" data-nav="true">🤖 IA</a>
             <a href="/logout" class="logout">Sair</a>
         </div>
+    </div>
+    """
+
+
+def container(c):
+    return f"""
+    <head>
+        <title>KBSISTEMAS</title>
+        <link rel="icon" type="image/png" href="/static/logo.png">
+        <link rel="shortcut icon" href="/static/logo.png">
+        <meta http-equiv="Cache-Control" content="public, max-age=300">
+    </head>
+    """ + topo() + f"""
+    <!-- TODO O RESTO DO SEU HTML/CSS/JS FICA AQUI IGUAL -->
+    <div class="overlay" id="mainContent">
+        {c}
     </div>
     """
