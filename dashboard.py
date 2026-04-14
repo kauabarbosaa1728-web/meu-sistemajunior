@@ -1,6 +1,7 @@
 from flask import Blueprint, session, redirect
 from banco import conectar, devolver_conexao
-from layout import container, gerar_barras_3d
+from layout import container
+from permissoes import gerar_barras_3d
 
 dashboard_bp = Blueprint("dashboard_bp", __name__)
 
