@@ -12,148 +12,102 @@ def painel():
     if "user" not in session:
         return redirect("/")
 
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
+    conn = conectar()
+    cursor = conn.cursor()
 
-        # ===== DADOS =====
-        cursor.execute("SELECT COUNT(*) FROM estoque")
-        total_produtos = cursor.fetchone()[0]
+    # ===== DADOS =====
+    cursor.execute("SELECT COUNT(*) FROM estoque")
+    total_produtos = cursor.fetchone()[0]
 
-        cursor.execute("SELECT COALESCE(SUM(quantidade), 0) FROM estoque")
-        total_qtd = cursor.fetchone()[0]
+    cursor.execute("SELECT COALESCE(SUM(quantidade), 0) FROM estoque")
+    total_qtd = cursor.fetchone()[0]
 
-        cursor.execute("SELECT COUNT(*) FROM transferencias")
-        total_transferencias = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM transferencias")
+    total_transferencias = cursor.fetchone()[0]
 
-        cursor.execute("SELECT COUNT(*) FROM usuarios WHERE online=1")
-        usuarios_online = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM usuarios WHERE online=1")
+    usuarios_online = cursor.fetchone()[0]
 
-        # ===== GRÁFICOS =====
-        cursor.execute("""
-        SELECT COALESCE(categoria, 'Sem categoria'), COALESCE(SUM(quantidade), 0)
-        FROM estoque
-        GROUP BY categoria
-        ORDER BY SUM(quantidade) DESC
-        LIMIT 8
-        """)
-        categorias = cursor.fetchall()
+    # ===== GRÁFICOS =====
+    cursor.execute("""
+    SELECT COALESCE(categoria, 'Sem categoria'), COALESCE(SUM(quantidade), 0)
+    FROM estoque GROUP BY categoria
+    ORDER BY SUM(quantidade) DESC LIMIT 8
+    """)
+    categorias = cursor.fetchall()
 
-        cursor.execute("""
-        SELECT COALESCE(produto, 'Sem nome'), COALESCE(SUM(quantidade), 0)
-        FROM transferencias
-        GROUP BY produto
-        ORDER BY SUM(quantidade) DESC
-        LIMIT 8
-        """)
-        transferencias_produto = cursor.fetchall()
+    barras_categoria = gerar_barras_3d(categorias, 180, "categoria")
 
-        barras_categoria = gerar_barras_3d(categorias, 220, "categoria")
-        barras_transferencia = gerar_barras_3d(transferencias_produto, 220, "transferencia")
+    # ===== CALENDÁRIO =====
+    now = datetime.now()
+    ano = now.year
+    mes = now.month
+    nome_mes = calendar.month_name[mes].capitalize()
 
-        # ===== TOP PRODUTOS =====
-        cursor.execute("""
-        SELECT produto, quantidade, categoria
-        FROM estoque
-        ORDER BY quantidade DESC
-        LIMIT 5
-        """)
-        top_produtos = cursor.fetchall()
+    cal = calendar.monthcalendar(ano, mes)
 
-        tabela_top = ""
-        for produto, quantidade, categoria in top_produtos:
-            tabela_top += f"""
-            <tr>
-                <td>{produto}</td>
-                <td>{quantidade}</td>
-                <td>{categoria}</td>
-            </tr>
-            """
+    dias_semana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
 
-        if not tabela_top:
-            tabela_top = "<tr><td colspan='3'>Sem dados</td></tr>"
+    calendario_html = ""
 
-        # ===== CALENDÁRIO =====
-        now = datetime.now()
-        ano = now.year
-        mes = now.month
-        nome_mes = calendar.month_name[mes].capitalize()
+    # Cabeçalho dias
+    for dia_nome in dias_semana:
+        calendario_html += f"<div class='head'>{dia_nome}</div>"
 
-        cal = calendar.monthcalendar(ano, mes)
+    # Dias
+    for semana in cal:
+        for dia in semana:
+            if dia == 0:
+                calendario_html += "<div class='day vazio'></div>"
+            else:
+                calendario_html += f"""
+                <div class="day">
+                    <div class="numero">{dia}</div>
+                    <div class="c aberto">A: {dia % 5}</div>
+                    <div class="c encerrado">E: {dia * 2}</div>
+                    <div class="c execucao">Ex: {dia % 3}</div>
+                    <div class="c pendente">P: {dia % 2}</div>
+                    <div class="c total">T: {dia * 3}</div>
+                </div>
+                """
 
-        calendario_html = ""
-        for semana in cal:
-            for dia in semana:
-                if dia == 0:
-                    calendario_html += "<div class='day vazio'></div>"
-                else:
-                    calendario_html += f"""
-                    <div class="day">
-                        <div class="numero">{dia}</div>
-                        <div class="c aberto">A: {dia % 5}</div>
-                        <div class="c encerrado">E: {dia * 2}</div>
-                        <div class="c execucao">Ex: {dia % 3}</div>
-                        <div class="c pendente">P: {dia % 2}</div>
-                        <div class="c total">T: {dia * 3}</div>
-                    </div>
-                    """
+    html = f"""
 
-        return container(f"""
+    <div class="wrap">
 
-        <div class="wrap">
+        <div class="topo">
+            <h2>🖥️ Painel do Sistema</h2>
+            <span>{nome_mes} de {ano}</span>
+        </div>
 
-            <!-- TOPO -->
-            <div class="topo-box">
-                <h2>🖥️ Painel</h2>
-                <span>{nome_mes} de {ano}</span>
-            </div>
+        <div class="dashboard">
 
-            <div class="dashboard">
+            <!-- ESQUERDA -->
+            <div class="left">
 
-                <!-- ESQUERDA -->
-                <div class="left">
-
-                    <div class="box">
-                        <h3>📊 Resumo</h3>
-                        <p>Produtos: <b>{total_produtos}</b></p>
-                        <p>Quantidade: <b>{total_qtd}</b></p>
-                        <p>Movimentações: <b>{total_transferencias}</b></p>
-                        <p>Online: <b>{usuarios_online}</b></p>
-                    </div>
-
-                    <div class="box">
-                        <h3>Categorias</h3>
-                        {barras_categoria}
-                    </div>
-
-                    <div class="box">
-                        <h3>Transferências</h3>
-                        {barras_transferencia}
-                    </div>
-
+                <div class="box destaque">
+                    <h3>Resumo Geral</h3>
+                    <p>📦 Produtos: <b>{total_produtos}</b></p>
+                    <p>🔢 Quantidade: <b>{total_qtd}</b></p>
+                    <p>🔄 Movimentações: <b>{total_transferencias}</b></p>
+                    <p>🟢 Online: <b>{usuarios_online}</b></p>
                 </div>
 
-                <!-- DIREITA -->
-                <div class="right">
+                <div class="box">
+                    <h3>Categorias</h3>
+                    {barras_categoria}
+                </div>
 
-                    <div class="box">
-                        <h3>🏆 Top produtos</h3>
-                        <table>
-                            <tr>
-                                <th>Produto</th>
-                                <th>Quantidade</th>
-                                <th>Categoria</th>
-                            </tr>
-                            {tabela_top}
-                        </table>
-                    </div>
+            </div>
 
-                    <div class="box">
-                        <h3>📅 Calendário - {nome_mes}/{ano}</h3>
-                        <div class="calendar">
-                            {calendario_html}
-                        </div>
+            <!-- DIREITA -->
+            <div class="right">
+
+                <div class="box calendario-box">
+                    <h3>📅 Calendário - {nome_mes}/{ano}</h3>
+
+                    <div class="calendar">
+                        {calendario_html}
                     </div>
 
                 </div>
@@ -162,86 +116,83 @@ def painel():
 
         </div>
 
-        <style>
+    </div>
 
-        .wrap {{
-            max-width: 1400px;
-            margin: auto;
-        }}
+    <style>
 
-        .topo-box {{
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            margin-bottom:20px;
-        }}
+    .wrap {{
+        max-width: 1500px;
+        margin: auto;
+    }}
 
-        .dashboard {{
-            display:flex;
-            gap:20px;
-        }}
+    .topo {{
+        display:flex;
+        justify-content:space-between;
+        margin-bottom:20px;
+    }}
 
-        .left {{ width:28%; }}
-        .right {{ width:72%; }}
+    .dashboard {{
+        display:flex;
+        gap:20px;
+    }}
 
-        .box {{
-            background:#0b0b0b;
-            border:1px solid #2c2c2c;
-            padding:15px;
-            border-radius:10px;
-            margin-bottom:20px;
-        }}
+    .left {{ width:25%; }}
+    .right {{ width:75%; }}
 
-        table {{
-            width:100%;
-            border-collapse:collapse;
-        }}
+    .box {{
+        background:#0b0b0b;
+        border:1px solid #2c2c2c;
+        padding:15px;
+        border-radius:10px;
+        margin-bottom:20px;
+    }}
 
-        th, td {{
-            padding:10px;
-            border:1px solid #333;
-        }}
+    .destaque {{
+        border-left:4px solid #3b82f6;
+    }}
 
-        th {{ background:#222; }}
+    /* CALENDÁRIO */
+    .calendar {{
+        display:grid;
+        grid-template-columns:repeat(7,1fr);
+        gap:6px;
+    }}
 
-        /* CALENDÁRIO */
-        .calendar {{
-            display:grid;
-            grid-template-columns:repeat(7,1fr);
-            gap:10px;
-        }}
+    .head {{
+        text-align:center;
+        font-weight:bold;
+        padding:5px;
+        background:#1a1a1a;
+    }}
 
-        .day {{
-            background:#111;
-            border:1px solid #333;
-            padding:6px;
-            font-size:11px;
-        }}
+    .day {{
+        background:#111;
+        border:1px solid #333;
+        padding:5px;
+        min-height:90px;
+        font-size:11px;
+    }}
 
-        .numero {{
-            font-weight:bold;
-            margin-bottom:5px;
-        }}
+    .numero {{
+        font-weight:bold;
+        margin-bottom:5px;
+    }}
 
-        .c {{ padding:2px; margin-bottom:2px; }}
+    .c {{ padding:2px; margin-bottom:2px; }}
 
-        .aberto {{ background:#6b7280; }}
-        .encerrado {{ background:#22c55e; }}
-        .execucao {{ background:#f59e0b; }}
-        .pendente {{ background:#ef4444; }}
-        .total {{ background:#3b82f6; }}
+    .aberto {{ background:#6b7280; }}
+    .encerrado {{ background:#22c55e; }}
+    .execucao {{ background:#f59e0b; }}
+    .pendente {{ background:#ef4444; }}
+    .total {{ background:#3b82f6; }}
 
-        .vazio {{
-            background:transparent;
-            border:none;
-        }}
+    .vazio {{
+        background:transparent;
+        border:none;
+    }}
 
-        </style>
+    </style>
+    """
 
-        """)
-
-    except Exception as e:
-        return container(f"<div style='color:red;'>Erro: {e}</div>")
-
-    finally:
-        devolver_conexao(conn)
+    devolver_conexao(conn)
+    return container(html)
