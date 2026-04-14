@@ -1,3 +1,13 @@
+from flask import Blueprint, request, redirect, session
+from werkzeug.security import generate_password_hash
+from banco import conectar, devolver_conexao, registrar_log
+from layout import container, acesso_negado
+from datetime import datetime, timedelta
+
+# 🔥 ESSA LINHA É OBRIGATÓRIA (RESOLVE O ERRO)
+usuarios_bp = Blueprint("usuarios_bp", __name__)
+
+# ================= USUÁRIOS =================
 @usuarios_bp.route("/usuarios", methods=["GET", "POST"])
 def usuarios():
     if "user" not in session:
@@ -76,7 +86,6 @@ def usuarios():
         if u != "admin":
             acoes = f"""
             <div class="acoes">
-
                 <form action="/usuarios/alterar_senha/{u}" method="POST">
                     <input type="password" name="senha" placeholder="Nova senha" required>
                     <button class="btn">Senha</button>
@@ -94,7 +103,6 @@ def usuarios():
                 <form action="/usuarios/excluir_usuario/{u}" method="POST">
                     <button class="btn danger">Excluir</button>
                 </form>
-
             </div>
             """
         else:
@@ -115,17 +123,13 @@ def usuarios():
     devolver_conexao(conn)
 
     return container(f"""
-
     <div class="wrap">
-
         <h2>👤 Usuários</h2>
 
-        <!-- FORM -->
         <div class="box">
             <h3>Criar novo usuário</h3>
 
             <form method="POST" class="form-grid">
-
                 <input name="user" placeholder="Usuário" required>
                 <input name="senha" placeholder="Senha" required>
                 <input name="email" placeholder="E-mail">
@@ -153,13 +157,11 @@ def usuarios():
                 </div>
 
                 <button class="btn full">Criar usuário</button>
-
             </form>
 
             <p>{mensagem}</p>
         </div>
 
-        <!-- TABELA -->
         <div class="box">
             <h3>Lista de usuários</h3>
 
@@ -176,88 +178,5 @@ def usuarios():
                 {tabela}
             </table>
         </div>
-
     </div>
-
-    <style>
-
-    .wrap {{
-        max-width: 1300px;
-        margin:auto;
-    }}
-
-    .box {{
-        background:#0b0b0b;
-        border:1px solid #2c2c2c;
-        padding:20px;
-        border-radius:10px;
-        margin-bottom:20px;
-    }}
-
-    .form-grid {{
-        display:grid;
-        grid-template-columns:repeat(2,1fr);
-        gap:10px;
-    }}
-
-    input, select {{
-        padding:10px;
-        background:#111;
-        border:1px solid #333;
-        color:white;
-        border-radius:6px;
-    }}
-
-    .permissoes {{
-        grid-column:span 2;
-        display:flex;
-        flex-wrap:wrap;
-        gap:10px;
-    }}
-
-    .btn {{
-        padding:8px 10px;
-        background:#3b82f6;
-        border:none;
-        color:white;
-        border-radius:6px;
-        cursor:pointer;
-    }}
-
-    .danger {{
-        background:#ef4444;
-    }}
-
-    .full {{
-        grid-column:span 2;
-    }}
-
-    table {{
-        width:100%;
-        border-collapse:collapse;
-        margin-top:10px;
-    }}
-
-    th {{
-        background:#1a1a1a;
-        padding:10px;
-        text-align:left;
-    }}
-
-    td {{
-        padding:10px;
-        border-top:1px solid #333;
-    }}
-
-    .acoes {{
-        display:flex;
-        gap:5px;
-        flex-wrap:wrap;
-    }}
-
-    .on {{ color:#22c55e; }}
-    .off {{ color:#ef4444; }}
-    .protegido {{ color:#888; }}
-
-    </style>
     """)
