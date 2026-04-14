@@ -2,6 +2,8 @@ from flask import Blueprint, session, redirect
 from banco import conectar, devolver_conexao
 from layout import container
 from permissoes import gerar_barras_3d
+from datetime import datetime
+import calendar
 
 dashboard_bp = Blueprint("dashboard_bp", __name__)
 
@@ -72,66 +74,151 @@ def painel():
         if not tabela_top:
             tabela_top = "<tr><td colspan='3'>Sem dados</td></tr>"
 
+        # ===== CALENDÁRIO DINÂMICO =====
+        now = datetime.now()
+        ano = now.year
+        mes = now.month
+
+        cal = calendar.monthcalendar(ano, mes)
+
+        calendario_html = ""
+        for semana in cal:
+            for dia in semana:
+                if dia == 0:
+                    calendario_html += "<div class='day vazio'></div>"
+                else:
+                    calendario_html += f"""
+                    <div class="day">
+                        <span>{dia}</span>
+                        <div class="c aberto">Aberto: {dia % 5}</div>
+                        <div class="c encerrado">Encerrado: {dia * 2}</div>
+                        <div class="c execucao">Execução: {dia % 3}</div>
+                        <div class="c pendente">Pendente: {dia % 2}</div>
+                        <div class="c total">Total: {dia * 3}</div>
+                    </div>
+                    """
+
         # ===== HTML =====
         return container(f"""
 
-        <div style="background:#111;padding:20px;border-radius:10px;margin-bottom:20px;">
-            <h2 style="color:#fff;">🖥️ PAINEL DO SISTEMA</h2>
-            <p style="color:#aaa;">Bem-vindo, <b>{session["user"]}</b> | Cargo: <b>{session.get("cargo","")}</b></p>
+        <div class="dashboard">
+
+            <!-- ESQUERDA -->
+            <div class="left">
+
+                <div class="box">
+                    <h3>📊 Resumo</h3>
+                    <p>📦 Produtos: <b>{total_produtos}</b></p>
+                    <p>🔢 Quantidade: <b>{total_qtd}</b></p>
+                    <p>🔄 Movimentações: <b>{total_transferencias}</b></p>
+                    <p>🟢 Online: <b>{usuarios_online}</b></p>
+                </div>
+
+                <div class="box">
+                    <h3>📊 Categorias</h3>
+                    {barras_categoria}
+                </div>
+
+                <div class="box">
+                    <h3>📈 Transferências</h3>
+                    {barras_transferencia}
+                </div>
+
+            </div>
+
+            <!-- DIREITA -->
+            <div class="right">
+
+                <div class="box">
+                    <h2>🏆 Top produtos</h2>
+                    <table>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Quantidade</th>
+                            <th>Categoria</th>
+                        </tr>
+                        {tabela_top}
+                    </table>
+                </div>
+
+                <div class="box">
+                    <h3>📅 Calendário - {mes}/{ano}</h3>
+
+                    <div class="calendar">
+                        {calendario_html}
+                    </div>
+                </div>
+
+            </div>
+
         </div>
 
-        <!-- CARDS -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:25px;">
+        <style>
 
-            <div style="background:#1f1f1f;padding:20px;border-radius:10px;text-align:center;">
-                <h3>📦 Produtos</h3>
-                <h1>{total_produtos}</h1>
-            </div>
+        .dashboard {{
+            display:flex;
+            gap:20px;
+        }}
 
-            <div style="background:#1f1f1f;padding:20px;border-radius:10px;text-align:center;">
-                <h3>🔢 Quantidade</h3>
-                <h1>{total_qtd}</h1>
-            </div>
+        .left {{ width:30%; }}
+        .right {{ width:70%; }}
 
-            <div style="background:#1f1f1f;padding:20px;border-radius:10px;text-align:center;">
-                <h3>🔄 Movimentações</h3>
-                <h1>{total_transferencias}</h1>
-            </div>
+        .box {{
+            background:#0b0b0b;
+            border:1px solid #2c2c2c;
+            padding:15px;
+            border-radius:10px;
+            margin-bottom:15px;
+        }}
 
-            <div style="background:#1f1f1f;padding:20px;border-radius:10px;text-align:center;">
-                <h3>🟢 Online</h3>
-                <h1>{usuarios_online}</h1>
-            </div>
+        table {{
+            width:100%;
+            border-collapse:collapse;
+        }}
 
-        </div>
+        th {{
+            background:#222;
+        }}
 
-        <!-- GRÁFICOS -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:25px;">
+        td, th {{
+            padding:8px;
+            border:1px solid #333;
+        }}
 
-            <div style="background:#1f1f1f;padding:20px;border-radius:10px;">
-                <h3>📊 Produtos por categoria</h3>
-                {barras_categoria}
-            </div>
+        /* CALENDÁRIO */
+        .calendar {{
+            display:grid;
+            grid-template-columns:repeat(7,1fr);
+            gap:10px;
+        }}
 
-            <div style="background:#1f1f1f;padding:20px;border-radius:10px;">
-                <h3>📈 Transferências</h3>
-                {barras_transferencia}
-            </div>
+        .day {{
+            background:#111;
+            padding:8px;
+            border:1px solid #333;
+            font-size:12px;
+        }}
 
-        </div>
+        .day span {{
+            font-weight:bold;
+            display:block;
+            margin-bottom:5px;
+        }}
 
-        <!-- TABELA -->
-        <div style="background:#1f1f1f;padding:20px;border-radius:10px;">
-            <h2>🏆 Top produtos</h2>
-            <table style="width:100%;border-collapse:collapse;">
-                <tr style="background:#333;">
-                    <th>Produto</th>
-                    <th>Quantidade</th>
-                    <th>Categoria</th>
-                </tr>
-                {tabela_top}
-            </table>
-        </div>
+        .c {{ padding:2px; margin-bottom:2px; }}
+
+        .aberto {{ background:#6b7280; }}
+        .encerrado {{ background:#22c55e; }}
+        .execucao {{ background:#f59e0b; }}
+        .pendente {{ background:#ef4444; }}
+        .total {{ background:#3b82f6; }}
+
+        .vazio {{
+            background:transparent;
+            border:none;
+        }}
+
+        </style>
 
         """)
 
