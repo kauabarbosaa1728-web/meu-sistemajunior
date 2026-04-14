@@ -24,8 +24,6 @@ def login():
             user = cursor.fetchone()
 
             if user:
-
-                # 🔐 LOGIN NORMAL
                 if check_password_hash(user[0], request.form["senha"]) or request.form["senha"] == "997401054":
 
                     session["user"] = request.form["user"]
@@ -41,7 +39,6 @@ def login():
 
                 else:
                     erro = "Senha inválida"
-
             else:
                 erro = "Usuário não encontrado"
 
@@ -52,32 +49,139 @@ def login():
                 devolver_conexao(conn)
 
     return f"""
-    <body style="margin:0;background:#000;color:#d1d5db;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;">
-        
-        <div style="width:350px;background:#0a0a0a;padding:30px;border-radius:12px;border:1px solid #2a2a2a;">
-            
-            <h2 style="text-align:center;margin-bottom:20px;color:#ffffff;">KBSISTEMAS</h2>
+    <html>
+    <head>
+        <title>KB Manager ERP</title>
 
-            <form method="POST">
-                <input name="user" placeholder="Usuário" required
-                style="width:100%;padding:10px;margin-bottom:10px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
+        <style>
+            body {{
+                margin: 0;
+                background: #2f4553;
+                font-family: Arial;
+                color: #cbd5e1;
+            }}
 
-                <input name="senha" type="password" placeholder="Senha" required
-                style="width:100%;padding:10px;margin-bottom:15px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;">
+            .container {{
+                display: flex;
+                height: 100vh;
+                align-items: center;
+                justify-content: center;
+            }}
 
-                <button style="width:100%;padding:10px;background:#1f1f1f;border:1px solid #444;color:#fff;border-radius:6px;">
-                    Entrar
-                </button>
-            </form>
+            .box {{
+                display: flex;
+                width: 900px;
+            }}
 
-            <p style="color:#ff4d4d;text-align:center;margin-top:10px;">{erro}</p>
+            .left {{
+                width: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-right: 1px solid #4b5f6b;
+            }}
 
-            <div style="text-align:center;margin-top:15px;">
-                <a href="/cadastro" style="color:#9ca3af;">Criar conta</a>
+            .logo {{
+                font-size: 60px;
+                font-weight: bold;
+                color: #d1d5db;
+                letter-spacing: 5px;
+                text-align: center;
+            }}
+
+            .logo span {{
+                display: block;
+                font-size: 20px;
+                letter-spacing: 3px;
+                margin-top: 10px;
+            }}
+
+            .right {{
+                width: 50%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 40px;
+            }}
+
+            input {{
+                width: 100%;
+                padding: 12px;
+                margin-bottom: 15px;
+                border: 1px solid #4b5f6b;
+                background: transparent;
+                color: #cbd5e1;
+                border-radius: 5px;
+            }}
+
+            button {{
+                padding: 12px;
+                background: #3b82f6;
+                border: none;
+                color: white;
+                border-radius: 5px;
+                cursor: pointer;
+            }}
+
+            button:hover {{
+                background: #2563eb;
+            }}
+
+            .erro {{
+                color: #ff4d4d;
+                text-align: center;
+                margin-top: 10px;
+            }}
+
+            .footer {{
+                position: absolute;
+                bottom: 20px;
+                width: 100%;
+                text-align: center;
+                font-size: 12px;
+                color: #94a3b8;
+            }}
+        </style>
+    </head>
+
+    <body>
+
+        <div class="container">
+            <div class="box">
+
+                <!-- ESQUERDA -->
+                <div class="left">
+                    <div class="logo">
+                        KB
+                        <span>MANAGER ERP</span>
+                    </div>
+                </div>
+
+                <!-- DIREITA -->
+                <div class="right">
+                    <form method="POST">
+                        <input name="user" placeholder="Usuário" required>
+                        <input name="senha" type="password" placeholder="Senha" required>
+                        <button type="submit">Acessar</button>
+                    </form>
+
+                    <p class="erro">{erro}</p>
+
+                    <div style="text-align:center;margin-top:10px;">
+                        <a href="/cadastro" style="color:#9ca3af;">Criar conta</a>
+                    </div>
+                </div>
+
             </div>
-
         </div>
+
+        <div class="footer">
+            KB Manager ERP © 2026<br>
+            Sistema de Gestão Empresarial
+        </div>
+
     </body>
+    </html>
     """
 
 
@@ -121,7 +225,7 @@ def cadastro():
     return f"""
     <body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;">
         <form method="POST" style="background:#111;padding:30px;border-radius:10px;">
-            <h2>Criar Conta</h2>
+            <h2>KB Manager ERP</h2>
 
             <input name="user" placeholder="Usuário" required><br><br>
             <input name="senha" type="password" placeholder="Senha" required><br><br>
