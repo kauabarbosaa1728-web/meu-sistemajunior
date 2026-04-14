@@ -134,6 +134,7 @@ def topo():
         <div class="menu">
             <a href="/painel" data-nav="true">Painel</a>
             <a href="/estoque" data-nav="true">Estoque</a>
+            <a href="/financeiro" data-nav="true">💰 Financeiro</a> <!-- 🔥 ADICIONADO -->
             <a href="/transferencia" data-nav="true">Transferência</a>
             <a href="/historico" data-nav="true">Histórico</a>
             <a href="/usuarios" data-nav="true">Usuários</a>
@@ -155,44 +156,6 @@ def container(c):
         <meta http-equiv="Cache-Control" content="public, max-age=300">
     </head>
     """ + topo() + f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-
-    body {{
-        margin: 0;
-        font-family: 'Share Tech Mono', monospace;
-        background: #000000;
-        color: #d1d5db;
-    }}
-
-    .navbar {{
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 20px;
-        padding: 12px 20px;
-        background: #0a0a0a;
-        border-bottom: 1px solid #2a2a2a;
-        position: sticky;
-        top: 0;
-        z-index: 999;
-    }}
-
-    .logo-area {{
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }}
-
-    .logo {{
-        width: 38px;
-        height: 38px;
-        border-radius: 10px;
-        object-fit: cover;
-        border: 1px solid #2f2f2f;
-        background: #111111;
-    }}
-
     .logo-text {{
         font-size: 18px;
         color: #e5e7eb;
