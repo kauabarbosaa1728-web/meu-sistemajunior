@@ -1,11 +1,9 @@
-from flask import Blueprint, request, redirect, session
+from flask import Blueprint, request, redirect, session, send_file
 from banco import conectar, devolver_conexao, registrar_log, verificar_pagamento
 from layout import container, acesso_negado
 from permissoes import tem_permissao
-from reportlab.platypus import SimpleDocTemplate, Table
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
 from openpyxl import Workbook
+from io import BytesIO
 
 estoque_bp = Blueprint("estoque_bp", __name__)
 
@@ -118,6 +116,19 @@ def estoque():
 
     <h2>📦 ESTOQUE</h2>
 
+    <!-- BOTÃO EXCEL -->
+    <a href="/exportar_estoque" style="
+    background:#16a34a;
+    padding:10px;
+    border-radius:6px;
+    color:white;
+    text-decoration:none;
+    display:inline-block;
+    margin-bottom:15px;
+    ">
+    📥 Exportar Excel
+    </a>
+
     <!-- RESUMO -->
     <div style="background:#111;padding:15px;border-radius:8px;margin-bottom:20px;">
         <b>Quantidade total:</b> {total_qtd} <br>
@@ -208,6 +219,51 @@ def estoque():
     }}
     </style>
     """)
+
+
+# ================= EXPORTAR EXCEL =================
+@estoque_bp.route("/exportar_estoque")
+def exportar_estoque():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT produto, quantidade, categoria, valor 
+    FROM estoque
+    """)
+    dados = cursor.fetchall()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Estoque"
+
+    ws.append(["Produto", "Quantidade", "Categoria", "Valor Unitário", "Valor Total"])
+
+    total_geral = 0
+
+    for p, q, c, v in dados:
+        valor_total = q * float(v or 0)
+        total_geral += valor_total
+        ws.append([p, q, c, float(v or 0), valor_total])
+
+    ws.append([])
+    ws.append(["", "", "", "TOTAL:", total_geral])
+
+    arquivo = BytesIO()
+    wb.save(arquivo)
+    arquivo.seek(0)
+
+    devolver_conexao(conn)
+
+    return send_file(
+        arquivo,
+        as_attachment=True,
+        download_name="estoque.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 # ================= EDITAR =================
 # ================= EDITAR =================
 @estoque_bp.route("/editar_estoque/<int:id>", methods=["GET", "POST"])
