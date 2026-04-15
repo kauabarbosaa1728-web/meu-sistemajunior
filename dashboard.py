@@ -83,7 +83,6 @@ def painel():
 
             <div class="dashboard">
 
-                <!-- ESQUERDA -->
                 <div class="left">
 
                     <div class="box">
@@ -101,7 +100,6 @@ def painel():
 
                 </div>
 
-                <!-- DIREITA -->
                 <div class="right">
 
                     <div class="box">
@@ -146,7 +144,7 @@ def painel():
         <style>
 
         .wrap {{
-            max-width: 1200px;
+            max-width: 1000px;
             margin: auto;
         }}
 
@@ -157,16 +155,17 @@ def painel():
             margin-bottom:20px;
         }}
 
-        /* 🔥 GRID PROFISSIONAL */
         .dashboard {{
             display: grid;
-            grid-template-columns: 300px 1fr;
+            grid-template-columns: 280px 1fr;
             gap: 20px;
+            margin-top:10px;
         }}
 
         .box {{
             background:#0b0b0b;
-            border:1px solid #2c2c2c;
+            border:2px solid #3b82f6;
+            box-shadow: 0 0 10px #3b82f630;
             padding:15px;
             border-radius:10px;
             margin-bottom:20px;
@@ -177,7 +176,6 @@ def painel():
             height:250px !important;
         }}
 
-        /* CALENDÁRIO */
         .calendar {{
             display:grid;
             grid-template-columns:repeat(7,1fr);
@@ -189,11 +187,14 @@ def painel():
             font-weight:bold;
             padding:5px;
             background:#1a1a1a;
+            border:2px solid #3b82f6;
+            border-radius:6px;
         }}
 
         .day {{
             background:#111;
-            border:1px solid #333;
+            border:2px solid #3b82f6;
+            border-radius:8px;
             padding:8px;
             min-height:70px;
         }}
@@ -213,7 +214,6 @@ def painel():
             border:none;
         }}
 
-        /* MOBILE */
         @media (max-width: 768px) {{
 
             .dashboard {{
