@@ -41,7 +41,6 @@ def estoque():
     cursor = conn.cursor()
     msg = ""
 
-    # ================= ADICIONAR =================
     if request.method == "POST":
         produto = request.form.get("produto")
         qtd = request.form.get("qtd")
@@ -54,62 +53,60 @@ def estoque():
                 valor = float(valor or 0)
 
                 cursor.execute("""
-                INSERT INTO estoque (produto, quantidade, categoria, valor)
-                VALUES (%s,%s,%s,%s)
+                    INSERT INTO estoque (produto, quantidade, categoria, valor)
+                    VALUES (%s, %s, %s, %s)
                 """, (produto, qtd, categoria, valor))
 
                 conn.commit()
                 registrar_log(session["user"], "add_estoque", f"{produto} ({qtd})")
-
                 msg = "✅ Produto adicionado com sucesso"
 
             except Exception as e:
                 conn.rollback()
                 msg = f"❌ Erro: {e}"
 
-    # ================= LISTAGEM =================
     cursor.execute("""
-    SELECT id, produto, quantidade, categoria, valor 
-    FROM estoque 
-    ORDER BY id DESC
+        SELECT id, produto, quantidade, categoria, valor
+        FROM estoque
+        ORDER BY id DESC
     """)
     dados = cursor.fetchall()
 
-    total_qtd = sum([d[2] for d in dados])
-    total_valor = sum([d[2] * float(d[4] or 0) for d in dados])
+    total_qtd = sum(d[2] for d in dados)
+    total_valor = sum(d[2] * float(d[4] or 0) for d in dados)
 
-    # ================= ALERTA =================
     cursor.execute("""
-    SELECT produto, quantidade 
-    FROM estoque 
-    WHERE quantidade <= 10
-    ORDER BY quantidade ASC
-    LIMIT 5
+        SELECT produto, quantidade
+        FROM estoque
+        WHERE quantidade <= 10
+        ORDER BY quantidade ASC
+        LIMIT 5
     """)
     baixo = cursor.fetchall()
 
     alerta_html = ""
     if baixo:
-        alerta_html += "<div style='background:#330000;padding:10px;border-radius:8px;margin-bottom:15px;'>"
-        alerta_html += "<b>⚠️ Estoque baixo:</b><br>"
+        alerta_html += """
+        <div style="background:#330000;padding:10px;border-radius:8px;margin-bottom:15px;">
+            <b>⚠️ Estoque baixo:</b><br>
+        """
         for p, q in baixo:
             alerta_html += f"<span style='color:red'>{p} - {q} unidades</span><br>"
         alerta_html += "</div>"
 
-    # ================= TABELA =================
     tabela = ""
     for i, p, q, c, v in dados:
         tabela += f"""
         <tr>
-        <td>{i}</td>
-        <td>{p}</td>
-        <td>{q}</td>
-        <td>{c}</td>
-        <td>R$ {float(v or 0):,.2f}</td>
-        <td>
-        <a href='/editar_estoque/{i}'>✏️</a>
-        <a href='/excluir_estoque/{i}' onclick="return confirm('Tem certeza?')">🗑️</a>
-        </td>
+            <td>{i}</td>
+            <td>{p}</td>
+            <td>{q}</td>
+            <td>{c or ''}</td>
+            <td>R$ {float(v or 0):,.2f}</td>
+            <td>
+                <a href="/editar_estoque/{i}">✏️</a>
+                <a href="/excluir_estoque/{i}" onclick="return confirm('Tem certeza?')">🗑️</a>
+            </td>
         </tr>
         """
 
@@ -121,12 +118,29 @@ def estoque():
 
     <h2>📦 ESTOQUE</h2>
 
-    <a href="/exportar_estoque" style="background:#16a34a;padding:10px;border-radius:6px;color:white;text-decoration:none;display:inline-block;margin-bottom:15px;">
-    📥 Excel
+    <a href="/exportar_estoque" style="
+        background:#16a34a;
+        padding:10px;
+        border-radius:6px;
+        color:white;
+        text-decoration:none;
+        display:inline-block;
+        margin-bottom:15px;
+    ">
+        📥 Excel
     </a>
 
-    <a href="/exportar_pdf" style="background:#dc2626;padding:10px;border-radius:6px;color:white;text-decoration:none;display:inline-block;margin-bottom:15px;margin-left:10px;">
-    📄 PDF
+    <a href="/exportar_pdf" style="
+        background:#dc2626;
+        padding:10px;
+        border-radius:6px;
+        color:white;
+        text-decoration:none;
+        display:inline-block;
+        margin-bottom:15px;
+        margin-left:10px;
+    ">
+        📄 PDF
     </a>
 
     <div style="background:#111;padding:15px;border-radius:8px;margin-bottom:20px;">
@@ -135,7 +149,6 @@ def estoque():
     </div>
 
     <div class="grid">
-
         <div class="box">
             <h3>➕ Novo Produto</h3>
 
@@ -144,7 +157,7 @@ def estoque():
                 <input name="qtd" placeholder="Quantidade" required>
                 <input name="categoria" placeholder="Categoria">
                 <input name="valor" placeholder="Valor (R$)">
-                <button>Adicionar</button>
+                <button type="submit">Adicionar</button>
             </form>
 
             <p>{msg}</p>
@@ -154,27 +167,105 @@ def estoque():
             <h3>📋 Produtos</h3>
 
             <table>
-            <tr>
-            <th>ID</th><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Valor</th><th></th>
-            </tr>
-            {tabela}
+                <tr>
+                    <th>ID</th>
+                    <th>Produto</th>
+                    <th>Qtd</th>
+                    <th>Categoria</th>
+                    <th>Valor</th>
+                    <th>Ações</th>
+                </tr>
+                {tabela}
             </table>
         </div>
-
     </div>
+
+    <style>
+        .grid {{
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+        }}
+
+        .box {{
+            background: #0b0b0b;
+            border: 1px solid #2c2c2c;
+            padding: 20px;
+            border-radius: 10px;
+        }}
+
+        input {{
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #111;
+            border: 1px solid #333;
+            color: white;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }}
+
+        button {{
+            width: 100%;
+            padding: 10px;
+            background: #3b82f6;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+        }}
+
+        button:hover {{
+            opacity: 0.9;
+        }}
+
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
+
+        th {{
+            background: #1a1a1a;
+            padding: 10px;
+            text-align: left;
+        }}
+
+        td {{
+            padding: 10px;
+            border-top: 1px solid #333;
+        }}
+
+        tr:hover {{
+            background: #111;
+        }}
+
+        @media (max-width: 900px) {{
+            .grid {{
+                grid-template-columns: 1fr;
+            }}
+        }}
+    </style>
     """)
 
 # ================= EXCEL =================
 @estoque_bp.route("/exportar_estoque")
 def exportar_estoque():
+    if "user" not in session:
+        return redirect("/")
+
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT produto, quantidade, categoria, valor FROM estoque")
+    cursor.execute("""
+        SELECT produto, quantidade, categoria, valor
+        FROM estoque
+        ORDER BY produto ASC
+    """)
     dados = cursor.fetchall()
 
     wb = Workbook()
     ws = wb.active
+    ws.title = "Estoque"
 
     ws.append(["Produto", "Qtd", "Categoria", "Valor Unitário", "Total"])
 
@@ -193,26 +284,37 @@ def exportar_estoque():
 
     devolver_conexao(conn)
 
-    return send_file(arquivo, as_attachment=True, download_name="estoque.xlsx")
+    return send_file(
+        arquivo,
+        as_attachment=True,
+        download_name="estoque.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 # ================= PDF =================
 @estoque_bp.route("/exportar_pdf")
 def exportar_pdf():
+    if "user" not in session:
+        return redirect("/")
+
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT produto, quantidade, categoria, valor FROM estoque")
+    cursor.execute("""
+        SELECT produto, quantidade, categoria, valor
+        FROM estoque
+        ORDER BY produto ASC
+    """)
     dados = cursor.fetchall()
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
-
     elementos = []
     styles = getSampleStyleSheet()
 
     try:
         elementos.append(Image("static/logo.png", width=60, height=60))
-    except:
+    except Exception:
         pass
 
     elementos.append(Spacer(1, 10))
@@ -226,13 +328,21 @@ def exportar_pdf():
     for p, q, c, v in dados:
         t = q * float(v or 0)
         total += t
-        tabela_dados.append([p, q, c or "-", f"R$ {v}", f"R$ {t}"])
+        tabela_dados.append([
+            p,
+            q,
+            c or "-",
+            f"R$ {float(v or 0):.2f}",
+            f"R$ {t:.2f}"
+        ])
 
-    tabela = Table(tabela_dados)
+    tabela = Table(tabela_dados, repeatRows=1)
     tabela.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.black),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.gray),
+        ("ALIGN", (1, 1), (-1, -1), "CENTER"),
     ]))
 
     elementos.append(tabela)
@@ -244,23 +354,12 @@ def exportar_pdf():
     buffer.seek(0)
     devolver_conexao(conn)
 
-    return send_file(buffer, as_attachment=True, download_name="relatorio.pdf")
-    th {{
-        background:#1a1a1a;
-        padding:10px;
-        text-align:left;
-    }}
-
-    td {{
-        padding:10px;
-        border-top:1px solid #333;
-    }}
-
-    tr:hover {{
-        background:#111;
-    }}
-    </style>
-    """)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name="relatorio.pdf",
+        mimetype="application/pdf"
+    )
 
 
 # ================= EXPORTAR EXCEL =================
