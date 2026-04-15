@@ -78,7 +78,7 @@ def container(c):
         body {{
             margin: 0;
             font-family: 'Inter', Arial;
-            background: #000;
+            background: #05070d;
             color: #d1d5db;
         }}
 
@@ -88,9 +88,10 @@ def container(c):
             justify-content: space-between;
             align-items: center;
             padding: 12px 20px;
-            background: #0a0a0a;
-            border-bottom: 1px solid #2a2a2a;
+            background: #0a0f1a;
+            border-bottom: 1px solid rgba(0,255,150,0.1);
             flex-wrap: wrap;
+            backdrop-filter: blur(10px);
         }}
 
         .logo-area {{
@@ -108,7 +109,7 @@ def container(c):
         .logo-text {{
             font-weight: 600;
             font-size: 16px;
-            color: #3b82f6;
+            color: #00ff9c;
         }}
 
         /* MENU */
@@ -124,13 +125,14 @@ def container(c):
         .menu li {{
             position: relative;
             padding: 8px 12px;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
+            transition: 0.2s;
         }}
 
         .menu li:hover {{
-            background: #1a1a1a;
+            background: rgba(0,255,150,0.08);
         }}
 
         .menu a {{
@@ -144,12 +146,12 @@ def container(c):
             position: absolute;
             top: 100%;
             left: 0;
-            background: #111;
+            background: #0b0f1a;
             list-style: none;
             padding: 0;
             min-width: 180px;
-            border: 1px solid #2a2a2a;
-            border-radius: 6px;
+            border: 1px solid rgba(0,255,150,0.1);
+            border-radius: 10px;
             overflow: hidden;
             z-index: 99;
         }}
@@ -160,7 +162,7 @@ def container(c):
         }}
 
         .submenu li:hover {{
-            background: #222;
+            background: rgba(0,255,150,0.08);
         }}
 
         .menu li:hover > .submenu {{
@@ -168,47 +170,74 @@ def container(c):
         }}
 
         .logout {{
-            color: #ef4444 !important;
+            color: #ff4d4d !important;
         }}
 
         /* CONTEÚDO */
         .conteudo {{
-            padding: 15px;
+            padding: 20px;
             max-width: 1400px;
             margin: auto;
         }}
 
         /* CARD */
         .card {{
-            background: #0b0b0b;
-            border: 1px solid #2c2c2c;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
+            background: linear-gradient(145deg, #0a0f1a, #05070d);
+            border: 1px solid rgba(0,255,150,0.08);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 15px;
+
+            box-shadow:
+                0 0 20px rgba(0,255,150,0.05),
+                inset 0 0 10px rgba(0,255,150,0.03);
+
+            transition: 0.3s;
+        }}
+
+        .card:hover {{
+            transform: translateY(-4px);
+            box-shadow:
+                0 0 30px rgba(0,255,150,0.12),
+                inset 0 0 15px rgba(0,255,150,0.05);
+        }}
+
+        .card h2, .card h3 {{
+            color: #00ff9c;
         }}
 
         .erro {{
-            color: #f87171;
+            color: #ff4d4d;
         }}
 
-        /* INPUTS MOBILE */
+        /* GRID */
+        .grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }}
+
+        /* INPUTS */
         input, select, button {{
             width: 100%;
             padding: 12px;
             margin-top: 8px;
-            border-radius: 8px;
-            border: none;
+            border-radius: 10px;
+            border: 1px solid #1f2937;
             font-size: 14px;
+            background: #0b0f1a;
+            color: #fff;
         }}
 
         button {{
-            background: #3b82f6;
-            color: white;
+            background: #00ff9c;
+            color: #000;
+            font-weight: bold;
             cursor: pointer;
         }}
 
         button:hover {{
-            background: #2563eb;
+            background: #00cc7a;
         }}
 
         /* RESPONSIVO */
