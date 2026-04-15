@@ -5,6 +5,11 @@ from permissoes import tem_permissao
 from openpyxl import Workbook
 from io import BytesIO
 
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+
 estoque_bp = Blueprint("estoque_bp", __name__)
 
 # ================= ESTOQUE =================
@@ -73,7 +78,7 @@ def estoque():
     total_qtd = sum([d[2] for d in dados])
     total_valor = sum([d[2] * float(d[4] or 0) for d in dados])
 
-    # ================= ALERTA ESTOQUE BAIXO =================
+    # ================= ALERTA =================
     cursor.execute("""
     SELECT produto, quantidade 
     FROM estoque 
@@ -116,20 +121,14 @@ def estoque():
 
     <h2>📦 ESTOQUE</h2>
 
-    <!-- BOTÃO EXCEL -->
-    <a href="/exportar_estoque" style="
-    background:#16a34a;
-    padding:10px;
-    border-radius:6px;
-    color:white;
-    text-decoration:none;
-    display:inline-block;
-    margin-bottom:15px;
-    ">
-    📥 Exportar Excel
+    <a href="/exportar_estoque" style="background:#16a34a;padding:10px;border-radius:6px;color:white;text-decoration:none;display:inline-block;margin-bottom:15px;">
+    📥 Excel
     </a>
 
-    <!-- RESUMO -->
+    <a href="/exportar_pdf" style="background:#dc2626;padding:10px;border-radius:6px;color:white;text-decoration:none;display:inline-block;margin-bottom:15px;margin-left:10px;">
+    📄 PDF
+    </a>
+
     <div style="background:#111;padding:15px;border-radius:8px;margin-bottom:20px;">
         <b>Quantidade total:</b> {total_qtd} <br>
         <b>Valor total:</b> R$ {total_valor:,.2f}
@@ -137,7 +136,6 @@ def estoque():
 
     <div class="grid">
 
-        <!-- FORM -->
         <div class="box">
             <h3>➕ Novo Produto</h3>
 
@@ -152,57 +150,101 @@ def estoque():
             <p>{msg}</p>
         </div>
 
-        <!-- TABELA -->
         <div class="box">
             <h3>📋 Produtos</h3>
 
             <table>
             <tr>
-            <th>ID</th>
-            <th>Produto</th>
-            <th>Qtd</th>
-            <th>Categoria</th>
-            <th>Valor</th>
-            <th></th>
+            <th>ID</th><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Valor</th><th></th>
             </tr>
             {tabela}
             </table>
         </div>
 
     </div>
+    """)
 
-    <style>
-    .grid {{
-        display:grid;
-        grid-template-columns:320px 1fr;
-        gap:20px;
-    }}
+# ================= EXCEL =================
+@estoque_bp.route("/exportar_estoque")
+def exportar_estoque():
+    conn = conectar()
+    cursor = conn.cursor()
 
-    input {{
-        width:100%;
-        padding:10px;
-        margin-bottom:10px;
-        background:#111;
-        border:1px solid #333;
-        color:white;
-        border-radius:6px;
-    }}
+    cursor.execute("SELECT produto, quantidade, categoria, valor FROM estoque")
+    dados = cursor.fetchall()
 
-    button {{
-        width:100%;
-        padding:10px;
-        background:#3b82f6;
-        border:none;
-        border-radius:6px;
-        color:white;
-        cursor:pointer;
-    }}
+    wb = Workbook()
+    ws = wb.active
 
-    table {{
-        width:100%;
-        border-collapse:collapse;
-    }}
+    ws.append(["Produto", "Qtd", "Categoria", "Valor Unitário", "Total"])
 
+    total = 0
+    for p, q, c, v in dados:
+        t = q * float(v or 0)
+        total += t
+        ws.append([p, q, c, float(v or 0), t])
+
+    ws.append([])
+    ws.append(["", "", "", "TOTAL", total])
+
+    arquivo = BytesIO()
+    wb.save(arquivo)
+    arquivo.seek(0)
+
+    devolver_conexao(conn)
+
+    return send_file(arquivo, as_attachment=True, download_name="estoque.xlsx")
+
+# ================= PDF =================
+@estoque_bp.route("/exportar_pdf")
+def exportar_pdf():
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT produto, quantidade, categoria, valor FROM estoque")
+    dados = cursor.fetchall()
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+
+    elementos = []
+    styles = getSampleStyleSheet()
+
+    try:
+        elementos.append(Image("static/logo.png", width=60, height=60))
+    except:
+        pass
+
+    elementos.append(Spacer(1, 10))
+    elementos.append(Paragraph("<b>KBSISTEMAS</b>", styles["Title"]))
+    elementos.append(Paragraph("Relatório Profissional de Estoque", styles["Heading2"]))
+    elementos.append(Spacer(1, 20))
+
+    tabela_dados = [["Produto", "Qtd", "Categoria", "Valor Unitário", "Total"]]
+
+    total = 0
+    for p, q, c, v in dados:
+        t = q * float(v or 0)
+        total += t
+        tabela_dados.append([p, q, c or "-", f"R$ {v}", f"R$ {t}"])
+
+    tabela = Table(tabela_dados)
+    tabela.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.black),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.gray),
+    ]))
+
+    elementos.append(tabela)
+    elementos.append(Spacer(1, 20))
+    elementos.append(Paragraph(f"<b>Total: R$ {total:.2f}</b>", styles["Heading2"]))
+
+    doc.build(elementos)
+
+    buffer.seek(0)
+    devolver_conexao(conn)
+
+    return send_file(buffer, as_attachment=True, download_name="relatorio.pdf")
     th {{
         background:#1a1a1a;
         padding:10px;
