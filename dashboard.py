@@ -77,29 +77,29 @@ def painel():
         <div class="wrap">
 
             <div class="topo">
-                <h2>🚀 Dashboard Premium</h2>
+                <h2>🚀 Dashboard</h2>
                 <span>{nome_mes} de {ano}</span>
             </div>
 
-            <!-- 🔥 CARDS GRANDES -->
+            <!-- CARDS -->
             <div class="cards">
 
-                <div class="card big">
+                <div class="card">
                     <span>📦 Produtos</span>
                     <h1>{total_produtos}</h1>
                 </div>
 
-                <div class="card big">
+                <div class="card">
                     <span>📊 Quantidade</span>
                     <h1>{total_qtd}</h1>
                 </div>
 
-                <div class="card big">
+                <div class="card">
                     <span>🔄 Movimentações</span>
                     <h1>{total_transferencias}</h1>
                 </div>
 
-                <div class="card big">
+                <div class="card">
                     <span>🟢 Online</span>
                     <h1>{usuarios_online}</h1>
                 </div>
@@ -159,7 +159,7 @@ def painel():
             margin-bottom:20px;
         }}
 
-        /* 🔥 CARDS */
+        /* CARDS */
         .cards {{
             display:grid;
             grid-template-columns: repeat(4,1fr);
@@ -169,16 +169,17 @@ def painel():
 
         .card {{
             background:#0b0b0b;
-            border:2px solid #3b82f6;
-            border-radius:10px;
+            border:none;
+            border-radius:12px;
             padding:15px;
             text-align:center;
             transition:0.3s;
+            box-shadow: 0 0 10px rgba(59,130,246,0.25);
         }}
 
         .card:hover {{
-            transform:scale(1.05);
-            box-shadow:0 0 15px #3b82f6;
+            transform: scale(1.03);
+            box-shadow: 0 0 20px rgba(59,130,246,0.5);
         }}
 
         .card h1 {{
@@ -195,9 +196,10 @@ def painel():
 
         .box {{
             background:#0b0b0b;
-            border:2px solid #3b82f6;
-            border-radius:10px;
+            border:none;
+            border-radius:12px;
             padding:15px;
+            box-shadow: 0 0 10px rgba(59,130,246,0.2);
         }}
 
         canvas {{
@@ -213,19 +215,25 @@ def painel():
         }}
 
         .head {{
+            background:#1a1a1a;
+            border:none;
+            border-radius:8px;
+            color:#3b82f6;
             text-align:center;
             padding:5px;
-            background:#1a1a1a;
-            border:2px solid #3b82f6;
-            border-radius:6px;
         }}
 
         .day {{
             background:#111;
-            border:2px solid #3b82f6;
-            border-radius:8px;
+            border:none;
+            border-radius:10px;
             padding:8px;
             min-height:70px;
+            box-shadow: inset 0 0 5px rgba(59,130,246,0.2);
+        }}
+
+        .numero {{
+            font-weight:bold;
         }}
 
         .total {{
