@@ -87,9 +87,10 @@ def container(c):
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 25px;
+            padding: 12px 20px;
             background: #0a0a0a;
             border-bottom: 1px solid #2a2a2a;
+            flex-wrap: wrap;
         }}
 
         .logo-area {{
@@ -117,6 +118,7 @@ def container(c):
             gap: 10px;
             margin: 0;
             padding: 0;
+            flex-wrap: wrap;
         }}
 
         .menu li {{
@@ -149,6 +151,7 @@ def container(c):
             border: 1px solid #2a2a2a;
             border-radius: 6px;
             overflow: hidden;
+            z-index: 99;
         }}
 
         .submenu li {{
@@ -170,7 +173,7 @@ def container(c):
 
         /* CONTEÚDO */
         .conteudo {{
-            padding: 25px;
+            padding: 15px;
             max-width: 1400px;
             margin: auto;
         }}
@@ -179,12 +182,62 @@ def container(c):
         .card {{
             background: #0b0b0b;
             border: 1px solid #2c2c2c;
-            padding: 20px;
+            padding: 15px;
             border-radius: 10px;
+            margin-bottom: 10px;
         }}
 
         .erro {{
             color: #f87171;
+        }}
+
+        /* INPUTS MOBILE */
+        input, select, button {{
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+        }}
+
+        button {{
+            background: #3b82f6;
+            color: white;
+            cursor: pointer;
+        }}
+
+        button:hover {{
+            background: #2563eb;
+        }}
+
+        /* RESPONSIVO */
+        @media (max-width: 768px) {{
+
+            .navbar {{
+                flex-direction: column;
+                align-items: flex-start;
+            }}
+
+            .menu {{
+                width: 100%;
+                flex-direction: column;
+                margin-top: 10px;
+            }}
+
+            .menu li {{
+                width: 100%;
+            }}
+
+            .submenu {{
+                position: relative;
+                border: none;
+            }}
+
+            .conteudo {{
+                padding: 10px;
+            }}
+
         }}
 
         </style>
