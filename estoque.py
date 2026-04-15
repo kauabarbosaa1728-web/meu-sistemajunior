@@ -43,10 +43,9 @@ def estoque():
         produto = request.form.get("produto")
         qtd = request.form.get("qtd")
         categoria = request.form.get("categoria")
-        fornecedor = request.form.get("fornecedor")
         valor = request.form.get("valor")
 
-        if produto and qtd and categoria:
+        if produto and qtd:
             try:
                 qtd = int(qtd)
                 valor = float(valor or 0)
@@ -59,19 +58,42 @@ def estoque():
                 conn.commit()
                 registrar_log(session["user"], "add_estoque", f"{produto} ({qtd})")
 
-                msg = "✅ Adicionado"
+                msg = "✅ Produto adicionado com sucesso"
 
             except Exception as e:
                 conn.rollback()
                 msg = f"❌ Erro: {e}"
 
     # ================= LISTAGEM =================
-    cursor.execute("SELECT id, produto, quantidade, categoria, valor FROM estoque ORDER BY id DESC")
+    cursor.execute("""
+    SELECT id, produto, quantidade, categoria, valor 
+    FROM estoque 
+    ORDER BY id DESC
+    """)
     dados = cursor.fetchall()
 
     total_qtd = sum([d[2] for d in dados])
     total_valor = sum([d[2] * float(d[4] or 0) for d in dados])
 
+    # ================= ALERTA ESTOQUE BAIXO =================
+    cursor.execute("""
+    SELECT produto, quantidade 
+    FROM estoque 
+    WHERE quantidade <= 10
+    ORDER BY quantidade ASC
+    LIMIT 5
+    """)
+    baixo = cursor.fetchall()
+
+    alerta_html = ""
+    if baixo:
+        alerta_html += "<div style='background:#330000;padding:10px;border-radius:8px;margin-bottom:15px;'>"
+        alerta_html += "<b>⚠️ Estoque baixo:</b><br>"
+        for p, q in baixo:
+            alerta_html += f"<span style='color:red'>{p} - {q} unidades</span><br>"
+        alerta_html += "</div>"
+
+    # ================= TABELA =================
     tabela = ""
     for i, p, q, c, v in dados:
         tabela += f"""
@@ -92,13 +114,14 @@ def estoque():
 
     return container(f"""
     {aviso}
+    {alerta_html}
 
-    <h2 style="margin-bottom:20px;">📦 ESTOQUE</h2>
+    <h2>📦 ESTOQUE</h2>
 
     <!-- RESUMO -->
     <div style="background:#111;padding:15px;border-radius:8px;margin-bottom:20px;">
-        <b>Quantidade total:</b> {total_qtd} &nbsp;&nbsp; | &nbsp;&nbsp;
-        <b>Custo total:</b> R$ {total_valor:,.2f}
+        <b>Quantidade total:</b> {total_qtd} <br>
+        <b>Valor total:</b> R$ {total_valor:,.2f}
     </div>
 
     <div class="grid">
@@ -111,7 +134,6 @@ def estoque():
                 <input name="produto" placeholder="Produto" required>
                 <input name="qtd" placeholder="Quantidade" required>
                 <input name="categoria" placeholder="Categoria">
-                <input name="fornecedor" placeholder="Fornecedor">
                 <input name="valor" placeholder="Valor (R$)">
                 <button>Adicionar</button>
             </form>
@@ -139,7 +161,6 @@ def estoque():
     </div>
 
     <style>
-
     .grid {{
         display:grid;
         grid-template-columns:320px 1fr;
@@ -169,7 +190,6 @@ def estoque():
     table {{
         width:100%;
         border-collapse:collapse;
-        font-size:14px;
     }}
 
     th {{
@@ -186,95 +206,8 @@ def estoque():
     tr:hover {{
         background:#111;
     }}
-
     </style>
     """)
-
-    # ================= ADICIONAR =================
-    if request.method == "POST":
-        produto = request.form.get("produto")
-        qtd = request.form.get("qtd")
-        categoria = request.form.get("categoria")
-        fornecedor = request.form.get("fornecedor")
-        valor = request.form.get("valor")
-
-        if produto and qtd and categoria:
-            try:
-                qtd = int(qtd)
-                valor = float(valor or 0)
-
-                cursor.execute("""
-                INSERT INTO estoque (produto, quantidade, categoria, valor)
-                VALUES (%s,%s,%s,%s)
-                """, (produto, qtd, categoria, valor))
-
-                conn.commit()
-                registrar_log(session["user"], "add_estoque", produto)
-
-                msg = "✅ Adicionado"
-
-            except Exception as e:
-                conn.rollback()
-                msg = f"❌ Erro: {e}"
-
-    # ================= LISTAGEM =================
-    cursor.execute("SELECT id, produto, quantidade, categoria, valor FROM estoque ORDER BY id DESC")
-    dados = cursor.fetchall()
-
-    total_qtd = sum([d[2] for d in dados])
-    total_valor = sum([d[2] * float(d[4] or 0) for d in dados])
-
-    tabela = ""
-    for i, p, q, c, v in dados:
-        tabela += f"""
-        <tr>
-        <td>{i}</td>
-        <td>{p}</td>
-        <td>{q}</td>
-        <td>{c}</td>
-        <td>R$ {float(v or 0):,.2f}</td>
-        <td>
-        <a href='/editar_estoque/{i}'>✏️ Editar</a> |
-        <a href='/excluir_estoque/{i}' onclick="return confirm('Tem certeza?')">🗑️ Excluir</a>
-        </td>
-        </tr>
-        """
-
-    devolver_conexao(conn)
-
-    return container(f"""
-    {aviso}
-
-    <div class="card">
-    <h2>📦 ESTOQUE</h2>
-
-    <div style="margin-bottom:15px; padding:10px; background:#111; border-radius:8px;">
-        <b>Quantidade total:</b> {total_qtd} <br>
-        <b>Custo total:</b> R$ {total_valor:,.2f}
-    </div>
-
-    <a href="/entrada">➕ Entrada de Produtos</a>
-
-    <form method="POST" style="display:flex; flex-direction:column; gap:10px; max-width:300px;">
-        <input name="produto" placeholder="Produto">
-        <input name="qtd" placeholder="Quantidade">
-        <input name="categoria" placeholder="Categoria">
-        <input name="fornecedor" placeholder="Fornecedor">
-        <input name="valor" placeholder="Valor (R$)">
-        <button>Adicionar</button>
-    </form>
-
-    <p>{msg}</p>
-
-    <table>
-    <tr>
-    <th>ID</th><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Valor</th><th>Ações</th>
-    </tr>
-    {tabela}
-    </table>
-    </div>
-    """)
-
 # ================= EDITAR =================
 # ================= EDITAR =================
 @estoque_bp.route("/editar_estoque/<int:id>", methods=["GET", "POST"])
