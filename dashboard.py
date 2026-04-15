@@ -29,7 +29,7 @@ def painel():
         cursor.execute("SELECT COUNT(*) FROM usuarios WHERE online=1")
         usuarios_online = cursor.fetchone()[0]
 
-        # ===== CATEGORIAS (GRÁFICO) =====
+        # ===== CATEGORIAS =====
         cursor.execute("""
         SELECT COALESCE(categoria, 'Sem categoria'), SUM(quantidade)
         FROM estoque
@@ -40,12 +40,20 @@ def painel():
         nomes = [c[0] for c in categorias]
         valores = [c[1] for c in categorias]
 
-        # ===== CALENDÁRIO =====
+        # ===== MÊS EM PT-BR =====
         now = datetime.now()
         ano = now.year
         mes = now.month
-        nome_mes = calendar.month_name[mes].capitalize()
 
+        meses = [
+            "", "Janeiro", "Fevereiro", "Março", "Abril", "Maio",
+            "Junho", "Julho", "Agosto", "Setembro", "Outubro",
+            "Novembro", "Dezembro"
+        ]
+
+        nome_mes = meses[mes]
+
+        # ===== CALENDÁRIO =====
         cal = calendar.monthcalendar(ano, mes)
         dias_semana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
 
@@ -138,7 +146,7 @@ def painel():
         <style>
 
         .wrap {{
-            max-width: 1400px;
+            max-width: 1200px;
             margin: auto;
         }}
 
@@ -147,16 +155,14 @@ def painel():
             justify-content:space-between;
             align-items:center;
             margin-bottom:20px;
-            flex-wrap:wrap;
         }}
 
+        /* 🔥 GRID PROFISSIONAL */
         .dashboard {{
-            display:flex;
-            gap:20px;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
         }}
-
-        .left {{ width:25%; }}
-        .right {{ width:75%; }}
 
         .box {{
             background:#0b0b0b;
@@ -207,20 +213,16 @@ def painel():
             border:none;
         }}
 
-        /* 🔥 MOBILE */
+        /* MOBILE */
         @media (max-width: 768px) {{
 
             .dashboard {{
-                flex-direction: column;
-            }}
-
-            .left, .right {{
-                width: 100%;
+                grid-template-columns: 1fr;
             }}
 
             .topo {{
                 flex-direction: column;
-                align-items:flex-start;
+                align-items: flex-start;
                 gap:5px;
             }}
 
