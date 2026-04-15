@@ -142,18 +142,43 @@ def painel():
             options: {{
                 responsive: true,
                 maintainAspectRatio: true,
+                cutout: '70%',
                 plugins: {{
                     legend: {{
                         position: 'bottom',
                         labels: {{
                             color: '#ccc',
-                            font: {{
-                                size: 14
-                            }}
+                            font: {{ size: 14 }}
                         }}
                     }}
+                }},
+                animation: {{
+                    animateRotate: true,
+                    duration: 1200
                 }}
-            }}
+            }},
+            plugins: [{{
+                id: 'textoCentro',
+                beforeDraw(chart) {{
+                    const {{width, height, ctx}} = chart;
+                    ctx.restore();
+
+                    const total = chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
+
+                    ctx.font = 'bold 28px Arial';
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    ctx.fillText(total, width / 2, height / 2);
+
+                    ctx.font = '14px Arial';
+                    ctx.fillStyle = '#aaa';
+                    ctx.fillText('Total', width / 2, height / 2 + 25);
+
+                    ctx.save();
+                }}
+            }}]
         }});
         </script>
 
@@ -203,10 +228,9 @@ def painel():
             box-shadow: 0 0 15px rgba(59,130,246,0.2);
         }}
 
-        /* 🔥 TAMANHO PERFEITO DO GRÁFICO */
         .grafico {{
-            width: 300px !important;
-            height: 300px !important;
+            width: 280px !important;
+            height: 280px !important;
             margin: auto;
         }}
 
