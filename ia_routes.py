@@ -1,58 +1,75 @@
 from flask import Blueprint, request, session, redirect
-from openai import OpenAI
 from banco import conectar, devolver_conexao
-import os
 
 ia_bp = Blueprint("ia_bp", __name__)
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# ================= IA LOCAL (GRÁTIS) =================
+def resposta_inteligente(pergunta):
+    pergunta = pergunta.lower()
 
-# ================= CONTEXTO DO SISTEMA =================
-def contexto_sistema():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) FROM estoque")
-    total_produtos = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COALESCE(SUM(quantidade),0) FROM estoque")
-    total_qtd = cursor.fetchone()[0]
-
-    devolver_conexao(conn)
-
-    return f"""
-    Você é uma IA do sistema KBSISTEMAS.
-    Responda de forma simples, amigável e direta.
-
-    Dados atuais:
-    - Total de produtos: {total_produtos}
-    - Quantidade total: {total_qtd}
-
-    Se perguntarem algo do sistema, use esses dados.
-    """
-
-# ================= FALLBACK INTELIGENTE =================
-def resposta_local(pergunta):
-    pergunta = pergunta.lower()
-
-    if "oi" in pergunta or "ola" in pergunta:
-        return "👋 Fala! Como posso te ajudar no sistema?"
-
-    if "tudo bem" in pergunta:
-        return "Tudo certo 😎 e com você?"
-
-    if "quantos produtos" in pergunta:
-        conn = conectar()
-        cursor = conn.cursor()
+    # ===== TOTAL DE PRODUTOS =====
+    if any(p in pergunta for p in ["quantos", "total"]) and any(p in pergunta for p in ["produto", "material", "item"]):
         cursor.execute("SELECT COUNT(*) FROM estoque")
         total = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COALESCE(SUM(quantidade),0) FROM estoque")
+        qtd = cursor.fetchone()[0]
+
         devolver_conexao(conn)
-        return f"📦 Você tem {total} produtos cadastrados."
+        return f"📦 Você tem {total} produtos cadastrados com {qtd} itens no total."
 
-    return "🤖 Tenta perguntar sobre estoque ou algo do sistema 😉"
+    # ===== PRODUTO ESPECÍFICO =====
+    if "tem" in pergunta or "quantidade" in pergunta:
+        palavras = pergunta.split()
 
+        for palavra in palavras:
+            cursor.execute(
+                "SELECT produto, quantidade FROM estoque WHERE LOWER(produto) LIKE %s LIMIT 1",
+                (f"%{palavra}%",)
+            )
+            resultado = cursor.fetchone()
 
-# ================= IA =================
+            if resultado:
+                devolver_conexao(conn)
+                return f"📦 O produto '{resultado[0]}' tem {resultado[1]} unidades."
+
+    # ===== LISTAR ESTOQUE =====
+    if any(p in pergunta for p in ["listar", "mostrar", "estoque"]):
+        cursor.execute("SELECT produto, quantidade FROM estoque LIMIT 10")
+        dados = cursor.fetchall()
+
+        if not dados:
+            devolver_conexao(conn)
+            return "📭 Seu estoque está vazio."
+
+        texto = "📋 Estoque:\n"
+        for p, q in dados:
+            texto += f"- {p}: {q}\n"
+
+        devolver_conexao(conn)
+        return texto
+
+    # ===== MAIOR ESTOQUE =====
+    if any(p in pergunta for p in ["maior", "mais"]):
+        cursor.execute("SELECT produto, quantidade FROM estoque ORDER BY quantidade DESC LIMIT 1")
+        p = cursor.fetchone()
+
+        devolver_conexao(conn)
+        if p:
+            return f"🏆 Produto com maior estoque: {p[0]} ({p[1]} unidades)"
+
+    # ===== SAUDAÇÃO =====
+    if any(p in pergunta for p in ["oi", "ola", "eai"]):
+        devolver_conexao(conn)
+        return "👋 Fala! Pergunta algo sobre o estoque 😉"
+
+    devolver_conexao(conn)
+    return "🤖 Não entendi. Tente perguntar sobre estoque."
+
+# ================= ROTA =================
 @ia_bp.route("/ia", methods=["GET", "POST"])
 def ia():
     if "user" not in session:
@@ -64,22 +81,7 @@ def ia():
     if request.method == "POST":
         pergunta = request.form.get("pergunta")
 
-        try:
-            mensagens = [
-                {"role": "system", "content": contexto_sistema()}
-            ] + session["chat"] + [
-                {"role": "user", "content": pergunta}
-            ]
-
-            resposta_openai = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=mensagens
-            )
-
-            resposta = resposta_openai.choices[0].message.content
-
-        except Exception:
-            resposta = resposta_local(pergunta)
+        resposta = resposta_inteligente(pergunta)
 
         session["chat"].append({"role": "user", "content": pergunta})
         session["chat"].append({"role": "assistant", "content": resposta})
@@ -148,12 +150,12 @@ def ia():
     </style>
 
     <div class="container">
-        <h2>💬 IA KBSISTEMAS</h2>
+        <h2>💬 IA KBSISTEMAS (GRÁTIS)</h2>
 
         {historico}
 
         <form method="post" class="input-box">
-            <input name="pergunta" placeholder="Pergunte qualquer coisa...">
+            <input name="pergunta" placeholder="Pergunte sobre o sistema...">
             <button>Enviar</button>
         </form>
     </div>
