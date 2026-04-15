@@ -95,26 +95,27 @@ def painel():
                 <div class="card"><h1>{usuarios_online}</h1><p>Online</p></div>
             </div>
 
-            <!-- GRÁFICOS -->
+            <!-- GRID POWER BI -->
             <div class="grid">
 
-                <div class="box">
-                    <h3>Distribuição</h3>
+                <!-- PRINCIPAL -->
+                <div class="box grande">
+                    <h3>Distribuição Geral</h3>
                     <canvas id="pizza"></canvas>
                 </div>
 
                 <div class="box">
-                    <h3>📈 Movimentações</h3>
+                    <h3>Movimentações</h3>
                     <canvas id="linha"></canvas>
                 </div>
 
                 <div class="box">
-                    <h3>🔥 Top Produtos</h3>
+                    <h3>Top Produtos</h3>
                     <canvas id="top"></canvas>
                 </div>
 
                 <div class="box">
-                    <h3>⚠️ Baixo Estoque</h3>
+                    <h3>Baixo Estoque</h3>
                     <canvas id="baixo"></canvas>
                 </div>
 
@@ -124,98 +125,90 @@ def painel():
 
         <script>
 
-        // 🔥 DISTRIBUIÇÃO
         new Chart(document.getElementById('pizza'), {{
             type:'doughnut',
-            data:{{
-                labels:{json.dumps(nomes)},
-                datasets:[{{data:{json.dumps(valores)}}}]
-            }},
-            options:{{
-                cutout:'70%',
-                plugins:{{legend:{{position:'bottom'}}}}
-            }}
+            data:{{labels:{json.dumps(nomes)},datasets:[{{data:{json.dumps(valores)}}}]}}
         }});
 
-        // 📈 MOVIMENTAÇÃO
         new Chart(document.getElementById('linha'), {{
             type:'line',
             data:{{
                 labels:{json.dumps(dias_labels)},
-                datasets:[{{
-                    data:{json.dumps(dias_valores)},
-                    borderColor:'#22c55e',
-                    tension:0.4
-                }}]
+                datasets:[{{data:{json.dumps(dias_valores)},borderColor:'#22c55e',tension:0.4}}]
             }}
         }});
 
-        // 🔥 TOP PRODUTOS
         new Chart(document.getElementById('top'), {{
             type:'bar',
             data:{{
                 labels:{json.dumps(top_nomes)},
-                datasets:[{{
-                    data:{json.dumps(top_valores)},
-                    backgroundColor:'#3b82f6'
-                }}]
+                datasets:[{{data:{json.dumps(top_valores)},backgroundColor:'#3b82f6'}}]
             }}
         }});
 
-        // ⚠️ BAIXO ESTOQUE
         new Chart(document.getElementById('baixo'), {{
             type:'bar',
             data:{{
                 labels:{json.dumps(baixo_nomes)},
-                datasets:[{{
-                    data:{json.dumps(baixo_valores)},
-                    backgroundColor:'#ef4444'
-                }}]
+                datasets:[{{data:{json.dumps(baixo_valores)},backgroundColor:'#ef4444'}}]
             }}
         }});
 
         </script>
 
         <style>
-        .wrap{{max-width:1200px;margin:auto}}
 
-        .cards{{
-            display:grid;
-            grid-template-columns:repeat(4,1fr);
-            gap:15px;
-            margin-bottom:20px
+        .wrap {{
+            max-width: 1200px;
+            margin: auto;
         }}
 
-        .card{{
-            background:#0b0b0b;
-            padding:20px;
-            border-radius:10px;
-            text-align:center;
-            box-shadow:0 0 10px #3b82f640
+        .cards {{
+            display: grid;
+            grid-template-columns: repeat(4,1fr);
+            gap: 15px;
+            margin-bottom: 20px;
         }}
 
-        .grid{{
-            display:grid;
-            grid-template-columns:1fr 1fr;
-            gap:20px
+        .card {{
+            background: #0b0b0b;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 10px #3b82f640;
         }}
 
-        .box{{
-            background:#0b0b0b;
-            padding:15px;
-            border-radius:10px;
-            box-shadow:0 0 10px #3b82f640
+        /* POWER BI GRID */
+        .grid {{
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 20px;
         }}
 
-        canvas{{
-            width:100%!important;
-            height:250px!important
+        .box {{
+            background: #0b0b0b;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #3b82f640;
+        }}
+
+        .grande {{
+            grid-column: 1 / 2;
+            grid-row: 1 / 3;
+        }}
+
+        canvas {{
+            width: 100% !important;
+            height: 300px !important;
         }}
 
         @media(max-width:768px){{
             .cards{{grid-template-columns:1fr 1fr}}
             .grid{{grid-template-columns:1fr}}
+            .grande{{grid-column:auto;grid-row:auto}}
         }}
+
         </style>
         """
 
