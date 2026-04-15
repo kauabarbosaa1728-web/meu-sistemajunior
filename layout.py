@@ -1,8 +1,8 @@
 def acesso_negado():
     return container("""
     <div class="card">
-        <h2 class="erro">⛔ Você não tem autorização para acessar esta área.</h2>
-        <p>Fale com um administrador para liberar esta permissão.</p>
+        <h2 class="erro">⛔ Acesso negado</h2>
+        <p>Você não tem permissão para acessar esta área.</p>
         <p><a href="/painel">⬅ Voltar para o painel</a></p>
     </div>
     """)
@@ -18,10 +18,10 @@ def topo():
 
         <ul class="menu">
 
-            <li><a href="/painel">Painel</a></li>
+            <li><a href="/painel">📊 Painel</a></li>
 
             <li>
-                Estoque
+                📦 Estoque
                 <ul class="submenu">
                     <li><a href="/estoque">Ver Estoque</a></li>
                     <li><a href="/transferencia">Transferência</a></li>
@@ -29,29 +29,29 @@ def topo():
             </li>
 
             <li>
-                Financeiro
+                💰 Financeiro
                 <ul class="submenu">
-                    <li><a href="/financeiro">💰 Financeiro</a></li>
+                    <li><a href="/financeiro">Ver Financeiro</a></li>
                 </ul>
             </li>
 
             <li>
-                Relatórios
+                📄 Relatórios
                 <ul class="submenu">
                     <li><a href="/historico">Histórico</a></li>
                 </ul>
             </li>
 
             <li>
-                Sistema
+                ⚙️ Sistema
                 <ul class="submenu">
                     <li><a href="/usuarios">Usuários</a></li>
                     <li><a href="/logs">Logs</a></li>
-                    <li><a href="/ia">🤖 IA</a></li>
+                    <li><a href="/ia">IA</a></li>
                 </ul>
             </li>
 
-            <li><a href="/logout" class="logout">Sair</a></li>
+            <li><a href="/logout" class="logout">🚪 Sair</a></li>
 
         </ul>
     </div>
@@ -65,10 +65,12 @@ def container(c):
         <title>KBSISTEMAS</title>
         <link rel="icon" href="/static/logo.png">
 
-        <!-- 🔥 FONTE PROFISSIONAL -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <!-- FONTE -->
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 
-        <!-- 🔥 CHART JS -->
+        <!-- CHART -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
         <style>
@@ -105,6 +107,7 @@ def container(c):
         .logo-text {{
             font-weight: 600;
             font-size: 16px;
+            color: #3b82f6;
         }}
 
         /* MENU */
