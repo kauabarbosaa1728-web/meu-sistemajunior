@@ -109,7 +109,7 @@ def painel():
 
                 <div class="box">
                     <h3>Distribuição</h3>
-                    <canvas id="graficoPizza"></canvas>
+                    <canvas id="graficoPizza" class="grafico"></canvas>
                 </div>
 
                 <div class="box">
@@ -203,9 +203,10 @@ def painel():
             box-shadow: 0 0 15px rgba(59,130,246,0.2);
         }}
 
-        canvas {{
-            max-width: 400px;
-            max-height: 400px;
+        /* 🔥 TAMANHO PERFEITO DO GRÁFICO */
+        .grafico {{
+            width: 300px !important;
+            height: 300px !important;
             margin: auto;
         }}
 
