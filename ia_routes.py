@@ -1,17 +1,37 @@
 from flask import Blueprint, request, session, redirect
 from banco import conectar, devolver_conexao
+import difflib
 
 ia_bp = Blueprint("ia_bp", __name__)
 
-# ================= IA LOCAL (GRÁTIS) =================
+# ================= BUSCAR PRODUTO INTELIGENTE =================
+def encontrar_produto(pergunta):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT produto FROM estoque")
+    produtos = [p[0].lower() for p in cursor.fetchall()]
+
+    devolver_conexao(conn)
+
+    palavras = pergunta.lower().split()
+
+    for palavra in palavras:
+        resultado = difflib.get_close_matches(palavra, produtos, n=1, cutoff=0.6)
+        if resultado:
+            return resultado[0]
+
+    return None
+
+# ================= IA INTELIGENTE =================
 def resposta_inteligente(pergunta):
-    pergunta = pergunta.lower()
+    pergunta_lower = pergunta.lower()
 
     conn = conectar()
     cursor = conn.cursor()
 
-    # ===== TOTAL DE PRODUTOS =====
-    if any(p in pergunta for p in ["quantos", "total"]) and any(p in pergunta for p in ["produto", "material", "item"]):
+    # ===== TOTAL =====
+    if any(p in pergunta_lower for p in ["quantos", "total", "temos", "existem"]):
         cursor.execute("SELECT COUNT(*) FROM estoque")
         total = cursor.fetchone()[0]
 
@@ -19,55 +39,57 @@ def resposta_inteligente(pergunta):
         qtd = cursor.fetchone()[0]
 
         devolver_conexao(conn)
-        return f"📦 Você tem {total} produtos cadastrados com {qtd} itens no total."
+        return f"📦 Atualmente você tem {total} produtos cadastrados, somando {qtd} itens no estoque."
 
-    # ===== PRODUTO ESPECÍFICO =====
-    if "tem" in pergunta or "quantidade" in pergunta:
-        palavras = pergunta.split()
+    # ===== BUSCAR PRODUTO INTELIGENTE =====
+    produto = encontrar_produto(pergunta)
 
-        for palavra in palavras:
-            cursor.execute(
-                "SELECT produto, quantidade FROM estoque WHERE LOWER(produto) LIKE %s LIMIT 1",
-                (f"%{palavra}%",)
-            )
-            resultado = cursor.fetchone()
+    if produto:
+        cursor.execute(
+            "SELECT produto, quantidade FROM estoque WHERE LOWER(produto)=%s",
+            (produto,)
+        )
+        resultado = cursor.fetchone()
 
-            if resultado:
-                devolver_conexao(conn)
-                return f"📦 O produto '{resultado[0]}' tem {resultado[1]} unidades."
+        devolver_conexao(conn)
 
-    # ===== LISTAR ESTOQUE =====
-    if any(p in pergunta for p in ["listar", "mostrar", "estoque"]):
+        if resultado:
+            return f"📦 O produto '{resultado[0]}' possui {resultado[1]} unidades no estoque."
+
+    # ===== LISTAR =====
+    if any(p in pergunta_lower for p in ["listar", "mostrar", "ver", "estoque", "produtos"]):
         cursor.execute("SELECT produto, quantidade FROM estoque LIMIT 10")
         dados = cursor.fetchall()
 
+        devolver_conexao(conn)
+
         if not dados:
-            devolver_conexao(conn)
             return "📭 Seu estoque está vazio."
 
-        texto = "📋 Estoque:\n"
+        texto = "📋 Aqui estão alguns produtos:\n"
         for p, q in dados:
             texto += f"- {p}: {q}\n"
 
-        devolver_conexao(conn)
         return texto
 
-    # ===== MAIOR ESTOQUE =====
-    if any(p in pergunta for p in ["maior", "mais"]):
+    # ===== MAIOR =====
+    if any(p in pergunta_lower for p in ["mais", "maior", "top"]):
         cursor.execute("SELECT produto, quantidade FROM estoque ORDER BY quantidade DESC LIMIT 1")
         p = cursor.fetchone()
 
         devolver_conexao(conn)
+
         if p:
-            return f"🏆 Produto com maior estoque: {p[0]} ({p[1]} unidades)"
+            return f"🏆 O produto com maior quantidade é '{p[0]}' com {p[1]} unidades."
 
     # ===== SAUDAÇÃO =====
-    if any(p in pergunta for p in ["oi", "ola", "eai"]):
+    if any(p in pergunta_lower for p in ["oi", "ola", "eai", "fala"]):
         devolver_conexao(conn)
-        return "👋 Fala! Pergunta algo sobre o estoque 😉"
+        return "👋 Fala! Pode perguntar qualquer coisa sobre o sistema."
 
     devolver_conexao(conn)
-    return "🤖 Não entendi. Tente perguntar sobre estoque."
+
+    return "🤖 Não entendi muito bem, mas posso te ajudar com estoque, produtos e quantidades."
 
 # ================= ROTA =================
 @ia_bp.route("/ia", methods=["GET", "POST"])
@@ -95,67 +117,21 @@ def ia():
 
     return f"""
     <style>
-        body {{
-            background:#0f0f0f;
-            font-family: Arial;
-            color:white;
-        }}
-
-        .container {{
-            width:90%;
-            max-width:800px;
-            margin:auto;
-            margin-top:40px;
-        }}
-
-        .msg {{
-            padding:12px;
-            border-radius:10px;
-            margin:10px 0;
-            max-width:70%;
-        }}
-
-        .user {{
-            background:#2b2b2b;
-            margin-left:auto;
-        }}
-
-        .bot {{
-            background:#1a1a1a;
-            margin-right:auto;
-        }}
-
-        .input-box {{
-            display:flex;
-            margin-top:20px;
-        }}
-
-        input {{
-            flex:1;
-            padding:15px;
-            border-radius:10px;
-            border:none;
-            background:#2b2b2b;
-            color:white;
-        }}
-
-        button {{
-            padding:15px;
-            margin-left:10px;
-            border:none;
-            border-radius:10px;
-            background:white;
-            cursor:pointer;
-        }}
+        body {{ background:#0f0f0f; font-family: Arial; color:white; }}
+        .container {{ width:90%; max-width:800px; margin:auto; margin-top:40px; }}
+        .msg {{ padding:12px; border-radius:10px; margin:10px 0; max-width:70%; }}
+        .user {{ background:#2b2b2b; margin-left:auto; }}
+        .bot {{ background:#1a1a1a; margin-right:auto; }}
+        .input-box {{ display:flex; margin-top:20px; }}
+        input {{ flex:1; padding:15px; border-radius:10px; border:none; background:#2b2b2b; color:white; }}
+        button {{ padding:15px; margin-left:10px; border:none; border-radius:10px; background:white; cursor:pointer; }}
     </style>
 
     <div class="container">
-        <h2>💬 IA KBSISTEMAS (GRÁTIS)</h2>
-
+        <h2>💬 IA KBSISTEMAS</h2>
         {historico}
-
         <form method="post" class="input-box">
-            <input name="pergunta" placeholder="Pergunte sobre o sistema...">
+            <input name="pergunta" placeholder="Pergunte qualquer coisa...">
             <button>Enviar</button>
         </form>
     </div>
