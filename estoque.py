@@ -248,6 +248,7 @@ def estoque():
     """)
 
 # ================= EXCEL =================
+# ================= EXCEL =================
 @estoque_bp.route("/exportar_estoque")
 def exportar_estoque():
     if "user" not in session:
@@ -291,6 +292,7 @@ def exportar_estoque():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+
 # ================= PDF =================
 @estoque_bp.route("/exportar_pdf")
 def exportar_pdf():
@@ -314,7 +316,7 @@ def exportar_pdf():
 
     try:
         elementos.append(Image("static/logo.png", width=60, height=60))
-    except Exception:
+    except:
         pass
 
     elementos.append(Spacer(1, 10))
@@ -362,50 +364,6 @@ def exportar_pdf():
     )
 
 
-# ================= EXPORTAR EXCEL =================
-@estoque_bp.route("/exportar_estoque")
-def exportar_estoque():
-    if "user" not in session:
-        return redirect("/")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    SELECT produto, quantidade, categoria, valor 
-    FROM estoque
-    """)
-    dados = cursor.fetchall()
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Estoque"
-
-    ws.append(["Produto", "Quantidade", "Categoria", "Valor Unitário", "Valor Total"])
-
-    total_geral = 0
-
-    for p, q, c, v in dados:
-        valor_total = q * float(v or 0)
-        total_geral += valor_total
-        ws.append([p, q, c, float(v or 0), valor_total])
-
-    ws.append([])
-    ws.append(["", "", "", "TOTAL:", total_geral])
-
-    arquivo = BytesIO()
-    wb.save(arquivo)
-    arquivo.seek(0)
-
-    devolver_conexao(conn)
-
-    return send_file(
-        arquivo,
-        as_attachment=True,
-        download_name="estoque.xlsx",
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-# ================= EDITAR =================
 # ================= EDITAR =================
 @estoque_bp.route("/editar_estoque/<int:id>", methods=["GET", "POST"])
 def editar_estoque(id):
@@ -414,7 +372,6 @@ def editar_estoque(id):
 
     status = verificar_pagamento(session["user"])
 
-    # 🔥 LIBERA ADMIN
     if status == "bloqueado" and session.get("cargo") != "admin":
         return "<h1 style='color:red'>🚫 Sistema bloqueado</h1>"
 
@@ -425,7 +382,7 @@ def editar_estoque(id):
         produto = request.form.get("produto")
         qtd = request.form.get("qtd")
         categoria = request.form.get("categoria")
-        valor = request.form.get("valor")  # 🔥 NOVO
+        valor = request.form.get("valor")
 
         try:
             qtd = int(qtd)
@@ -453,7 +410,6 @@ def editar_estoque(id):
             </div>
             """)
 
-    # 🔥 AGORA BUSCA VALOR TAMBÉM
     cursor.execute("SELECT produto, quantidade, categoria, valor FROM estoque WHERE id=%s", (id,))
     dado = cursor.fetchone()
 
@@ -475,67 +431,11 @@ def editar_estoque(id):
         <input name="produto" value="{dado[0]}" placeholder="Produto">
         <input name="qtd" value="{dado[1]}" placeholder="Quantidade">
         <input name="categoria" value="{dado[2]}" placeholder="Categoria">
-        <input name="valor" value="{float(dado[3] or 0):.2f}" placeholder="Valor (R$)"> <!-- 🔥 NOVO -->
+        <input name="valor" value="{float(dado[3] or 0):.2f}" placeholder="Valor (R$)">
         <button>Salvar</button>
     </form>
     </div>
     """)
-
-    if "user" not in session:
-        return redirect("/")
-
-    status = verificar_pagamento(session["user"])
-
-    # 🔥 CORREÇÃO AQUI (libera admin)
-    if status == "bloqueado" and session.get("cargo") != "admin":
-        return "<h1 style='color:red'>🚫 Sistema bloqueado</h1>"
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    if request.method == "POST":
-        produto = request.form.get("produto")
-        qtd = request.form.get("qtd")
-        categoria = request.form.get("categoria")
-
-        try:
-            qtd = int(qtd)
-
-            cursor.execute("""
-            UPDATE estoque SET produto=%s, quantidade=%s, categoria=%s
-            WHERE id=%s
-            """, (produto, qtd, categoria, id))
-
-            conn.commit()
-            registrar_log(session["user"], "editar_estoque", produto)
-
-            devolver_conexao(conn)
-            return redirect("/estoque")
-
-        except Exception as e:
-            conn.rollback()
-            return container(f"""
-            <div class="card">
-            <h2 style='color:red'>❌ Erro ao atualizar</h2>
-            <p>{e}</p>
-            <a href="/estoque">⬅ Voltar</a>
-            </div>
-            """)
-
-    cursor.execute("SELECT produto, quantidade, categoria FROM estoque WHERE id=%s", (id,))
-    dado = cursor.fetchone()
-
-    devolver_conexao(conn)
-
-    # 🔥 proteção caso não encontre o produto
-    if not dado:
-        return container("""
-        <div class="card">
-        <h2 style='color:red'>❌ Produto não encontrado</h2>
-        <a href="/estoque">⬅ Voltar</a>
-        </div>
-        """)
-
     return container(f"""
     <div class="card">
     <h2>✏️ EDITAR PRODUTO</h2>
