@@ -81,7 +81,6 @@ def painel():
                 <span>{nome_mes} de {ano}</span>
             </div>
 
-            <!-- CARDS -->
             <div class="cards">
 
                 <div class="card">
@@ -136,12 +135,24 @@ def painel():
                     backgroundColor: [
                         '#3b82f6','#22c55e','#f59e0b','#ef4444',
                         '#8b5cf6','#06b6d4','#84cc16','#f97316'
-                    ]
+                    ],
+                    borderWidth: 0
                 }}]
             }},
             options: {{
                 responsive: true,
-                maintainAspectRatio: false
+                maintainAspectRatio: true,
+                plugins: {{
+                    legend: {{
+                        position: 'bottom',
+                        labels: {{
+                            color: '#ccc',
+                            font: {{
+                                size: 14
+                            }}
+                        }}
+                    }}
+                }}
             }}
         }});
         </script>
@@ -159,7 +170,6 @@ def painel():
             margin-bottom:30px;
         }}
 
-        /* CARDS */
         .cards {{
             display:grid;
             grid-template-columns: repeat(4,1fr);
@@ -169,20 +179,16 @@ def painel():
 
         .card {{
             background:#0b0b0b;
-            border:none;
             border-radius:15px;
             padding:25px;
             text-align:center;
-            transition:0.3s;
             box-shadow: 0 0 15px rgba(59,130,246,0.25);
         }}
 
         .card h1 {{
-            margin-top:10px;
             font-size:40px;
         }}
 
-        /* DASHBOARD */
         .dashboard {{
             display:grid;
             grid-template-columns:1fr 1fr;
@@ -191,18 +197,18 @@ def painel():
 
         .box {{
             background:#0b0b0b;
-            border:none;
             border-radius:15px;
             padding:20px;
+            text-align:center;
             box-shadow: 0 0 15px rgba(59,130,246,0.2);
         }}
 
         canvas {{
-            width:100% !important;
-            height:350px !important;
+            max-width: 400px;
+            max-height: 400px;
+            margin: auto;
         }}
 
-        /* CALENDÁRIO */
         .calendar {{
             display:grid;
             grid-template-columns:repeat(7,1fr);
@@ -215,7 +221,6 @@ def painel():
             color:#3b82f6;
             text-align:center;
             padding:8px;
-            font-size:14px;
         }}
 
         .day {{
@@ -223,20 +228,16 @@ def painel():
             border-radius:12px;
             padding:10px;
             min-height:90px;
-            box-shadow: inset 0 0 8px rgba(59,130,246,0.2);
         }}
 
         .numero {{
             font-weight:bold;
-            font-size:16px;
         }}
 
         .total {{
-            font-size:13px;
             color:#3b82f6;
         }}
 
-        /* MOBILE */
         @media (max-width:768px){{
             .cards {{
                 grid-template-columns:1fr 1fr;
