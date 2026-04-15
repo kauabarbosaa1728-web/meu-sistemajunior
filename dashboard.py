@@ -149,106 +149,101 @@ def painel():
         <style>
 
         .wrap {{
-            max-width: 1000px;
+            max-width: 1200px;
             margin: auto;
         }}
 
         .topo {{
             display:flex;
             justify-content:space-between;
-            margin-bottom:20px;
+            margin-bottom:30px;
         }}
 
         /* CARDS */
         .cards {{
             display:grid;
             grid-template-columns: repeat(4,1fr);
-            gap:15px;
-            margin-bottom:20px;
+            gap:20px;
+            margin-bottom:30px;
         }}
 
         .card {{
             background:#0b0b0b;
             border:none;
-            border-radius:12px;
-            padding:15px;
+            border-radius:15px;
+            padding:25px;
             text-align:center;
             transition:0.3s;
-            box-shadow: 0 0 10px rgba(59,130,246,0.25);
-        }}
-
-        .card:hover {{
-            transform: scale(1.03);
-            box-shadow: 0 0 20px rgba(59,130,246,0.5);
+            box-shadow: 0 0 15px rgba(59,130,246,0.25);
         }}
 
         .card h1 {{
-            margin:10px 0 0 0;
-            font-size:28px;
+            margin-top:10px;
+            font-size:40px;
         }}
 
         /* DASHBOARD */
         .dashboard {{
             display:grid;
-            grid-template-columns:1fr;
+            grid-template-columns:1fr 1fr;
             gap:20px;
         }}
 
         .box {{
             background:#0b0b0b;
             border:none;
-            border-radius:12px;
-            padding:15px;
-            box-shadow: 0 0 10px rgba(59,130,246,0.2);
+            border-radius:15px;
+            padding:20px;
+            box-shadow: 0 0 15px rgba(59,130,246,0.2);
         }}
 
         canvas {{
             width:100% !important;
-            height:250px !important;
+            height:350px !important;
         }}
 
         /* CALENDÁRIO */
         .calendar {{
             display:grid;
             grid-template-columns:repeat(7,1fr);
-            gap:6px;
+            gap:8px;
         }}
 
         .head {{
             background:#1a1a1a;
-            border:none;
             border-radius:8px;
             color:#3b82f6;
             text-align:center;
-            padding:5px;
+            padding:8px;
+            font-size:14px;
         }}
 
         .day {{
             background:#111;
-            border:none;
-            border-radius:10px;
-            padding:8px;
-            min-height:70px;
-            box-shadow: inset 0 0 5px rgba(59,130,246,0.2);
+            border-radius:12px;
+            padding:10px;
+            min-height:90px;
+            box-shadow: inset 0 0 8px rgba(59,130,246,0.2);
         }}
 
         .numero {{
             font-weight:bold;
+            font-size:16px;
         }}
 
         .total {{
-            font-size:12px;
+            font-size:13px;
             color:#3b82f6;
-        }}
-
-        .vazio {{
-            border:none;
         }}
 
         /* MOBILE */
         @media (max-width:768px){{
             .cards {{
                 grid-template-columns:1fr 1fr;
+            }}
+
+            .dashboard {{
+                grid-template-columns:1fr;
             }}
         }}
 
