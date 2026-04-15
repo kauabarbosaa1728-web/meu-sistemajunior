@@ -2,7 +2,6 @@ from flask import Blueprint, session, redirect
 from banco import conectar, devolver_conexao
 from layout import container
 from datetime import datetime
-import calendar
 import json
 
 dashboard_bp = Blueprint("dashboard_bp", __name__)
@@ -29,94 +28,94 @@ def painel():
         cursor.execute("SELECT COUNT(*) FROM usuarios WHERE online=1")
         usuarios_online = cursor.fetchone()[0]
 
-        # ===== CATEGORIAS =====
+        # ===== DISTRIBUIÇÃO =====
         cursor.execute("""
         SELECT COALESCE(categoria, 'Sem categoria'), SUM(quantidade)
         FROM estoque
         GROUP BY categoria
         """)
         categorias = cursor.fetchall()
-
         nomes = [c[0] for c in categorias]
         valores = [c[1] for c in categorias]
 
+        # ===== TOP PRODUTOS =====
+        cursor.execute("""
+        SELECT produto, SUM(quantidade)
+        FROM transferencias
+        GROUP BY produto
+        ORDER BY SUM(quantidade) DESC
+        LIMIT 5
+        """)
+        top = cursor.fetchall()
+        top_nomes = [t[0] for t in top]
+        top_valores = [t[1] for t in top]
+
+        # ===== MOVIMENTAÇÃO =====
+        cursor.execute("""
+        SELECT DATE(data), COUNT(*)
+        FROM transferencias
+        GROUP BY DATE(data)
+        ORDER BY DATE(data)
+        LIMIT 7
+        """)
+        dias = cursor.fetchall()
+        dias_labels = [str(d[0]) for d in dias]
+        dias_valores = [d[1] for d in dias]
+
+        # ===== BAIXO ESTOQUE =====
+        cursor.execute("""
+        SELECT produto, quantidade
+        FROM estoque
+        WHERE quantidade < 10
+        ORDER BY quantidade ASC
+        LIMIT 5
+        """)
+        baixo = cursor.fetchall()
+        baixo_nomes = [b[0] for b in baixo]
+        baixo_valores = [b[1] for b in baixo]
+
         # ===== DATA =====
         now = datetime.now()
-        ano = now.year
-        mes = now.month
-
-        meses = [
-            "", "Janeiro", "Fevereiro", "Março", "Abril", "Maio",
-            "Junho", "Julho", "Agosto", "Setembro", "Outubro",
-            "Novembro", "Dezembro"
-        ]
-
-        nome_mes = meses[mes]
-
-        # ===== CALENDÁRIO =====
-        cal = calendar.monthcalendar(ano, mes)
-        dias_semana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
-
-        calendario_html = ""
-        for d in dias_semana:
-            calendario_html += f"<div class='head'>{d}</div>"
-
-        for semana in cal:
-            for dia in semana:
-                if dia == 0:
-                    calendario_html += "<div class='day vazio'></div>"
-                else:
-                    calendario_html += f"""
-                    <div class="day">
-                        <div class="numero">{dia}</div>
-                        <div class="total">Mov: {dia}</div>
-                    </div>
-                    """
+        nome_mes = [
+            "", "Janeiro","Fevereiro","Março","Abril","Maio",
+            "Junho","Julho","Agosto","Setembro","Outubro",
+            "Novembro","Dezembro"
+        ][now.month]
 
         html = f"""
         <div class="wrap">
 
-            <div class="topo">
-                <h2>🚀 Dashboard</h2>
-                <span>{nome_mes} de {ano}</span>
-            </div>
+            <h2>🚀 Dashboard - {nome_mes}</h2>
 
+            <!-- CARDS -->
             <div class="cards">
-
-                <div class="card">
-                    <span>📦 Produtos</span>
-                    <h1>{total_produtos}</h1>
-                </div>
-
-                <div class="card">
-                    <span>📊 Quantidade</span>
-                    <h1>{total_qtd}</h1>
-                </div>
-
-                <div class="card">
-                    <span>🔄 Movimentações</span>
-                    <h1>{total_transferencias}</h1>
-                </div>
-
-                <div class="card">
-                    <span>🟢 Online</span>
-                    <h1>{usuarios_online}</h1>
-                </div>
-
+                <div class="card"><h1>{total_produtos}</h1><p>Produtos</p></div>
+                <div class="card"><h1>{total_qtd}</h1><p>Quantidade</p></div>
+                <div class="card"><h1>{total_transferencias}</h1><p>Movimentações</p></div>
+                <div class="card"><h1>{usuarios_online}</h1><p>Online</p></div>
             </div>
 
-            <div class="dashboard">
+            <!-- GRÁFICOS -->
+            <div class="grid">
 
                 <div class="box">
                     <h3>Distribuição</h3>
-                    <canvas id="graficoPizza" class="grafico"></canvas>
+                    <canvas id="pizza"></canvas>
                 </div>
 
                 <div class="box">
-                    <h3>📅 Calendário</h3>
-                    <div class="calendar">
-                        {calendario_html}
-                    </div>
+                    <h3>📈 Movimentações</h3>
+                    <canvas id="linha"></canvas>
+                </div>
+
+                <div class="box">
+                    <h3>🔥 Top Produtos</h3>
+                    <canvas id="top"></canvas>
+                </div>
+
+                <div class="box">
+                    <h3>⚠️ Baixo Estoque</h3>
+                    <canvas id="baixo"></canvas>
                 </div>
 
             </div>
@@ -124,155 +123,99 @@ def painel():
         </div>
 
         <script>
-        const ctx = document.getElementById('graficoPizza');
 
-        new Chart(ctx, {{
-            type: 'doughnut',
-            data: {{
-                labels: {json.dumps(nomes)},
-                datasets: [{{
-                    data: {json.dumps(valores)},
-                    backgroundColor: [
-                        '#3b82f6','#22c55e','#f59e0b','#ef4444',
-                        '#8b5cf6','#06b6d4','#84cc16','#f97316'
-                    ],
-                    borderWidth: 0
-                }}]
+        // 🔥 DISTRIBUIÇÃO
+        new Chart(document.getElementById('pizza'), {{
+            type:'doughnut',
+            data:{{
+                labels:{json.dumps(nomes)},
+                datasets:[{{data:{json.dumps(valores)}}}]
             }},
-            options: {{
-                responsive: true,
-                maintainAspectRatio: true,
-                cutout: '70%',
-                plugins: {{
-                    legend: {{
-                        position: 'bottom',
-                        labels: {{
-                            color: '#ccc',
-                            font: {{ size: 14 }}
-                        }}
-                    }}
-                }},
-                animation: {{
-                    animateRotate: true,
-                    duration: 1200
-                }}
-            }},
-            plugins: [{{
-                id: 'textoCentro',
-                beforeDraw(chart) {{
-                    const {{width, height, ctx}} = chart;
-                    ctx.restore();
-
-                    const total = chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
-
-                    ctx.font = 'bold 28px Arial';
-                    ctx.fillStyle = '#3b82f6';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-
-                    ctx.fillText(total, width / 2, height / 2);
-
-                    ctx.font = '14px Arial';
-                    ctx.fillStyle = '#aaa';
-                    ctx.fillText('Total', width / 2, height / 2 + 25);
-
-                    ctx.save();
-                }}
-            }}]
+            options:{{
+                cutout:'70%',
+                plugins:{{legend:{{position:'bottom'}}}}
+            }}
         }});
+
+        // 📈 MOVIMENTAÇÃO
+        new Chart(document.getElementById('linha'), {{
+            type:'line',
+            data:{{
+                labels:{json.dumps(dias_labels)},
+                datasets:[{{
+                    data:{json.dumps(dias_valores)},
+                    borderColor:'#22c55e',
+                    tension:0.4
+                }}]
+            }}
+        }});
+
+        // 🔥 TOP PRODUTOS
+        new Chart(document.getElementById('top'), {{
+            type:'bar',
+            data:{{
+                labels:{json.dumps(top_nomes)},
+                datasets:[{{
+                    data:{json.dumps(top_valores)},
+                    backgroundColor:'#3b82f6'
+                }}]
+            }}
+        }});
+
+        // ⚠️ BAIXO ESTOQUE
+        new Chart(document.getElementById('baixo'), {{
+            type:'bar',
+            data:{{
+                labels:{json.dumps(baixo_nomes)},
+                datasets:[{{
+                    data:{json.dumps(baixo_valores)},
+                    backgroundColor:'#ef4444'
+                }}]
+            }}
+        }});
+
         </script>
 
         <style>
+        .wrap{{max-width:1200px;margin:auto}}
 
-        .wrap {{
-            max-width: 1200px;
-            margin: auto;
-        }}
-
-        .topo {{
-            display:flex;
-            justify-content:space-between;
-            margin-bottom:30px;
-        }}
-
-        .cards {{
+        .cards{{
             display:grid;
-            grid-template-columns: repeat(4,1fr);
-            gap:20px;
-            margin-bottom:30px;
+            grid-template-columns:repeat(4,1fr);
+            gap:15px;
+            margin-bottom:20px
         }}
 
-        .card {{
+        .card{{
             background:#0b0b0b;
-            border-radius:15px;
-            padding:25px;
+            padding:20px;
+            border-radius:10px;
             text-align:center;
-            box-shadow: 0 0 15px rgba(59,130,246,0.25);
+            box-shadow:0 0 10px #3b82f640
         }}
 
-        .card h1 {{
-            font-size:40px;
-        }}
-
-        .dashboard {{
+        .grid{{
             display:grid;
             grid-template-columns:1fr 1fr;
-            gap:20px;
+            gap:20px
         }}
 
-        .box {{
+        .box{{
             background:#0b0b0b;
-            border-radius:15px;
-            padding:20px;
-            text-align:center;
-            box-shadow: 0 0 15px rgba(59,130,246,0.2);
+            padding:15px;
+            border-radius:10px;
+            box-shadow:0 0 10px #3b82f640
         }}
 
-        .grafico {{
-            width: 280px !important;
-            height: 280px !important;
-            margin: auto;
+        canvas{{
+            width:100%!important;
+            height:250px!important
         }}
 
-        .calendar {{
-            display:grid;
-            grid-template-columns:repeat(7,1fr);
-            gap:8px;
+        @media(max-width:768px){{
+            .cards{{grid-template-columns:1fr 1fr}}
+            .grid{{grid-template-columns:1fr}}
         }}
-
-        .head {{
-            background:#1a1a1a;
-            border-radius:8px;
-            color:#3b82f6;
-            text-align:center;
-            padding:8px;
-        }}
-
-        .day {{
-            background:#111;
-            border-radius:12px;
-            padding:10px;
-            min-height:90px;
-        }}
-
-        .numero {{
-            font-weight:bold;
-        }}
-
-        .total {{
-            color:#3b82f6;
-        }}
-
-        @media (max-width:768px){{
-            .cards {{
-                grid-template-columns:1fr 1fr;
-            }}
-
-            .dashboard {{
-                grid-template-columns:1fr;
-            }}
-        }}
-
         </style>
         """
 
