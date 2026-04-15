@@ -110,7 +110,6 @@ def painel():
         </div>
 
         <script>
-        // 🔥 GRÁFICO PIZZA
         const ctx = document.getElementById('graficoPizza');
 
         new Chart(ctx, {{
@@ -124,10 +123,13 @@ def painel():
                         '#8b5cf6','#06b6d4','#84cc16','#f97316'
                     ]
                 }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false
             }}
         }});
 
-        // 🔥 AUTO UPDATE
         setTimeout(() => {{
             location.reload();
         }}, 5000);
@@ -143,7 +145,9 @@ def painel():
         .topo {{
             display:flex;
             justify-content:space-between;
+            align-items:center;
             margin-bottom:20px;
+            flex-wrap:wrap;
         }}
 
         .dashboard {{
@@ -160,6 +164,11 @@ def painel():
             padding:15px;
             border-radius:10px;
             margin-bottom:20px;
+        }}
+
+        canvas {{
+            width:100% !important;
+            height:250px !important;
         }}
 
         /* CALENDÁRIO */
@@ -179,8 +188,8 @@ def painel():
         .day {{
             background:#111;
             border:1px solid #333;
-            padding:10px;
-            min-height:80px;
+            padding:8px;
+            min-height:70px;
         }}
 
         .numero {{
@@ -196,6 +205,30 @@ def painel():
         .vazio {{
             background:transparent;
             border:none;
+        }}
+
+        /* 🔥 MOBILE */
+        @media (max-width: 768px) {{
+
+            .dashboard {{
+                flex-direction: column;
+            }}
+
+            .left, .right {{
+                width: 100%;
+            }}
+
+            .topo {{
+                flex-direction: column;
+                align-items:flex-start;
+                gap:5px;
+            }}
+
+            .day {{
+                min-height:60px;
+                font-size:12px;
+            }}
+
         }}
 
         </style>
