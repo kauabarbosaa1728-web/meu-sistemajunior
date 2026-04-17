@@ -53,18 +53,18 @@ def login():
 <head>
 <title>KBSISTEMAS</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 
 <style>
 body {{
     margin:0;
     height:100vh;
     background:#000;
-    font-family:'Orbitron', sans-serif;
+    font-family:'Inter', sans-serif;
     display:flex;
     align-items:center;
     justify-content:center;
-    color:#00ff9c;
+    color:#e5e7eb;
 }}
 
 .container {{
@@ -72,9 +72,9 @@ body {{
     width:1000px;
     height:550px;
     background:rgba(0,0,0,0.9);
-    border:1px solid rgba(0,255,150,0.2);
+    border:1px solid rgba(255,255,255,0.08);
     border-radius:15px;
-    box-shadow:0 0 50px rgba(0,255,150,0.2);
+    box-shadow:0 0 40px rgba(255,255,255,0.05);
 }}
 
 .left {{
@@ -82,7 +82,7 @@ body {{
     display:flex;
     align-items:center;
     justify-content:center;
-    border-right:1px solid rgba(0,255,150,0.2);
+    border-right:1px solid rgba(255,255,255,0.08);
 }}
 
 .logo {{
@@ -90,13 +90,14 @@ body {{
     font-weight:900;
     text-align:center;
     letter-spacing:4px;
+    color:#ffffff;
 }}
 
 .logo span {{
     display:block;
     font-size:18px;
     margin-top:10px;
-    color:#888;
+    color:#9ca3af;
 }}
 
 .right {{
@@ -112,21 +113,21 @@ input {{
     padding:14px;
     margin-top:10px;
     background:#020617;
-    border:1px solid #00ff9c;
+    border:1px solid #ffffff;
     border-radius:8px;
-    color:#00ff9c;
+    color:#ffffff;
 }}
 
 input:focus {{
     outline:none;
-    box-shadow:0 0 10px #00ff9c;
+    box-shadow:0 0 10px rgba(255,255,255,0.2);
 }}
 
 button {{
     width:100%;
     padding:14px;
     margin-top:15px;
-    background:#00ff9c;
+    background:#ffffff;
     border:none;
     border-radius:8px;
     font-weight:bold;
@@ -135,13 +136,27 @@ button {{
 }}
 
 button:hover {{
-    background:#00cc7a;
+    background:#e5e5e5;
 }}
 
 .erro {{
     color:#ff4d4d;
     text-align:center;
     margin-top:10px;
+}}
+
+.link {{
+    text-align:center;
+    margin-top:10px;
+}}
+
+.link a {{
+    color:#9ca3af;
+    text-decoration:none;
+}}
+
+.link a:hover {{
+    color:#ffffff;
 }}
 </style>
 </head>
@@ -150,7 +165,6 @@ button:hover {{
 
 <div class="container">
 
-    <!-- ESQUERDA -->
     <div class="left">
         <div class="logo">
             KB
@@ -158,7 +172,6 @@ button:hover {{
         </div>
     </div>
 
-    <!-- DIREITA -->
     <div class="right">
         <form method="POST">
             <input name="user" placeholder="Usuário" required>
@@ -168,8 +181,8 @@ button:hover {{
 
         <p class="erro">{erro}</p>
 
-        <div style="text-align:center;margin-top:10px;">
-            <a href="/cadastro" style="color:#888;">Criar conta</a>
+        <div class="link">
+            <a href="/cadastro">Criar conta</a>
         </div>
     </div>
 
