@@ -67,10 +67,7 @@ def container(c):
 
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <!-- FONTE -->
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-
-        <!-- CHART -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
         <style>
@@ -79,7 +76,7 @@ def container(c):
             margin: 0;
             font-family: 'Inter', Arial;
             background: #05070d;
-            color: #d1d5db;
+            color: #e5e7eb;
         }}
 
         .navbar {{
@@ -88,7 +85,7 @@ def container(c):
             align-items: center;
             padding: 12px 20px;
             background: #0a0f1a;
-            border-bottom: 1px solid rgba(0,255,150,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
             flex-wrap: wrap;
             backdrop-filter: blur(10px);
         }}
@@ -108,7 +105,7 @@ def container(c):
         .logo-text {{
             font-weight: 600;
             font-size: 16px;
-            color: #00ff9c;
+            color: #ffffff;
         }}
 
         .menu {{
@@ -130,7 +127,7 @@ def container(c):
         }}
 
         .menu li:hover {{
-            background: rgba(0,255,150,0.08);
+            background: rgba(255,255,255,0.08);
         }}
 
         .menu a {{
@@ -147,7 +144,7 @@ def container(c):
             list-style: none;
             padding: 0;
             min-width: 180px;
-            border: 1px solid rgba(0,255,150,0.1);
+            border: 1px solid rgba(255,255,255,0.08);
             border-radius: 10px;
             overflow: hidden;
             z-index: 99;
@@ -159,7 +156,7 @@ def container(c):
         }}
 
         .submenu li:hover {{
-            background: rgba(0,255,150,0.08);
+            background: rgba(255,255,255,0.08);
         }}
 
         .menu li:hover > .submenu {{
@@ -189,7 +186,7 @@ def container(c):
 
         .card {{
             background: linear-gradient(145deg, #0a0f1a, #05070d);
-            border: 1px solid rgba(0,255,150,0.08);
+            border: 1px solid rgba(255,255,255,0.08);
             padding: 20px;
             border-radius: 16px;
             margin-bottom: 15px;
@@ -216,14 +213,14 @@ def container(c):
         }}
 
         button {{
-            background: #00ff9c;
+            background: #ffffff;
             color: #000;
             font-weight: bold;
             cursor: pointer;
         }}
 
         button:hover {{
-            background: #00cc7a;
+            background: #e5e5e5;
         }}
 
         </style>
@@ -237,7 +234,7 @@ def container(c):
             {c}
         </div>
 
-        <!-- 🔥 NAVEGAÇÃO FLUIDA (CORRIGIDO) -->
+        <!-- NAVEGAÇÃO FLUIDA -->
         <script>
         document.querySelectorAll("a").forEach(link => {{
             if(link.href && link.href.startsWith(window.location.origin)){{
