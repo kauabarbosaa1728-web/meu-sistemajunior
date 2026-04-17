@@ -3,7 +3,7 @@ def acesso_negado():
     <div class="card">
         <h2 class="erro">⛔ Acesso negado</h2>
         <p>Você não tem permissão para acessar esta área.</p>
-        <p><a href="/painel" data-nav="true">⬅ Voltar para o painel</a></p>
+        <p><a href="/painel">⬅ Voltar para o painel</a></p>
     </div>
     """)
 
@@ -18,36 +18,36 @@ def topo():
 
         <ul class="menu">
 
-            <li><a href="/painel" data-nav="true">📊 Painel</a></li>
+            <li><a href="/painel">📊 Painel</a></li>
 
-            <li>
-                📦 Estoque
+            <li class="has-submenu">
+                <span class="menu-toggle">📦 Estoque</span>
                 <ul class="submenu">
-                    <li><a href="/estoque" data-nav="true">Ver Estoque</a></li>
-                    <li><a href="/transferencia" data-nav="true">Transferência</a></li>
+                    <li><a href="/estoque">Ver Estoque</a></li>
+                    <li><a href="/transferencia">Transferência</a></li>
                 </ul>
             </li>
 
-            <li>
-                💰 Financeiro
+            <li class="has-submenu">
+                <span class="menu-toggle">💰 Financeiro</span>
                 <ul class="submenu">
-                    <li><a href="/financeiro" data-nav="true">Ver Financeiro</a></li>
+                    <li><a href="/financeiro">Ver Financeiro</a></li>
                 </ul>
             </li>
 
-            <li>
-                📄 Relatórios
+            <li class="has-submenu">
+                <span class="menu-toggle">📄 Relatórios</span>
                 <ul class="submenu">
-                    <li><a href="/historico" data-nav="true">Histórico</a></li>
+                    <li><a href="/historico">Histórico</a></li>
                 </ul>
             </li>
 
-            <li>
-                ⚙️ Sistema
+            <li class="has-submenu">
+                <span class="menu-toggle">⚙️ Sistema</span>
                 <ul class="submenu">
-                    <li><a href="/usuarios" data-nav="true">Usuários</a></li>
-                    <li><a href="/logs" data-nav="true">Logs</a></li>
-                    <li><a href="/ia" data-nav="true">IA</a></li>
+                    <li><a href="/usuarios">Usuários</a></li>
+                    <li><a href="/logs">Logs</a></li>
+                    <li><a href="/ia">IA</a></li>
                 </ul>
             </li>
 
@@ -71,6 +71,10 @@ def container(c):
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
         <style>
+
+        * {{
+            box-sizing: border-box;
+        }}
 
         body {{
             margin: 0;
@@ -115,56 +119,70 @@ def container(c):
             margin: 0;
             padding: 0;
             flex-wrap: wrap;
+            align-items: center;
         }}
 
         .menu li {{
             position: relative;
-            padding: 8px 12px;
             border-radius: 8px;
-            cursor: pointer;
             font-size: 14px;
-            transition: 0.2s;
         }}
 
-        .menu li:hover {{
+        .menu a,
+        .menu-toggle {{
+            display: block;
+            padding: 8px 12px;
+            text-decoration: none;
+            color: #d1d5db;
+            cursor: pointer;
+            border-radius: 8px;
+            user-select: none;
+        }}
+
+        .menu a:hover,
+        .menu-toggle:hover {{
             background: rgba(255,255,255,0.08);
         }}
 
-        .menu a {{
-            text-decoration: none;
-            color: #d1d5db;
+        .logout {{
+            color: #ff4d4d !important;
         }}
 
         .submenu {{
             display: none;
             position: absolute;
-            top: 100%;
+            top: calc(100% + 6px);
             left: 0;
             background: #0b0f1a;
             list-style: none;
-            padding: 0;
-            min-width: 180px;
+            padding: 6px 0;
+            margin: 0;
+            min-width: 190px;
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 10px;
             overflow: hidden;
-            z-index: 99;
+            z-index: 9999;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
         }}
 
-        .submenu li {{
-            padding: 10px;
-            font-size: 13px;
-        }}
-
-        .submenu li:hover {{
-            background: rgba(255,255,255,0.08);
-        }}
-
-        .menu li:hover > .submenu {{
+        .has-submenu.open > .submenu {{
             display: block;
         }}
 
-        .logout {{
-            color: #ff4d4d !important;
+        .submenu li {{
+            width: 100%;
+        }}
+
+        .submenu a {{
+            display: block;
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 0;
+            white-space: nowrap;
+        }}
+
+        .submenu a:hover {{
+            background: rgba(255,255,255,0.08);
         }}
 
         .conteudo {{
@@ -223,6 +241,41 @@ def container(c):
             background: #e5e5e5;
         }}
 
+        @media (max-width: 768px) {{
+            .navbar {{
+                align-items: flex-start;
+            }}
+
+            .menu {{
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+                margin-top: 10px;
+                gap: 6px;
+            }}
+
+            .menu li {{
+                width: 100%;
+            }}
+
+            .menu a,
+            .menu-toggle {{
+                width: 100%;
+            }}
+
+            .submenu {{
+                position: static;
+                margin-top: 6px;
+                width: 100%;
+                min-width: unset;
+                box-shadow: none;
+            }}
+
+            .conteudo {{
+                padding: 10px;
+            }}
+        }}
+
         </style>
     </head>
 
@@ -234,19 +287,33 @@ def container(c):
             {c}
         </div>
 
-        <!-- 🔥 SCRIPT CORRIGIDO (SEM QUEBRAR MENU) -->
         <script>
-        document.querySelectorAll("a[data-nav='true']").forEach(link => {{
-            link.addEventListener("click", function(e){{
-                e.preventDefault();
+        document.querySelectorAll(".menu-toggle").forEach(function(toggle) {{
+            toggle.addEventListener("click", function(e) {{
+                e.stopPropagation();
 
-                fetch(this.href)
-                .then(res => res.text())
-                .then(html => {{
-                    document.open();
-                    document.write(html);
-                    document.close();
+                const parent = this.parentElement;
+                const isOpen = parent.classList.contains("open");
+
+                document.querySelectorAll(".has-submenu").forEach(function(item) {{
+                    item.classList.remove("open");
                 }});
+
+                if (!isOpen) {{
+                    parent.classList.add("open");
+                }}
+            }});
+        }});
+
+        document.addEventListener("click", function() {{
+            document.querySelectorAll(".has-submenu").forEach(function(item) {{
+                item.classList.remove("open");
+            }});
+        }});
+
+        document.querySelectorAll(".submenu").forEach(function(submenu) {{
+            submenu.addEventListener("click", function(e) {{
+                e.stopPropagation();
             }});
         }});
         </script>
