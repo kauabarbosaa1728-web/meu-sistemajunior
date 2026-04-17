@@ -1,63 +1,3 @@
-def acesso_negado():
-    return container("""
-    <div class="card">
-        <h2 class="erro">⛔ Acesso negado</h2>
-        <p>Você não tem permissão para acessar esta área.</p>
-        <p><a href="/painel">⬅ Voltar para o painel</a></p>
-    </div>
-    """)
-
-
-def topo():
-    return """
-    <div class="navbar">
-        <div class="logo-area">
-            <img src="/static/logo.png" class="logo">
-            <span class="logo-text">KBSISTEMAS</span>
-        </div>
-
-        <ul class="menu">
-
-            <li><a href="/painel">📊 Painel</a></li>
-
-            <li class="has-submenu">
-                <span class="menu-toggle">📦 Estoque</span>
-                <ul class="submenu">
-                    <li><a href="/estoque">Ver Estoque</a></li>
-                    <li><a href="/transferencia">Transferência</a></li>
-                </ul>
-            </li>
-
-            <li class="has-submenu">
-                <span class="menu-toggle">💰 Financeiro</span>
-                <ul class="submenu">
-                    <li><a href="/financeiro">Ver Financeiro</a></li>
-                </ul>
-            </li>
-
-            <li class="has-submenu">
-                <span class="menu-toggle">📄 Relatórios</span>
-                <ul class="submenu">
-                    <li><a href="/historico">Histórico</a></li>
-                </ul>
-            </li>
-
-            <li class="has-submenu">
-                <span class="menu-toggle">⚙️ Sistema</span>
-                <ul class="submenu">
-                    <li><a href="/usuarios">Usuários</a></li>
-                    <li><a href="/logs">Logs</a></li>
-                    <li><a href="/ia">IA</a></li>
-                </ul>
-            </li>
-
-            <li><a href="/logout" class="logout">🚪 Sair</a></li>
-
-        </ul>
-    </div>
-    """
-
-
 def container(c):
     return f"""
     <html>
@@ -305,15 +245,17 @@ def container(c):
             }});
         }});
 
-        document.addEventListener("click", function() {{
+        document.addEventListener("click", function(e) {{
+            if (e.target.closest(".has-submenu")) return;
+
             document.querySelectorAll(".has-submenu").forEach(function(item) {{
                 item.classList.remove("open");
             }});
         }});
 
-        document.querySelectorAll(".submenu").forEach(function(submenu) {{
-            submenu.addEventListener("click", function(e) {{
-                e.stopPropagation();
+        document.querySelectorAll(".submenu a").forEach(function(link) {{
+            link.addEventListener("click", function() {{
+                window.location.href = this.href;
             }});
         }});
         </script>
