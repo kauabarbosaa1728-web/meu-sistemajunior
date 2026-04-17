@@ -96,23 +96,36 @@ def painel():
                 <div class="card"><h1>{total_produtos}</h1><p>Total Produtos</p></div>
                 <div class="card"><h1>{total_qtd}</h1><p>Quantidade</p></div>
                 <div class="card"><h1>{total_transferencias}</h1><p>Movimentações</p></div>
-                <div class="card"><h1>{usuarios_online}</h1><p>Online</p></div>
+
+                <div class="card">
+                    <h1 style="color:{'#00ff9c' if usuarios_online > 0 else '#ff4d4d'}">
+                        {usuarios_online}
+                    </h1>
+                    <p style="color:{'#00ff9c' if usuarios_online > 0 else '#ff4d4d'}">
+                        <span style="
+                            display:inline-block;
+                            width:10px;
+                            height:10px;
+                            border-radius:50%;
+                            background:{'#00ff9c' if usuarios_online > 0 else '#ff4d4d'};
+                            margin-right:6px;">
+                        </span>
+                        {'Online' if usuarios_online > 0 else 'Offline'}
+                    </p>
+                </div>
             </div>
 
             <!-- GRÁFICOS -->
             <div class="grid">
-
                 <div class="box"><h3>📊 Distribuição</h3><canvas id="pizza"></canvas></div>
                 <div class="box"><h3>📈 Movimentações</h3><canvas id="linha"></canvas></div>
                 <div class="box"><h3>🔥 Top Produtos</h3><canvas id="top"></canvas></div>
                 <div class="box"><h3>⚠️ Baixo Estoque</h3><canvas id="baixo"></canvas></div>
-
             </div>
 
         </div>
 
         <script>
-
         const cores = ["#00ff9c","#00bfff","#ffaa00","#ff4d4d","#a855f7"];
 
         const baseOptions = {{
@@ -124,43 +137,27 @@ def painel():
 
         new Chart(document.getElementById('pizza'), {{
             type:'doughnut',
-            data:{{
-                labels:{json.dumps(nomes)},
-                datasets:[{{data:{json.dumps(valores)}, backgroundColor:cores, borderWidth:2}}]
-            }},
+            data:{{labels:{json.dumps(nomes)}, datasets:[{{data:{json.dumps(valores)}, backgroundColor:cores}}]}},
             options:{{...baseOptions, cutout:'65%'}}
         }});
 
         new Chart(document.getElementById('linha'), {{
             type:'line',
-            data:{{
-                labels:{json.dumps(dias_labels)},
-                datasets:[{{label:"Movimentações", data:{json.dumps(dias_valores)}, borderColor:"#00ff9c", tension:0.4}}]
-            }},
-            options:{{
-                ...baseOptions,
-                scales:{{x:{{ticks:{{color:"#aaa"}}}}, y:{{ticks:{{color:"#aaa"}}}}}}
-            }}
+            data:{{labels:{json.dumps(dias_labels)}, datasets:[{{data:{json.dumps(dias_valores)}, borderColor:"#00ff9c", tension:0.4}}]}},
+            options:baseOptions
         }});
 
         new Chart(document.getElementById('top'), {{
             type:'bar',
-            data:{{
-                labels:{json.dumps(top_nomes)},
-                datasets:[{{data:{json.dumps(top_valores)}, backgroundColor:"#00bfff", borderRadius:8}}]
-            }},
+            data:{{labels:{json.dumps(top_nomes)}, datasets:[{{data:{json.dumps(top_valores)}, backgroundColor:"#00bfff"}}]}},
             options:{{...baseOptions, plugins:{{legend:{{display:false}}}}}}
         }});
 
         new Chart(document.getElementById('baixo'), {{
             type:'bar',
-            data:{{
-                labels:{json.dumps(baixo_nomes)},
-                datasets:[{{data:{json.dumps(baixo_valores)}, backgroundColor:"#ff4d4d", borderRadius:8}}]
-            }},
+            data:{{labels:{json.dumps(baixo_nomes)}, datasets:[{{data:{json.dumps(baixo_valores)}, backgroundColor:"#ff4d4d"}}]}},
             options:{{...baseOptions, plugins:{{legend:{{display:false}}}}}}
         }});
-
         </script>
 
         <style>
