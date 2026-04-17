@@ -135,6 +135,7 @@ def container(c):
             color: #d1d5db;
         }}
 
+        /* 🔥 SUBMENU CORRIGIDO */
         .submenu {{
             display: none;
             position: absolute;
@@ -142,12 +143,11 @@ def container(c):
             left: 0;
             background: #0b0f1a;
             list-style: none;
-            padding: 0;
+            padding: 5px 0;
             min-width: 180px;
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 10px;
-            overflow: hidden;
-            z-index: 99;
+            z-index: 999;
         }}
 
         .submenu li {{
@@ -159,7 +159,9 @@ def container(c):
             background: rgba(255,255,255,0.08);
         }}
 
-        .menu li:hover > .submenu {{
+        /* 🔥 CORREÇÃO DO BUG */
+        .menu li:hover .submenu,
+        .submenu:hover {{
             display: block;
         }}
 
