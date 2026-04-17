@@ -1,5 +1,5 @@
 from flask import Blueprint, request, redirect, session
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import check_password_hash
 from banco import conectar, devolver_conexao, registrar_log
 from permissoes import carregar_permissoes
 
@@ -49,145 +49,135 @@ def login():
                 devolver_conexao(conn)
 
     return f"""
-    <html>
-    <head>
-        <title>KB Manager ERP</title>
+<html>
+<head>
+<title>KBSISTEMAS</title>
 
-        <style>
-            body {{
-                margin: 0;
-                background: #000;
-                font-family: Arial;
-                color: #fff;
-            }}
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 
-            .container {{
-                display: flex;
-                height: 100vh;
-                align-items: center;
-                justify-content: center;
-            }}
+<style>
+body {{
+    margin:0;
+    height:100vh;
+    background:#000;
+    font-family:'Orbitron', sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#00ff9c;
+}}
 
-            .box {{
-                display: flex;
-                width: 900px;
-            }}
+.container {{
+    display:flex;
+    width:1000px;
+    height:550px;
+    background:rgba(0,0,0,0.9);
+    border:1px solid rgba(0,255,150,0.2);
+    border-radius:15px;
+    box-shadow:0 0 50px rgba(0,255,150,0.2);
+}}
 
-            .left {{
-                width: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-right: 1px solid #222;
-            }}
+.left {{
+    width:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-right:1px solid rgba(0,255,150,0.2);
+}}
 
-            .logo {{
-                font-size: 80px;
-                font-weight: 900;
-                color: #fff;
-                letter-spacing: 8px;
-                text-align: center;
-            }}
+.logo {{
+    font-size:80px;
+    font-weight:900;
+    text-align:center;
+    letter-spacing:4px;
+}}
 
-            .logo span {{
-                display: block;
-                font-size: 22px;
-                letter-spacing: 4px;
-                margin-top: 10px;
-            }}
+.logo span {{
+    display:block;
+    font-size:18px;
+    margin-top:10px;
+    color:#888;
+}}
 
-            .right {{
-                width: 50%;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                padding: 40px;
-            }}
+.right {{
+    width:50%;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:50px;
+}}
 
-            input {{
-                width: 100%;
-                padding: 12px;
-                margin-bottom: 15px;
-                border: 1px solid #333;
-                background: transparent;
-                color: #fff;
-                border-radius: 5px;
-            }}
+input {{
+    width:100%;
+    padding:14px;
+    margin-top:10px;
+    background:#020617;
+    border:1px solid #00ff9c;
+    border-radius:8px;
+    color:#00ff9c;
+}}
 
-            input:focus {{
-                outline: none;
-                border: 1px solid #555;
-            }}
+input:focus {{
+    outline:none;
+    box-shadow:0 0 10px #00ff9c;
+}}
 
-            button {{
-                padding: 12px;
-                background: #111;
-                border: 1px solid #333;
-                color: white;
-                border-radius: 5px;
-                cursor: pointer;
-            }}
+button {{
+    width:100%;
+    padding:14px;
+    margin-top:15px;
+    background:#00ff9c;
+    border:none;
+    border-radius:8px;
+    font-weight:bold;
+    cursor:pointer;
+    color:#000;
+}}
 
-            button:hover {{
-                background: #222;
-            }}
+button:hover {{
+    background:#00cc7a;
+}}
 
-            .erro {{
-                color: #ff4d4d;
-                text-align: center;
-                margin-top: 10px;
-            }}
+.erro {{
+    color:#ff4d4d;
+    text-align:center;
+    margin-top:10px;
+}}
+</style>
+</head>
 
-            .footer {{
-                position: absolute;
-                bottom: 20px;
-                width: 100%;
-                text-align: center;
-                font-size: 12px;
-                color: #666;
-            }}
-        </style>
-    </head>
+<body>
 
-    <body>
+<div class="container">
 
-        <div class="container">
-            <div class="box">
-
-                <!-- LOGO -->
-                <div class="left">
-                    <div class="logo">
-                        KB
-                        <span>MANAGER ERP</span>
-                    </div>
-                </div>
-
-                <!-- LOGIN -->
-                <div class="right">
-                    <form method="POST">
-                        <input name="user" placeholder="Usuário" required>
-                        <input name="senha" type="password" placeholder="Senha" required>
-                        <button type="submit">Acessar</button>
-                    </form>
-
-                    <p class="erro">{erro}</p>
-
-                    <div style="text-align:center;margin-top:10px;">
-                        <a href="/cadastro" style="color:#888;">Criar conta</a>
-                    </div>
-                </div>
-
-            </div>
+    <!-- ESQUERDA -->
+    <div class="left">
+        <div class="logo">
+            KB
+            <span>SISTEMAS</span>
         </div>
+    </div>
 
-        <div class="footer">
-            KB Manager ERP © 2026
+    <!-- DIREITA -->
+    <div class="right">
+        <form method="POST">
+            <input name="user" placeholder="Usuário" required>
+            <input name="senha" type="password" placeholder="Senha" required>
+            <button type="submit">ACESSAR</button>
+        </form>
+
+        <p class="erro">{erro}</p>
+
+        <div style="text-align:center;margin-top:10px;">
+            <a href="/cadastro" style="color:#888;">Criar conta</a>
         </div>
+    </div>
 
-    </body>
-    </html>
-    """
+</div>
 
+</body>
+</html>
+"""
 
 # ================= CADASTRO =================
 @auth_bp.route("/cadastro", methods=["GET", "POST"])
@@ -227,28 +217,27 @@ def cadastro():
                 devolver_conexao(conn)
 
     return f"""
-    <body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;">
-        <form method="POST" style="background:#111;padding:30px;border-radius:10px;">
-            <h2>KB Manager ERP</h2>
+<body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;">
+    <form method="POST" style="background:#111;padding:30px;border-radius:10px;">
+        <h2>KBSISTEMAS</h2>
 
-            <input name="user" placeholder="Usuário" required><br><br>
-            <input name="senha" type="password" placeholder="Senha" required><br><br>
-            <input name="email" placeholder="Email" required><br><br>
-            <input name="nome_empresa" placeholder="Nome da empresa" required><br><br>
+        <input name="user" placeholder="Usuário" required><br><br>
+        <input name="senha" type="password" placeholder="Senha" required><br><br>
+        <input name="email" placeholder="Email" required><br><br>
+        <input name="nome_empresa" placeholder="Nome da empresa" required><br><br>
 
-            <select name="plano">
-                <option value="basico">Básico</option>
-                <option value="profissional">Profissional</option>
-                <option value="premium">Premium</option>
-            </select><br><br>
+        <select name="plano">
+            <option value="basico">Básico</option>
+            <option value="profissional">Profissional</option>
+            <option value="premium">Premium</option>
+        </select><br><br>
 
-            <button type="submit">Continuar</button>
+        <button type="submit">Continuar</button>
 
-            <p style="color:red;">{mensagem}</p>
-        </form>
-    </body>
-    """
-
+        <p style="color:red;">{mensagem}</p>
+    </form>
+</body>
+"""
 
 # ================= LOGOUT =================
 @auth_bp.route("/logout")
