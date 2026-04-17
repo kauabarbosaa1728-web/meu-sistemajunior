@@ -33,13 +33,14 @@ def ping():
 # ================= BLOQUEIO GLOBAL =================
 @app.before_request
 def bloquear_sistema():
-    return
+    # 🔥 NÃO BLOQUEIA NADA POR ENQUANTO
+    pass
 
 # ================= BLUEPRINTS =================
-app.register_blueprint(usuarios_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(estoque_bp)
+app.register_blueprint(usuarios_bp)
 app.register_blueprint(pagamento_routes)
 app.register_blueprint(logs_bp)
 app.register_blueprint(ia_bp)
