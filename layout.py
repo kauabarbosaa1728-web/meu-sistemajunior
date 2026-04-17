@@ -84,6 +84,8 @@ def container(c):
         }}
 
         .navbar {{
+            position: relative;
+            z-index: 99999;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -161,7 +163,7 @@ def container(c):
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 10px;
             overflow: hidden;
-            z-index: 9999;
+            z-index: 99999;
             box-shadow: 0 12px 30px rgba(0,0,0,0.35);
         }}
 
@@ -186,6 +188,8 @@ def container(c):
         }}
 
         .conteudo {{
+            position: relative;
+            z-index: 1;
             padding: 20px;
             max-width: 1400px;
             margin: auto;
