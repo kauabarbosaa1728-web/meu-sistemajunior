@@ -60,201 +60,161 @@ def topo():
 
 def container(c):
     return f"""
-    <html>
-    <head>
-        <title>KBSISTEMAS</title>
-        <link rel="icon" href="/static/logo.png">
+<html>
+<head>
+<title>KBSISTEMAS</title>
+<link rel="icon" href="/static/logo.png">
 
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        <style>
+<style>
 
-        body {{
-            margin: 0;
-            font-family: 'Inter', Arial;
-            background: #05070d;
-            color: #e5e7eb;
-        }}
+body {{
+    margin: 0;
+    font-family: 'Inter', Arial;
+    background: #05070d;
+    color: #e5e7eb;
+}}
 
-        .navbar {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 20px;
-            background: #0a0f1a;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            flex-wrap: wrap;
-            backdrop-filter: blur(10px);
-        }}
+.navbar {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 25px;
+    background: #0a0f1a;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    width: 100%;
+}}
 
-        .logo-area {{
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }}
+.logo-area {{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}}
 
-        .logo {{
-            width: 35px;
-            height: 35px;
-            border-radius: 6px;
-        }}
+.logo {{
+    width: 35px;
+    height: 35px;
+    border-radius: 6px;
+}}
 
-        .logo-text {{
-            font-weight: 600;
-            font-size: 16px;
-            color: #ffffff;
-        }}
+.logo-text {{
+    font-weight: 600;
+    font-size: 16px;
+    color: #ffffff;
+}}
 
-        .menu {{
-            list-style: none;
-            display: flex;
-            gap: 10px;
-            margin: 0;
-            padding: 0;
-            flex-wrap: wrap;
-        }}
+.menu {{
+    list-style: none;
+    display: flex;
+    gap: 20px;
+    margin: 0;
+    padding: 0;
+}}
 
-        .menu li {{
-            position: relative;
-            padding: 8px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: 0.2s;
-        }}
+.menu li {{
+    position: relative;
+    padding: 8px 12px;
+    border-radius: 8px;
+}}
 
-        .menu li:hover {{
-            background: rgba(255,255,255,0.08);
-        }}
+.menu li:hover {{
+    background: rgba(255,255,255,0.08);
+}}
 
-        .menu a {{
-            text-decoration: none;
-            color: #d1d5db;
-        }}
+.menu a {{
+    text-decoration: none;
+    color: #d1d5db;
+}}
 
-        /* 🔥 SUBMENU CORRIGIDO */
-        .submenu {{
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            background: #0b0f1a;
-            list-style: none;
-            padding: 5px 0;
-            min-width: 180px;
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 10px;
-            z-index: 999;
-        }}
+.submenu {{
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: #0b0f1a;
+    border-radius: 10px;
+    min-width: 180px;
+    border: 1px solid rgba(255,255,255,0.08);
+    z-index: 999;
+}}
 
-        .submenu li {{
-            padding: 10px;
-            font-size: 13px;
-        }}
+.submenu li {{
+    padding: 10px;
+}}
 
-        .submenu li:hover {{
-            background: rgba(255,255,255,0.08);
-        }}
+.submenu li:hover {{
+    background: rgba(255,255,255,0.08);
+}}
 
-        /* 🔥 CORREÇÃO DO BUG */
-        .menu li:hover .submenu,
-        .submenu:hover {{
-            display: block;
-        }}
+.menu li:hover .submenu {{
+    display: block;
+}}
 
-        .logout {{
-            color: #ff4d4d !important;
-        }}
+.logout {{
+    color: #ff4d4d !important;
+}}
 
-        .conteudo {{
-            padding: 20px;
-            max-width: 1400px;
-            margin: auto;
+.conteudo {{
+    padding: 25px;
+    max-width: 1400px;
+    margin: auto;
+}}
 
-            opacity: 0;
-            transform: translateY(10px);
-            animation: fadeIn 0.4s ease forwards;
-        }}
+.card {{
+    background: linear-gradient(145deg, #0a0f1a, #05070d);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 20px;
+    border-radius: 16px;
+    margin-bottom: 15px;
+}}
 
-        @keyframes fadeIn {{
-            to {{
-                opacity: 1;
-                transform: translateY(0);
-            }}
-        }}
+.erro {{
+    color: #ff4d4d;
+}}
 
-        .card {{
-            background: linear-gradient(145deg, #0a0f1a, #05070d);
-            border: 1px solid rgba(255,255,255,0.08);
-            padding: 20px;
-            border-radius: 16px;
-            margin-bottom: 15px;
-        }}
+.grid {{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+}}
 
-        .erro {{
-            color: #ff4d4d;
-        }}
+input, select, button {{
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    border-radius: 10px;
+    border: 1px solid #1f2937;
+    background: #0b0f1a;
+    color: #fff;
+}}
 
-        .grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-        }}
+button {{
+    background: #ffffff;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+}}
 
-        input, select, button {{
-            width: 100%;
-            padding: 12px;
-            margin-top: 8px;
-            border-radius: 10px;
-            border: 1px solid #1f2937;
-            background: #0b0f1a;
-            color: #fff;
-        }}
+button:hover {{
+    background: #e5e5e5;
+}}
 
-        button {{
-            background: #ffffff;
-            color: #000;
-            font-weight: bold;
-            cursor: pointer;
-        }}
+</style>
 
-        button:hover {{
-            background: #e5e5e5;
-        }}
+</head>
 
-        </style>
-    </head>
+<body>
 
-    <body>
+{topo()}
 
-        {topo()}
+<div class="conteudo">
+{c}
+</div>
 
-        <div class="conteudo">
-            {c}
-        </div>
-
-        <!-- NAVEGAÇÃO FLUIDA -->
-        <script>
-        document.querySelectorAll("a").forEach(link => {{
-            if(link.href && link.href.startsWith(window.location.origin)){{
-                link.addEventListener("click", function(e){{
-                    e.preventDefault();
-
-                    fetch(this.href)
-                    .then(res => res.text())
-                    .then(html => {{
-                        document.open();
-                        document.write(html);
-                        document.close();
-                    }});
-                }});
-            }}
-        }});
-        </script>
-
-    </body>
-    </html>
-    """
+</body>
+</html>
+"""
