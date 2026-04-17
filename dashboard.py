@@ -102,25 +102,10 @@ def painel():
             <!-- GRÁFICOS -->
             <div class="grid">
 
-                <div class="box">
-                    <h3>📊 Distribuição</h3>
-                    <canvas id="pizza"></canvas>
-                </div>
-
-                <div class="box">
-                    <h3>📈 Movimentações</h3>
-                    <canvas id="linha"></canvas>
-                </div>
-
-                <div class="box">
-                    <h3>🔥 Top Produtos</h3>
-                    <canvas id="top"></canvas>
-                </div>
-
-                <div class="box">
-                    <h3>⚠️ Baixo Estoque</h3>
-                    <canvas id="baixo"></canvas>
-                </div>
+                <div class="box"><h3>📊 Distribuição</h3><canvas id="pizza"></canvas></div>
+                <div class="box"><h3>📈 Movimentações</h3><canvas id="linha"></canvas></div>
+                <div class="box"><h3>🔥 Top Produtos</h3><canvas id="top"></canvas></div>
+                <div class="box"><h3>⚠️ Baixo Estoque</h3><canvas id="baixo"></canvas></div>
 
             </div>
 
@@ -130,82 +115,50 @@ def painel():
 
         const cores = ["#00ff9c","#00bfff","#ffaa00","#ff4d4d","#a855f7"];
 
-        // 📊 DISTRIBUIÇÃO
+        const baseOptions = {{
+            responsive:true,
+            maintainAspectRatio:true,
+            aspectRatio:1.2,
+            plugins:{{legend:{{labels:{{color:"#ccc"}}}}}}
+        }}
+
         new Chart(document.getElementById('pizza'), {{
             type:'doughnut',
             data:{{
                 labels:{json.dumps(nomes)},
-                datasets:[{{
-                    data:{json.dumps(valores)},
-                    backgroundColor:cores,
-                    borderWidth:2
-                }}]
+                datasets:[{{data:{json.dumps(valores)}, backgroundColor:cores, borderWidth:2}}]
             }},
-            options:{{
-                cutout:'65%',
-                plugins:{{legend:{{labels:{{color:"#ccc"}}}}}}
-            }}
+            options:{{...baseOptions, cutout:'65%'}}
         }});
 
-        // 📈 MOVIMENTAÇÃO
         new Chart(document.getElementById('linha'), {{
             type:'line',
             data:{{
                 labels:{json.dumps(dias_labels)},
-                datasets:[{{
-                    label:"Movimentações",
-                    data:{json.dumps(dias_valores)},
-                    borderColor:"#00ff9c",
-                    tension:0.4
-                }}]
+                datasets:[{{label:"Movimentações", data:{json.dumps(dias_valores)}, borderColor:"#00ff9c", tension:0.4}}]
             }},
             options:{{
-                plugins:{{legend:{{labels:{{color:"#ccc"}}}}}},
-                scales:{{
-                    x:{{ticks:{{color:"#aaa"}}}},
-                    y:{{ticks:{{color:"#aaa"}}}}
-                }}
+                ...baseOptions,
+                scales:{{x:{{ticks:{{color:"#aaa"}}}}, y:{{ticks:{{color:"#aaa"}}}}}}
             }}
         }});
 
-        // 🔥 TOP
         new Chart(document.getElementById('top'), {{
             type:'bar',
             data:{{
                 labels:{json.dumps(top_nomes)},
-                datasets:[{{
-                    data:{json.dumps(top_valores)},
-                    backgroundColor:"#00bfff",
-                    borderRadius:8
-                }}]
+                datasets:[{{data:{json.dumps(top_valores)}, backgroundColor:"#00bfff", borderRadius:8}}]
             }},
-            options:{{
-                plugins:{{legend:{{display:false}}}},
-                scales:{{
-                    x:{{ticks:{{color:"#aaa"}}}},
-                    y:{{ticks:{{color:"#aaa"}}}}
-                }}
-            }}
+            options:{{...baseOptions, plugins:{{legend:{{display:false}}}}}}
         }});
 
-        // ⚠️ BAIXO
         new Chart(document.getElementById('baixo'), {{
             type:'bar',
             data:{{
                 labels:{json.dumps(baixo_nomes)},
-                datasets:[{{
-                    data:{json.dumps(baixo_valores)},
-                    backgroundColor:"#ff4d4d",
-                    borderRadius:8
-                }}]
+                datasets:[{{data:{json.dumps(baixo_valores)}, backgroundColor:"#ff4d4d", borderRadius:8}}]
             }},
-            options:{{
-                plugins:{{legend:{{display:false}}}},
-                scales:{{
-                    x:{{ticks:{{color:"#aaa"}}}},
-                    y:{{ticks:{{color:"#aaa"}}}}
-                }}
-            }}
+            options:{{...baseOptions, plugins:{{legend:{{display:false}}}}}}
         }});
 
         </script>
@@ -240,12 +193,16 @@ def painel():
             background:#0b0f1a;
             padding:15px;
             border-radius:15px;
-            box-shadow:0 0 20px rgba(0,255,150,0.05)
+            box-shadow:0 0 20px rgba(0,255,150,0.05);
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
         }}
 
         canvas{{
-            width:100%!important;
-            height:250px!important
+            max-width:300px !important;
+            max-height:300px !important;
         }}
 
         @media(max-width:768px){{
