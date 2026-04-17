@@ -82,7 +82,6 @@ def container(c):
             color: #d1d5db;
         }}
 
-        /* NAVBAR */
         .navbar {{
             display: flex;
             justify-content: space-between;
@@ -112,7 +111,6 @@ def container(c):
             color: #00ff9c;
         }}
 
-        /* MENU */
         .menu {{
             list-style: none;
             display: flex;
@@ -140,7 +138,6 @@ def container(c):
             color: #d1d5db;
         }}
 
-        /* SUBMENU */
         .submenu {{
             display: none;
             position: absolute;
@@ -173,7 +170,6 @@ def container(c):
             color: #ff4d4d !important;
         }}
 
-        /* CONTEÚDO */
         .conteudo {{
             padding: 20px;
             max-width: 1400px;
@@ -191,51 +187,30 @@ def container(c):
             }}
         }}
 
-        /* CARD */
         .card {{
             background: linear-gradient(145deg, #0a0f1a, #05070d);
             border: 1px solid rgba(0,255,150,0.08);
             padding: 20px;
             border-radius: 16px;
             margin-bottom: 15px;
-
-            box-shadow:
-                0 0 20px rgba(0,255,150,0.05),
-                inset 0 0 10px rgba(0,255,150,0.03);
-
-            transition: 0.3s;
-        }}
-
-        .card:hover {{
-            transform: translateY(-4px);
-            box-shadow:
-                0 0 30px rgba(0,255,150,0.12),
-                inset 0 0 15px rgba(0,255,150,0.05);
-        }}
-
-        .card h2, .card h3 {{
-            color: #00ff9c;
         }}
 
         .erro {{
             color: #ff4d4d;
         }}
 
-        /* GRID */
         .grid {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 20px;
         }}
 
-        /* INPUTS */
         input, select, button {{
             width: 100%;
             padding: 12px;
             margin-top: 8px;
             border-radius: 10px;
             border: 1px solid #1f2937;
-            font-size: 14px;
             background: #0b0f1a;
             color: #fff;
         }}
@@ -251,35 +226,6 @@ def container(c):
             background: #00cc7a;
         }}
 
-        /* RESPONSIVO */
-        @media (max-width: 768px) {{
-
-            .navbar {{
-                flex-direction: column;
-                align-items: flex-start;
-            }}
-
-            .menu {{
-                width: 100%;
-                flex-direction: column;
-                margin-top: 10px;
-            }}
-
-            .menu li {{
-                width: 100%;
-            }}
-
-            .submenu {{
-                position: relative;
-                border: none;
-            }}
-
-            .conteudo {{
-                padding: 10px;
-            }}
-
-        }}
-
         </style>
     </head>
 
@@ -291,7 +237,7 @@ def container(c):
             {c}
         </div>
 
-        <!-- 🔥 NAVEGAÇÃO FLUIDA -->
+        <!-- 🔥 NAVEGAÇÃO FLUIDA (CORRIGIDO) -->
         <script>
         document.querySelectorAll("a").forEach(link => {{
             if(link.href && link.href.startsWith(window.location.origin)){{
@@ -307,7 +253,7 @@ def container(c):
                     }});
                 }});
             }}
-        });
+        }});
         </script>
 
     </body>
