@@ -98,10 +98,8 @@ def painel():
                 <div class="card"><h1>{total_transferencias}</h1><p>Movimentações</p></div>
 
                 <div class="card">
-                    <h1 style="color:{'#00ff9c' if usuarios_online > 0 else '#ff4d4d'}">
-                        {usuarios_online}
-                    </h1>
-                    <p style="color:{'#00ff9c' if usuarios_online > 0 else '#ff4d4d'}">
+                    <h1 style="color:#ffffff">{usuarios_online}</h1>
+                    <p>
                         <span style="
                             display:inline-block;
                             width:10px;
@@ -178,7 +176,7 @@ def painel():
             box-shadow:0 0 20px rgba(0,255,150,0.1);
         }}
 
-        .card h1{{font-size:28px;color:#00ff9c}}
+        .card h1{{font-size:28px;color:#ffffff}}
 
         .grid{{
             display:grid;
