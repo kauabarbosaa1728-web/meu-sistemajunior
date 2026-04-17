@@ -178,6 +178,17 @@ def container(c):
             padding: 20px;
             max-width: 1400px;
             margin: auto;
+
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeIn 0.4s ease forwards;
+        }}
+
+        @keyframes fadeIn {{
+            to {{
+                opacity: 1;
+                transform: translateY(0);
+            }}
         }}
 
         /* CARD */
@@ -279,6 +290,25 @@ def container(c):
         <div class="conteudo">
             {c}
         </div>
+
+        <!-- 🔥 NAVEGAÇÃO FLUIDA -->
+        <script>
+        document.querySelectorAll("a").forEach(link => {{
+            if(link.href && link.href.startsWith(window.location.origin)){{
+                link.addEventListener("click", function(e){{
+                    e.preventDefault();
+
+                    fetch(this.href)
+                    .then(res => res.text())
+                    .then(html => {{
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    }});
+                }});
+            }}
+        });
+        </script>
 
     </body>
     </html>
