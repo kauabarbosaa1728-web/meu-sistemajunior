@@ -306,17 +306,11 @@ def container(c):
         }});
 
         document.addEventListener("click", function(e) {{
-            if (e.target.closest(".has-submenu")) return;
-
-            document.querySelectorAll(".has-submenu").forEach(function(item) {{
-                item.classList.remove("open");
-            }});
-        }});
-
-        document.querySelectorAll(".submenu a").forEach(function(link) {{
-            link.addEventListener("click", function() {{
-                window.location.href = this.href;
-            }});
+            if (!e.target.closest(".navbar")) {{
+                document.querySelectorAll(".has-submenu").forEach(function(item) {{
+                    item.classList.remove("open");
+                }});
+            }}
         }});
         </script>
 
