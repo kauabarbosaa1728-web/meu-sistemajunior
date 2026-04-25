@@ -15,7 +15,6 @@ def login():
         try:
             conn = conectar()
 
-            # 🔥 proteção contra erro de conexão
             if conn is None:
                 erro = "Erro de conexão com servidor"
             else:
@@ -81,12 +80,6 @@ body {{
     border-radius:18px;
     backdrop-filter: blur(20px);
     box-shadow:0 0 80px rgba(255,255,255,0.05);
-    animation:fadeIn 0.6s ease;
-}}
-
-@keyframes fadeIn {{
-    from {{opacity:0; transform:translateY(20px);}}
-    to {{opacity:1; transform:translateY(0);}}
 }}
 
 .left {{
@@ -102,8 +95,6 @@ body {{
     font-weight:900;
     text-align:center;
     letter-spacing:6px;
-    color:#fff;
-    text-shadow:0 0 20px rgba(255,255,255,0.2);
 }}
 
 .logo span {{
@@ -122,71 +113,6 @@ body {{
 }}
 
 input {{
-    padding:12px;
-    margin-top:10px;
-    border-radius:10px;
-    border:1px solid #1f2937;
-    background:#0b0f1a;
-    color:#fff;
-}}
-
-button {{
-    margin-top:15px;
-    padding:12px;
-    border:none;
-    border-radius:10px;
-    background:#ffffff;
-    color:#000;
-    font-weight:bold;
-    cursor:pointer;
-    transition:0.2s;
-}}
-
-button:hover {{
-    transform:scale(1.02);
-    background:#e5e5e5;
-}}
-
-.erro {{
-    color:#ff4d4d;
-    margin-top:10px;
-    font-size:14px;
-    text-align:center;
-}}
-
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-    <div class="left">
-        <div class="logo">
-            KB
-            <span>SISTEMAS</span>
-        </div>
-    </div>
-
-    <div class="right">
-        <form method="POST">
-
-            <input type="text" name="user" placeholder="Usuário" required>
-            <input type="password" name="senha" placeholder="Senha" required>
-
-            <button>ACESSAR</button>
-
-            <div class="erro">{erro}</div>
-
-        </form>
-    </div>
-
-</div>
-
-</body>
-</html>
-"""
-input {{
     width:100%;
     padding:15px;
     margin-top:12px;
@@ -199,7 +125,6 @@ input {{
 input:focus {{
     outline:none;
     border:1px solid #fff;
-    box-shadow:0 0 15px rgba(255,255,255,0.2);
     box-shadow:0 0 10px rgba(255,255,255,0.2);
 }}
 
@@ -207,7 +132,6 @@ button {{
     width:100%;
     padding:15px;
     margin-top:20px;
-    background:linear-gradient(90deg,#ffffff,#d4d4d4);
     background:#ffffff;
     border:none;
     border-radius:10px;
@@ -217,8 +141,6 @@ button {{
 }}
 
 button:hover {{
-    transform:scale(1.03);
-    box-shadow:0 0 20px rgba(255,255,255,0.3);
     transform:scale(1.02);
 }}
 
