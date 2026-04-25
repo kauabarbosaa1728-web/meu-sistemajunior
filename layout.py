@@ -35,10 +35,12 @@ def topo():
                 </ul>
             </li>
 
+            <!-- 🔥 AQUI FOI CORRIGIDO -->
             <li class="has-submenu">
                 <span class="menu-toggle">📄 Relatórios</span>
                 <ul class="submenu">
-                    <li><a href="/historico">Histórico</a></li>
+                    <li><a href="/historico">📜 Histórico</a></li>
+                    <li><a href="/historico_estoque">📦 Estoque</a></li>
                 </ul>
             </li>
 
@@ -56,26 +58,6 @@ def topo():
         </ul>
     </div>
     """
-
-
-def container(c):
-    return f"""
-    <html>
-    <head>
-        <title>KBSISTEMAS</title>
-        <link rel="icon" href="/static/logo.png">
-
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-        <style>
-
-        * {{
-            box-sizing: border-box;
-        }}
-
         body {{
             margin: 0;
             font-family: 'Inter', Arial;
