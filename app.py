@@ -16,6 +16,9 @@ from ia_routes import ia_bp
 from financeiro import financeiro_bp
 from vendas import vendas_bp
 
+# 🔥 NOVO (RELATÓRIOS)
+from relatorios import relatorios_bp
+
 app = Flask(__name__)
 app.secret_key = "segredo123"
 
@@ -33,7 +36,7 @@ def ping():
 # ================= BLOQUEIO GLOBAL =================
 @app.before_request
 def bloquear_sistema():
-    # 🔥 NÃO BLOQUEIA NADA POR ENQUANTO
+    # 🔥 DESATIVADO POR ENQUANTO
     pass
 
 # ================= BLUEPRINTS =================
@@ -45,12 +48,20 @@ app.register_blueprint(pagamento_routes)
 app.register_blueprint(logs_bp)
 app.register_blueprint(ia_bp)
 app.register_blueprint(financeiro_bp)
+
+# 🔥 ATIVA RELATÓRIOS
+app.register_blueprint(relatorios_bp)
+
+# (deixa vendas comentado se ainda não usa)
 # app.register_blueprint(vendas_bp)
 
 # ================= ROTAS DIRETAS =================
 @app.route("/usuarios/excluir_usuario/<usuario>", methods=["POST"])
 def excluir_usuario_direto(usuario):
     conn = conectar()
+    if conn is None:
+        return "Erro de conexão"
+
     cursor = conn.cursor()
 
     cursor.execute("DELETE FROM usuarios WHERE usuario=%s", (usuario,))
@@ -67,6 +78,9 @@ def mudar_plano_direto(usuario):
     novo_plano = request.form.get("plano")
 
     conn = conectar()
+    if conn is None:
+        return "Erro de conexão"
+
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -84,6 +98,9 @@ def alterar_senha_direto(usuario):
     nova = request.form.get("senha")
 
     conn = conectar()
+    if conn is None:
+        return "Erro de conexão"
+
     cursor = conn.cursor()
 
     cursor.execute("""
