@@ -2,32 +2,56 @@ from werkzeug.security import generate_password_hash
 from psycopg2 import pool
 
 # ================= POOL DE CONEXÃO =================
-try:
-    db_pool = pool.SimpleConnectionPool(
-        1, 10,
-        host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
-        database="neondb",
-        user="neondb_owner",
-        password="npg_zGebRqQWoB06",
-        port="5432",
-        sslmode="require"
-    )
-except Exception as e:
-    print("❌ ERRO AO CRIAR POOL:", e)
-    db_pool = None
+db_pool = None
+
+def criar_pool():
+    global db_pool
+    try:
+        db_pool = pool.SimpleConnectionPool(
+            1, 10,
+            host="ep-calm-moon-acucwei3-pooler.sa-east-1.aws.neon.tech",
+            database="neondb",
+            user="neondb_owner",
+            password="npg_zGebRqQWoB06",
+            port="5432",
+            sslmode="require"
+        )
+        print("✅ Pool criado com sucesso")
+    except Exception as e:
+        print("❌ ERRO AO CRIAR POOL:", e)
+        db_pool = None
+
+# cria o pool ao iniciar
+criar_pool()
 
 
 # ================= CONEXÃO =================
 def conectar():
+    global db_pool
+
     try:
-        if db_pool:
-            return db_pool.getconn()
+        # 🔥 recria pool se cair
+        if db_pool is None:
+            print("⚠️ Recriando pool...")
+            criar_pool()
+
+        conn = db_pool.getconn()
+
+        # 🔥 testa conexão
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        cursor.close()
+
+        return conn
+
     except Exception as e:
-        print("Erro ao conectar:", e)
-    return None
+        print("❌ ERRO AO CONECTAR:", e)
+        db_pool = None
+        return None
 
 
 def devolver_conexao(conn):
+    global db_pool
     try:
         if conn and db_pool:
             db_pool.putconn(conn)
@@ -40,6 +64,9 @@ def registrar_log(usuario, acao, detalhes=""):
     conn = None
     try:
         conn = conectar()
+        if conn is None:
+            return
+
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -100,9 +127,12 @@ def criar_banco():
     conn = None
     try:
         conn = conectar()
+        if conn is None:
+            print("❌ Sem conexão com banco")
+            return
+
         cursor = conn.cursor()
 
-        # ================= USUARIOS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS usuarios (
             usuario TEXT PRIMARY KEY,
@@ -123,7 +153,6 @@ def criar_banco():
         )
         """)
 
-        # ================= PAGAMENTOS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS pagamentos (
             id SERIAL PRIMARY KEY,
@@ -144,7 +173,6 @@ def criar_banco():
         ADD COLUMN IF NOT EXISTS vencimento TIMESTAMP
         """)
 
-        # ================= ESTOQUE =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS estoque (
             id SERIAL PRIMARY KEY,
@@ -155,7 +183,6 @@ def criar_banco():
         )
         """)
 
-        # ================= TRANSFERENCIAS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS transferencias (
             id SERIAL PRIMARY KEY,
@@ -168,7 +195,6 @@ def criar_banco():
         )
         """)
 
-        # ================= LOGS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS logs (
             id SERIAL PRIMARY KEY,
@@ -179,7 +205,6 @@ def criar_banco():
         )
         """)
 
-        # ================= FINANCEIRO =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS financeiro (
             id SERIAL PRIMARY KEY,
@@ -191,7 +216,6 @@ def criar_banco():
         )
         """)
 
-        # ================= VENDAS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS vendas (
             id SERIAL PRIMARY KEY,
