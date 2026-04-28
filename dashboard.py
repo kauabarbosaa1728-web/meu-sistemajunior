@@ -1,4 +1,4 @@
-from flask import Blueprint, session, redirect
+from flask import Blueprint, session, redirect, request
 from banco import conectar, devolver_conexao
 from layout import container
 from datetime import datetime
@@ -11,10 +11,21 @@ def painel():
     if "user" not in session:
         return redirect("/")
 
+    # 🔥 FILTRO DE DATA
+    data_inicio = request.args.get("inicio")
+    data_fim = request.args.get("fim")
+
     conn = conectar()
     cursor = conn.cursor()
 
     try:
+        filtro = ""
+        valores_filtro = ()
+
+        if data_inicio and data_fim:
+            filtro = "WHERE DATE(data) BETWEEN %s AND %s"
+            valores_filtro = (data_inicio, data_fim)
+
         # ===== DADOS =====
         cursor.execute("SELECT COUNT(*) FROM estoque")
         total_produtos = cursor.fetchone()[0]
@@ -22,7 +33,7 @@ def painel():
         cursor.execute("SELECT COALESCE(SUM(quantidade), 0) FROM estoque")
         total_qtd = cursor.fetchone()[0]
 
-        cursor.execute("SELECT COUNT(*) FROM transferencias")
+        cursor.execute(f"SELECT COUNT(*) FROM transferencias {filtro}", valores_filtro)
         total_transferencias = cursor.fetchone()[0]
 
         cursor.execute("SELECT COUNT(*) FROM usuarios WHERE online=1")
@@ -40,26 +51,27 @@ def painel():
         valores = [c[1] if c[1] else 0 for c in categorias]
 
         # ===== TOP PRODUTOS =====
-        cursor.execute("""
+        cursor.execute(f"""
         SELECT COALESCE(produto, 'Sem nome'), SUM(quantidade)
         FROM transferencias
+        {filtro}
         GROUP BY produto
         ORDER BY SUM(quantidade) DESC
         LIMIT 5
-        """)
+        """, valores_filtro)
         top = cursor.fetchall()
 
         top_nomes = [t[0] if t[0] else "Sem nome" for t in top]
         top_valores = [t[1] if t[1] else 0 for t in top]
 
         # ===== MOVIMENTAÇÃO =====
-        cursor.execute("""
+        cursor.execute(f"""
         SELECT DATE(data), COUNT(*)
         FROM transferencias
+        {filtro}
         GROUP BY DATE(data)
         ORDER BY DATE(data)
-        LIMIT 7
-        """)
+        """, valores_filtro)
         dias = cursor.fetchall()
 
         dias_labels = [str(d[0]) for d in dias]
@@ -89,25 +101,37 @@ def painel():
         html = f"""
         <div class="wrap">
 
-            <h2>🚀 Dashboard - {nome_mes}</h2>
+            <div class="topo-dashboard">
+                <h2>📊 Visão Geral - {nome_mes}</h2>
+
+                <form method="get" class="filtro-data">
+                    <input type="date" name="inicio" min="2020-01-01" max="2030-12-31">
+                    <input type="date" name="fim" min="2020-01-01" max="2030-12-31">
+                    <button>Filtrar</button>
+                </form>
+            </div>
 
             <!-- KPI -->
             <div class="cards">
-                <div class="card"><h1>{total_produtos}</h1><p>Total Produtos</p></div>
-                <div class="card"><h1>{total_qtd}</h1><p>Quantidade</p></div>
-                <div class="card"><h1>{total_transferencias}</h1><p>Movimentações</p></div>
+                <div class="card">
+                    <h1 class="azul">{total_produtos}</h1>
+                    <p>Total Produtos</p>
+                </div>
+
+                <div class="card">
+                    <h1 class="azul">{total_qtd}</h1>
+                    <p>Quantidade</p>
+                </div>
+
+                <div class="card">
+                    <h1 class="azul">{total_transferencias}</h1>
+                    <p>Movimentações</p>
+                </div>
 
                 <div class="card">
                     <h1 style="color:#ffffff">{usuarios_online}</h1>
                     <p>
-                        <span style="
-                            display:inline-block;
-                            width:10px;
-                            height:10px;
-                            border-radius:50%;
-                            background:{'#00ff9c' if usuarios_online > 0 else '#ff4d4d'};
-                            margin-right:6px;">
-                        </span>
+                        <span class="status {'on' if usuarios_online > 0 else 'off'}"></span>
                         {'Online' if usuarios_online > 0 else 'Offline'}
                     </p>
                 </div>
@@ -123,13 +147,14 @@ def painel():
 
         </div>
 
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
         <script>
-        const cores = ["#00ff9c","#00bfff","#ffaa00","#ff4d4d","#a855f7"];
+        const cores = ["#38bdf8","#0ea5e9","#0284c7","#0369a1","#1d4ed8"];
 
         const baseOptions = {{
             responsive:true,
-            maintainAspectRatio:true,
-            aspectRatio:1.2,
+            maintainAspectRatio:false,
             plugins:{{legend:{{labels:{{color:"#ccc"}}}}}}
         }}
 
@@ -141,13 +166,13 @@ def painel():
 
         new Chart(document.getElementById('linha'), {{
             type:'line',
-            data:{{labels:{json.dumps(dias_labels)}, datasets:[{{data:{json.dumps(dias_valores)}, borderColor:"#00ff9c", tension:0.4}}]}},
+            data:{{labels:{json.dumps(dias_labels)}, datasets:[{{data:{json.dumps(dias_valores)}, borderColor:"#38bdf8", tension:0.4}}]}},
             options:baseOptions
         }});
 
         new Chart(document.getElementById('top'), {{
             type:'bar',
-            data:{{labels:{json.dumps(top_nomes)}, datasets:[{{data:{json.dumps(top_valores)}, backgroundColor:"#00bfff"}}]}},
+            data:{{labels:{json.dumps(top_nomes)}, datasets:[{{data:{json.dumps(top_valores)}, backgroundColor:"#38bdf8"}}]}},
             options:{{...baseOptions, plugins:{{legend:{{display:false}}}}}}
         }});
 
@@ -159,7 +184,30 @@ def painel():
         </script>
 
         <style>
-        .wrap{{max-width:1200px;margin:auto}}
+        .wrap{{max-width:1300px;margin:auto}}
+
+        .topo-dashboard{{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:15px;
+        }}
+
+        .filtro-data input{{
+            background:#020617;
+            border:1px solid #1e293b;
+            padding:6px;
+            color:white;
+            border-radius:6px;
+        }}
+
+        .filtro-data button{{
+            background:#38bdf8;
+            border:none;
+            padding:6px 10px;
+            border-radius:6px;
+            cursor:pointer;
+        }}
 
         .cards{{
             display:grid;
@@ -169,14 +217,30 @@ def painel():
         }}
 
         .card{{
-            background:linear-gradient(145deg,#0a0f1a,#05070d);
+            background:linear-gradient(145deg,#0f172a,#020617);
             padding:20px;
             border-radius:15px;
             text-align:center;
-            box-shadow:0 0 20px rgba(0,255,150,0.1);
+            transition:0.3s;
         }}
 
-        .card h1{{font-size:28px;color:#ffffff}}
+        .card:hover{{
+            transform:translateY(-5px);
+            box-shadow:0 0 20px #38bdf8;
+        }}
+
+        .azul{{color:#38bdf8}}
+
+        .status{{
+            display:inline-block;
+            width:10px;
+            height:10px;
+            border-radius:50%;
+            margin-right:6px;
+        }}
+
+        .status.on{{background:#00ff9c}}
+        .status.off{{background:#ff4d4d}}
 
         .grid{{
             display:grid;
@@ -185,19 +249,15 @@ def painel():
         }}
 
         .box{{
-            background:#0b0f1a;
+            background:#020617;
             padding:15px;
             border-radius:15px;
-            box-shadow:0 0 20px rgba(0,255,150,0.05);
-            display:flex;
-            flex-direction:column;
-            align-items:center;
-            justify-content:center;
+            height:320px;
         }}
 
         canvas{{
-            max-width:300px !important;
-            max-height:300px !important;
+            width:100% !important;
+            height:250px !important;
         }}
 
         @media(max-width:768px){{
