@@ -102,7 +102,10 @@ def painel():
         <div class="wrap">
 
             <div class="topo-dashboard">
-                <h2>📊 Dashboard Executivo • {nome_mes} {now.year}</h2>
+                <div>
+                    <h2>📊 Dashboard Executivo • {nome_mes} {now.year}</h2>
+                    <p class="subtitulo">Dados atualizados em tempo real • Controle total do seu estoque</p>
+                </div>
 
                 <form method="get" class="filtro-data">
                     <div class="campo">
@@ -120,7 +123,7 @@ def painel():
             </div>
 
             <!-- ALERTA -->
-            {"<div class='alerta-topo'>⚠️ " + str(len(baixo_nomes)) + " produto(s) com estoque baixo</div>" if baixo_nomes else ""}
+            {"<div class='alerta-topo'>⚠️ Atenção: " + str(len(baixo_nomes)) + " produto(s) com estoque abaixo do mínimo</div>" if baixo_nomes else ""}
 
             <!-- KPI -->
             <div class="cards">
@@ -161,7 +164,13 @@ def painel():
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
         <script>
-        const cores = ["#38bdf8","#0ea5e9","#0284c7","#0369a1","#1d4ed8"];
+        const cores = [
+            "#38bdf8",
+            "#60a5fa",
+            "#818cf8",
+            "#a78bfa",
+            "#22d3ee"
+        ];
 
         const baseOptions = {{
             responsive:true,
@@ -177,7 +186,15 @@ def painel():
 
         new Chart(document.getElementById('linha'), {{
             type:'line',
-            data:{{labels:{json.dumps(dias_labels)}, datasets:[{{data:{json.dumps(dias_valores)}, borderColor:"#38bdf8", tension:0.4}}]}},
+            data:{{
+                labels:{json.dumps(dias_labels)},
+                datasets:[{{
+                    label:"Movimentações",
+                    data:{json.dumps(dias_valores)},
+                    borderColor:"#38bdf8",
+                    tension:0.4
+                }}]
+            }},
             options:baseOptions
         }});
 
@@ -202,6 +219,11 @@ def painel():
             justify-content:space-between;
             align-items:center;
             margin-bottom:15px;
+        }}
+
+        .subtitulo{{
+            color:#64748b;
+            font-size:13px;
         }}
 
         .filtro-data{{
@@ -250,11 +272,23 @@ def painel():
         }}
 
         .card{{
+            position:relative;
+            overflow:hidden;
             background:linear-gradient(145deg,#0f172a,#020617);
             padding:20px;
             border-radius:15px;
             text-align:center;
             transition:0.3s;
+        }}
+
+        .card::after{{
+            content:'';
+            position:absolute;
+            top:0;
+            left:0;
+            width:100%;
+            height:2px;
+            background:linear-gradient(90deg,#38bdf8,#0ea5e9);
         }}
 
         .card:hover{{
