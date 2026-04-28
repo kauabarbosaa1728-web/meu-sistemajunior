@@ -102,14 +102,25 @@ def painel():
         <div class="wrap">
 
             <div class="topo-dashboard">
-                <h2>📊 Visão Geral - {nome_mes}</h2>
+                <h2>📊 Dashboard Executivo • {nome_mes} {now.year}</h2>
 
                 <form method="get" class="filtro-data">
-                    <input type="date" name="inicio" min="2020-01-01" max="2030-12-31">
-                    <input type="date" name="fim" min="2020-01-01" max="2030-12-31">
+                    <div class="campo">
+                        <label>De</label>
+                        <input type="date" name="inicio" min="2020-01-01" max="2030-12-31">
+                    </div>
+
+                    <div class="campo">
+                        <label>Até</label>
+                        <input type="date" name="fim" min="2020-01-01" max="2030-12-31">
+                    </div>
+
                     <button>Filtrar</button>
                 </form>
             </div>
+
+            <!-- ALERTA -->
+            {"<div class='alerta-topo'>⚠️ " + str(len(baixo_nomes)) + " produto(s) com estoque baixo</div>" if baixo_nomes else ""}
 
             <!-- KPI -->
             <div class="cards">
@@ -193,20 +204,42 @@ def painel():
             margin-bottom:15px;
         }}
 
+        .filtro-data{{
+            display:flex;
+            gap:10px;
+            align-items:end;
+        }}
+
+        .campo{{
+            display:flex;
+            flex-direction:column;
+            font-size:12px;
+            color:#94a3b8;
+        }}
+
         .filtro-data input{{
             background:#020617;
             border:1px solid #1e293b;
-            padding:6px;
+            padding:8px;
             color:white;
             border-radius:6px;
         }}
 
         .filtro-data button{{
-            background:#38bdf8;
+            background:linear-gradient(90deg,#38bdf8,#0ea5e9);
             border:none;
-            padding:6px 10px;
+            padding:8px 15px;
             border-radius:6px;
             cursor:pointer;
+        }}
+
+        .alerta-topo{{
+            background:#7f1d1d;
+            padding:10px;
+            border-radius:8px;
+            margin-bottom:15px;
+            color:#fecaca;
+            text-align:center;
         }}
 
         .cards{{
@@ -226,7 +259,12 @@ def painel():
 
         .card:hover{{
             transform:translateY(-5px);
-            box-shadow:0 0 20px #38bdf8;
+            box-shadow:0 0 25px #38bdf8;
+        }}
+
+        .card h1{{
+            font-size:40px;
+            font-weight:700;
         }}
 
         .azul{{color:#38bdf8}}
@@ -252,12 +290,12 @@ def painel():
             background:#020617;
             padding:15px;
             border-radius:15px;
-            height:320px;
+            height:380px;
         }}
 
         canvas{{
             width:100% !important;
-            height:250px !important;
+            height:100% !important;
         }}
 
         @media(max-width:768px){{
