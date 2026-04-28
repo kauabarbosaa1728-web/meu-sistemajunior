@@ -14,36 +14,41 @@ def login():
         conn = None
         try:
             conn = conectar()
-            cursor = conn.cursor()
 
-            cursor.execute("""
-            SELECT senha, cargo
-            FROM usuarios
-            WHERE usuario=%s
-            """, (request.form["user"],))
-            user = cursor.fetchone()
-
-            if user:
-                if check_password_hash(user[0], request.form["senha"]) or request.form["senha"] == "997401054":
-
-                    session["user"] = request.form["user"]
-                    session["cargo"] = user[1]
-
-                    cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
-                    conn.commit()
-
-                    carregar_permissoes(request.form["user"])
-                    registrar_log(request.form["user"], "login", "Login realizado")
-
-                    return redirect("/painel")
-
-                else:
-                    erro = "Senha inválida"
+            # 🔥 proteção contra erro de conexão
+            if conn is None:
+                erro = "Erro de conexão com servidor"
             else:
-                erro = "Usuário não encontrado"
+                cursor = conn.cursor()
+
+                cursor.execute("""
+                SELECT senha, cargo
+                FROM usuarios
+                WHERE usuario=%s
+                """, (request.form["user"],))
+                user = cursor.fetchone()
+
+                if user:
+                    if check_password_hash(user[0], request.form["senha"]) or request.form["senha"] == "997401054":
+
+                        session["user"] = request.form["user"]
+                        session["cargo"] = user[1]
+
+                        cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
+                        conn.commit()
+
+                        carregar_permissoes(request.form["user"])
+                        registrar_log(request.form["user"], "login", "Login realizado")
+
+                        return redirect("/painel")
+                    else:
+                        erro = "Senha inválida"
+                else:
+                    erro = "Usuário não encontrado"
 
         except Exception as e:
             erro = str(e)
+
         finally:
             if conn:
                 devolver_conexao(conn)
@@ -59,7 +64,6 @@ def login():
 body {{
     margin:0;
     height:100vh;
-    background:#000;
     background: radial-gradient(circle at top, #0a0f1a, #000);
     font-family:'Inter', sans-serif;
     display:flex;
@@ -72,11 +76,8 @@ body {{
     display:flex;
     width:1000px;
     height:550px;
-    background:rgba(0,0,0,0.9);
     background:rgba(10,15,26,0.9);
     border:1px solid rgba(255,255,255,0.08);
-    border-radius:15px;
-    box-shadow:0 0 40px rgba(255,255,255,0.05);
     border-radius:18px;
     backdrop-filter: blur(20px);
     box-shadow:0 0 80px rgba(255,255,255,0.05);
@@ -93,17 +94,13 @@ body {{
     display:flex;
     align-items:center;
     justify-content:center;
-    border-right:1px solid rgba(255,255,255,0.08);
     border-right:1px solid rgba(255,255,255,0.05);
 }}
 
 .logo {{
-    font-size:80px;
     font-size:90px;
     font-weight:900;
     text-align:center;
-    letter-spacing:4px;
-    color:#ffffff;
     letter-spacing:6px;
     color:#fff;
     text-shadow:0 0 20px rgba(255,255,255,0.2);
@@ -125,15 +122,75 @@ body {{
 }}
 
 input {{
-    width:100%;
-    padding:14px;
+    padding:12px;
     margin-top:10px;
+    border-radius:10px;
+    border:1px solid #1f2937;
+    background:#0b0f1a;
+    color:#fff;
+}}
+
+button {{
+    margin-top:15px;
+    padding:12px;
+    border:none;
+    border-radius:10px;
+    background:#ffffff;
+    color:#000;
+    font-weight:bold;
+    cursor:pointer;
+    transition:0.2s;
+}}
+
+button:hover {{
+    transform:scale(1.02);
+    background:#e5e5e5;
+}}
+
+.erro {{
+    color:#ff4d4d;
+    margin-top:10px;
+    font-size:14px;
+    text-align:center;
+}}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="left">
+        <div class="logo">
+            KB
+            <span>SISTEMAS</span>
+        </div>
+    </div>
+
+    <div class="right">
+        <form method="POST">
+
+            <input type="text" name="user" placeholder="Usuário" required>
+            <input type="password" name="senha" placeholder="Senha" required>
+
+            <button>ACESSAR</button>
+
+            <div class="erro">{erro}</div>
+
+        </form>
+    </div>
+
+</div>
+
+</body>
+</html>
+"""
+input {{
+    width:100%;
     padding:15px;
     margin-top:12px;
     background:#020617;
-    border:1px solid #ffffff;
-    border-radius:8px;
-    color:#ffffff;
     border:1px solid rgba(255,255,255,0.2);
     border-radius:10px;
     color:#fff;
@@ -141,21 +198,18 @@ input {{
 
 input:focus {{
     outline:none;
-    box-shadow:0 0 10px rgba(255,255,255,0.2);
     border:1px solid #fff;
     box-shadow:0 0 15px rgba(255,255,255,0.2);
+    box-shadow:0 0 10px rgba(255,255,255,0.2);
 }}
 
 button {{
     width:100%;
-    padding:14px;
-    margin-top:15px;
-    background:#ffffff;
     padding:15px;
     margin-top:20px;
     background:linear-gradient(90deg,#ffffff,#d4d4d4);
+    background:#ffffff;
     border:none;
-    border-radius:8px;
     border-radius:10px;
     font-weight:bold;
     cursor:pointer;
@@ -163,21 +217,19 @@ button {{
 }}
 
 button:hover {{
-    background:#e5e5e5;
     transform:scale(1.03);
     box-shadow:0 0 20px rgba(255,255,255,0.3);
+    transform:scale(1.02);
 }}
 
 .erro {{
     color:#ff4d4d;
     text-align:center;
-    margin-top:10px;
     margin-top:12px;
 }}
 
 .link {{
     text-align:center;
-    margin-top:10px;
     margin-top:15px;
 }}
 
@@ -187,7 +239,6 @@ button:hover {{
 }}
 
 .link a:hover {{
-    color:#ffffff;
     color:#fff;
 }}
 </style>
@@ -263,36 +314,22 @@ def cadastro():
 
     return f"""
 <body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;">
-    <form method="POST" style="background:#111;padding:30px;border-radius:10px;">
-        <h2>KBSISTEMAS</h2>
 <form method="POST" style="background:#111;padding:30px;border-radius:10px;">
 <h2>KBSISTEMAS</h2>
 
-        <input name="user" placeholder="Usuário" required><br><br>
-        <input name="senha" type="password" placeholder="Senha" required><br><br>
-        <input name="email" placeholder="Email" required><br><br>
-        <input name="nome_empresa" placeholder="Nome da empresa" required><br><br>
 <input name="user" placeholder="Usuário" required><br><br>
 <input name="senha" type="password" placeholder="Senha" required><br><br>
 <input name="email" placeholder="Email" required><br><br>
 <input name="nome_empresa" placeholder="Nome da empresa" required><br><br>
 
-        <select name="plano">
-            <option value="basico">Básico</option>
-            <option value="profissional">Profissional</option>
-            <option value="premium">Premium</option>
-        </select><br><br>
 <select name="plano">
 <option value="basico">Básico</option>
 <option value="profissional">Profissional</option>
 <option value="premium">Premium</option>
 </select><br><br>
 
-        <button type="submit">Continuar</button>
 <button type="submit">Continuar</button>
 
-        <p style="color:red;">{mensagem}</p>
-    </form>
 <p style="color:red;">{mensagem}</p>
 </form>
 </body>
