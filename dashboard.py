@@ -89,6 +89,22 @@ def painel():
         baixo_nomes = [b[0] if b[0] else "Sem nome" for b in baixo]
         baixo_valores = [b[1] if b[1] else 0 for b in baixo]
 
+        # 🔥 ===== FATURAMENTO (ADICIONADO) =====
+        cursor.execute("""
+        SELECT COALESCE(SUM(valor),0)
+        FROM financeiro
+        WHERE tipo = 'entrada'
+        """)
+        faturamento = cursor.fetchone()[0]
+
+        cursor.execute("""
+        SELECT COALESCE(SUM(valor),0)
+        FROM financeiro
+        WHERE tipo = 'saida'
+        """)
+        gastos = cursor.fetchone()[0]
+
+        lucro = faturamento - gastos
         # ===== DATA =====
         now = datetime.now()
         nome_mes = [
