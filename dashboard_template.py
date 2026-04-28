@@ -12,7 +12,10 @@ def render_dashboard(
     baixo_nomes,
     baixo_valores,
     nome_mes,
-    ano
+    ano,
+    faturamento,
+    gastos,
+    lucro
 ):
     import json
 
@@ -30,22 +33,11 @@ def render_dashboard(
 
         {"<div class='alerta-topo'>⚠️ Atenção: " + str(len(baixo_nomes)) + " produto(s) com estoque abaixo do mínimo</div>" if baixo_nomes else ""}
 
+        <!-- KPIs -->
         <div class="cards">
-            <div class="card">
-                <h1 class="azul">{total_produtos}</h1>
-                <p>Total Produtos</p>
-            </div>
-
-            <div class="card">
-                <h1 class="azul">{total_qtd}</h1>
-                <p>Quantidade</p>
-            </div>
-
-            <div class="card">
-                <h1 class="azul">{total_transferencias}</h1>
-                <p>Movimentações</p>
-            </div>
-
+            <div class="card"><h1 class="azul">{total_produtos}</h1><p>Total Produtos</p></div>
+            <div class="card"><h1 class="azul">{total_qtd}</h1><p>Quantidade</p></div>
+            <div class="card"><h1 class="azul">{total_transferencias}</h1><p>Movimentações</p></div>
             <div class="card">
                 <h1 style="color:#ffffff">{usuarios_online}</h1>
                 <p>
@@ -55,11 +47,31 @@ def render_dashboard(
             </div>
         </div>
 
+        <!-- 💰 FINANCEIRO -->
+        <div class="cards">
+            <div class="card">
+                <h1 style="color:#22c55e">R$ {faturamento:.2f}</h1>
+                <p>Faturamento</p>
+            </div>
+
+            <div class="card">
+                <h1 style="color:#ef4444">R$ {gastos:.2f}</h1>
+                <p>Gastos</p>
+            </div>
+
+            <div class="card">
+                <h1 style="color:#38bdf8">R$ {lucro:.2f}</h1>
+                <p>Lucro</p>
+            </div>
+        </div>
+
+        <!-- GRÁFICOS -->
         <div class="grid">
             <div class="box"><h3>📊 Distribuição</h3><canvas id="pizza"></canvas></div>
             <div class="box"><h3>📈 Movimentações</h3><canvas id="linha"></canvas></div>
             <div class="box"><h3>🔥 Top Produtos</h3><canvas id="top"></canvas></div>
             <div class="box"><h3>⚠️ Baixo Estoque</h3><canvas id="baixo"></canvas></div>
+            <div class="box"><h3>💰 Financeiro</h3><canvas id="graficoFinanceiro"></canvas></div>
         </div>
 
     </div>
@@ -91,8 +103,8 @@ def render_dashboard(
                 data:{json.dumps(dias_valores)},
                 borderColor:"#38bdf8",
                 tension:0.4,
-                fill:true,  // 🔥 melhoria
-                backgroundColor:"rgba(56,189,248,0.1)" // 🔥 melhoria
+                fill:true,
+                backgroundColor:"rgba(56,189,248,0.1)"
             }}]
         }},
         options:baseOptions
@@ -108,6 +120,18 @@ def render_dashboard(
         type:'bar',
         data:{{labels:{json.dumps(baixo_nomes)}, datasets:[{{data:{json.dumps(baixo_valores)}, backgroundColor:"#ff4d4d"}}]}},
         options:{{...baseOptions, plugins:{{legend:{{display:false}}}}}}
+    }});
+
+    new Chart(document.getElementById('graficoFinanceiro'), {{
+        type:'bar',
+        data:{{
+            labels:["Faturamento","Gastos","Lucro"],
+            datasets:[{{
+                data:[{faturamento},{gastos},{lucro}],
+                backgroundColor:["#22c55e","#ef4444","#38bdf8"]
+            }}]
+        }},
+        options:baseOptions
     }});
     </script>
 
@@ -155,9 +179,10 @@ def render_dashboard(
 
     .card h1{{
         font-size:42px;
-        color:#38bdf8;
         text-shadow:0 0 15px rgba(56,189,248,0.5);
     }}
+
+    .azul{{color:#38bdf8}}
 
     .grid{{display:grid;grid-template-columns:1fr 1fr;gap:20px}}
 
