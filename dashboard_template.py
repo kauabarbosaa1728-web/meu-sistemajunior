@@ -90,7 +90,9 @@ def render_dashboard(
                 label:"Movimentações",
                 data:{json.dumps(dias_valores)},
                 borderColor:"#38bdf8",
-                tension:0.4
+                tension:0.4,
+                fill:true,  // 🔥 melhoria
+                backgroundColor:"rgba(56,189,248,0.1)" // 🔥 melhoria
             }}]
         }},
         options:baseOptions
@@ -110,20 +112,67 @@ def render_dashboard(
     </script>
 
     <style>
-    .wrap{{max-width:1300px;margin:auto}}
+    .wrap{{
+        max-width:1300px;
+        margin:auto;
+        animation:fadeIn 0.5s ease-in-out;
+    }}
+
+    @keyframes fadeIn{{
+        from{{opacity:0; transform:translateY(10px);}}
+        to{{opacity:1; transform:translateY(0);}}
+    }}
 
     .topo-dashboard{{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}}
     .subtitulo{{color:#64748b;font-size:13px}}
     .status-live{{color:#00ff9c;font-size:12px;margin-left:10px}}
 
+    .alerta-topo{{
+        background:linear-gradient(90deg,#7f1d1d,#991b1b);
+        border:1px solid #ef4444;
+        padding:10px;
+        border-radius:8px;
+        margin-bottom:15px;
+        color:#fecaca;
+        text-align:center;
+    }}
+
     .cards{{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px}}
 
-    .card{{background:#020617;padding:20px;border-radius:15px;text-align:center}}
-    .card h1{{font-size:42px;color:#38bdf8}}
+    .card{{
+        background:#020617;
+        padding:20px;
+        border-radius:15px;
+        text-align:center;
+        border:1px solid rgba(56,189,248,0.2);
+        transition:0.3s;
+    }}
+
+    .card:hover{{
+        transform:translateY(-5px);
+        box-shadow:0 0 20px rgba(56,189,248,0.3);
+    }}
+
+    .card h1{{
+        font-size:42px;
+        color:#38bdf8;
+        text-shadow:0 0 15px rgba(56,189,248,0.5);
+    }}
 
     .grid{{display:grid;grid-template-columns:1fr 1fr;gap:20px}}
 
-    .box{{background:#020617;padding:15px;border-radius:15px;height:380px}}
+    .box{{
+        background:#020617;
+        padding:15px;
+        border-radius:15px;
+        height:380px;
+        transition:0.3s;
+    }}
+
+    .box:hover{{
+        transform:translateY(-5px);
+        box-shadow:0 0 20px rgba(56,189,248,0.2);
+    }}
 
     canvas{{width:100% !important;height:100% !important}}
     </style>
