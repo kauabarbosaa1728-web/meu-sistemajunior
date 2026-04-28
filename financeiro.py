@@ -4,7 +4,6 @@ from layout import container, acesso_negado
 
 financeiro_bp = Blueprint("financeiro_bp", __name__)
 
-# ================= FINANCEIRO =================
 @financeiro_bp.route("/financeiro", methods=["GET", "POST"])
 def financeiro():
 
@@ -49,6 +48,10 @@ def financeiro():
     total_saida = sum([float(d[2]) for d in dados if d[1] == "saida"])
     saldo = total_entrada - total_saida
 
+    # 🔥 PREPARA GRÁFICO
+    entradas = [float(d[2]) for d in dados if d[1] == "entrada"]
+    saidas = [float(d[2]) for d in dados if d[1] == "saida"]
+
     # ================= TABELA =================
     tabela = ""
     for d in dados:
@@ -92,6 +95,12 @@ def financeiro():
 
         </div>
 
+        <!-- 🔥 GRÁFICO -->
+        <div class="box" style="margin-bottom:20px;">
+            <h3>📊 Visão Financeira</h3>
+            <canvas id="graficoFinanceiro"></canvas>
+        </div>
+
         <div class="grid">
 
             <!-- FORM -->
@@ -133,11 +142,37 @@ def financeiro():
 
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+    new Chart(document.getElementById('graficoFinanceiro'), {{
+        type: 'bar',
+        data: {{
+            labels: ["Entradas", "Saídas"],
+            datasets: [{{
+                data: [{total_entrada}, {total_saida}],
+                backgroundColor: ["#22c55e", "#ef4444"]
+            }}]
+        }},
+        options: {{
+            responsive:true,
+            maintainAspectRatio:false,
+            animation:{{duration:1200}}
+        }}
+    }});
+    </script>
+
     <style>
 
     .wrap {{
         max-width: 1300px;
         margin: auto;
+        animation: fadeIn 0.5s ease-in-out;
+    }}
+
+    @keyframes fadeIn {{
+        from {{opacity:0; transform:translateY(10px);}}
+        to {{opacity:1; transform:translateY(0);}}
     }}
 
     .cards {{
@@ -148,20 +183,28 @@ def financeiro():
 
     .card {{
         flex:1;
-        padding:15px;
-        border-radius:8px;
+        padding:20px;
+        border-radius:12px;
         text-align:center;
-        background:#111;
+        background:#020617;
+        border:1px solid rgba(56,189,248,0.2);
+        transition:0.3s;
+    }}
+
+    .card:hover {{
+        transform:translateY(-5px);
+        box-shadow:0 0 20px rgba(56,189,248,0.3);
+    }}
+
+    .card p {{
+        font-size:22px;
+        margin-top:10px;
+        font-weight:bold;
     }}
 
     .green {{ border-left:4px solid #22c55e; }}
     .red {{ border-left:4px solid #ef4444; }}
     .blue {{ border-left:4px solid #3b82f6; }}
-
-    .card p {{
-        font-size:18px;
-        margin-top:10px;
-    }}
 
     .grid {{
         display:grid;
@@ -170,10 +213,15 @@ def financeiro():
     }}
 
     .box {{
-        background:#0b0b0b;
-        border:1px solid #2c2c2c;
+        background:#020617;
+        border:1px solid #1e293b;
         padding:20px;
-        border-radius:10px;
+        border-radius:12px;
+    }}
+
+    canvas {{
+        width:100% !important;
+        height:250px !important;
     }}
 
     input, select {{
