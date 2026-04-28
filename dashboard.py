@@ -17,7 +17,6 @@ def painel():
 
     conn = conectar()
     cursor = conn.cursor()
-
     try:
         filtro = ""
         valores_filtro = ()
