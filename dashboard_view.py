@@ -29,7 +29,6 @@ def render_dashboard(
     ano = now.year
     cal = calendar.monthcalendar(ano, mes)
 
-    # 🔥 CALENDÁRIO
     html_calendario = f"""
     <div class="box calendario-box">
 
@@ -186,12 +185,12 @@ def render_dashboard(
             <form method="get" class="filtro-data">
                 <div class="campo">
                     <label>De</label>
-                    <input type="date" name="inicio">
+                    <input type="text" class="calendario-input" name="inicio" placeholder="Selecionar data">
                 </div>
 
                 <div class="campo">
                     <label>Até</label>
-                    <input type="date" name="fim">
+                    <input type="text" class="calendario-input" name="fim" placeholder="Selecionar data">
                 </div>
 
                 <button>Filtrar</button>
@@ -236,7 +235,6 @@ def render_dashboard(
 
     </div>
 
-    <!-- 🔥 ADICIONADO (idioma PT) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
@@ -245,47 +243,56 @@ def render_dashboard(
 
     <script>
 
-    /* 🔥 SÓ ISSO FOI ALTERADO */
-    document.querySelectorAll("input[type='date']").forEach(el => {
-        flatpickr(el, {
-            dateFormat: "Y-m-d",
-            locale: "pt"
-        });
-    });
+    flatpickr(".calendario-input", {{
+        dateFormat: "Y-m-d",
+        locale: "pt"
+    }});
 
     const cores = ["#38bdf8","#60a5fa","#818cf8","#a78bfa","#22d3ee"]
 
-    const configPadrao = {
+    const configPadrao = {{
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-            legend: { labels: { color: "#cbd5e1" } }
-        },
-        scales: {
-            x: { ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.05)" } },
-            y: { ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.05)" } }
-        }
-    };
+        plugins: {{
+            legend: {{ labels: {{ color: "#cbd5e1" }} }}
+        }},
+        scales: {{
+            x: {{
+                ticks: {{ color: "#94a3b8" }},
+                grid: {{ color: "rgba(255,255,255,0.05)" }}
+            }},
+            y: {{
+                ticks: {{ color: "#94a3b8" }},
+                grid: {{ color: "rgba(255,255,255,0.05)" }}
+            }}
+        }}
+    }}
 
-    new Chart(document.getElementById('pizza'), {
+    new Chart(document.getElementById('pizza'), {{
         type:'doughnut',
-        data:{
+        data:{{
             labels:{json.dumps(nomes)},
-            datasets:[{ data:{json.dumps(valores)}, backgroundColor: cores, borderWidth:0 }]
-        },
-        options:{
+            datasets:[{{
+                data:{json.dumps(valores)},
+                backgroundColor: cores,
+                borderWidth:0
+            }}]
+        }},
+        options:{{
             responsive:true,
             maintainAspectRatio:false,
             cutout:'70%',
-            plugins:{ legend:{ position:'bottom', labels:{ color:'#cbd5e1' } } }
-        }
-    });
+            plugins:{{
+                legend:{{ position:'bottom', labels:{{ color:'#cbd5e1' }} }}
+            }}
+        }}
+    }});
 
-    new Chart(document.getElementById('linha'), {
+    new Chart(document.getElementById('linha'), {{
         type:'line',
-        data:{
+        data:{{
             labels:{json.dumps(dias_labels)},
-            datasets:[{
+            datasets:[{{
                 data:{json.dumps(dias_valores)},
                 borderColor:"#38bdf8",
                 backgroundColor:"rgba(56,189,248,0.2)",
@@ -293,28 +300,36 @@ def render_dashboard(
                 borderWidth:3,
                 tension:0.4,
                 pointRadius:4
-            }]
-        },
+            }}]
+        }},
         options: configPadrao
-    });
+    }});
 
-    new Chart(document.getElementById('top'), {
+    new Chart(document.getElementById('top'), {{
         type:'bar',
-        data:{
+        data:{{
             labels:{json.dumps(top_nomes)},
-            datasets:[{ data:{json.dumps(top_valores)}, backgroundColor:"#3b82f6", borderRadius:8 }]
-        },
+            datasets:[{{
+                data:{json.dumps(top_valores)},
+                backgroundColor:"#3b82f6",
+                borderRadius:8
+            }}]
+        }},
         options: configPadrao
-    });
+    }});
 
-    new Chart(document.getElementById('baixo'), {
+    new Chart(document.getElementById('baixo'), {{
         type:'bar',
-        data:{
+        data:{{
             labels:{json.dumps(baixo_nomes)},
-            datasets:[{ data:{json.dumps(baixo_valores)}, backgroundColor:"#ef4444", borderRadius:8 }]
-        },
+            datasets:[{{
+                data:{json.dumps(baixo_valores)},
+                backgroundColor:"#ef4444",
+                borderRadius:8
+            }}]
+        }},
         options: configPadrao
-    });
+    }});
 
     </script>
     """
