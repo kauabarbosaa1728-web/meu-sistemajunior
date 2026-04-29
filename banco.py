@@ -21,7 +21,6 @@ def criar_pool():
         print("❌ ERRO AO CRIAR POOL:", e)
         db_pool = None
 
-# cria o pool ao iniciar
 criar_pool()
 
 
@@ -30,14 +29,12 @@ def conectar():
     global db_pool
 
     try:
-        # 🔥 recria pool se cair
         if db_pool is None:
             print("⚠️ Recriando pool...")
             criar_pool()
 
         conn = db_pool.getconn()
 
-        # 🔥 testa conexão
         cursor = conn.cursor()
         cursor.execute("SELECT 1")
         cursor.close()
@@ -70,9 +67,15 @@ def registrar_log(usuario, acao, detalhes=""):
         cursor = conn.cursor()
 
         cursor.execute("""
-        INSERT INTO logs (usuario, acao, detalhes)
-        VALUES (%s, %s, %s)
-        """, (usuario, acao, detalhes))
+        SELECT empresa_id FROM usuarios WHERE usuario=%s
+        """, (usuario,))
+        emp = cursor.fetchone()
+        empresa_id = emp[0] if emp else None
+
+        cursor.execute("""
+        INSERT INTO logs (usuario, acao, detalhes, empresa_id)
+        VALUES (%s, %s, %s, %s)
+        """, (usuario, acao, detalhes, empresa_id))
 
         conn.commit()
 
@@ -133,6 +136,7 @@ def criar_banco():
 
         cursor = conn.cursor()
 
+        # 🔥 USUARIOS
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS usuarios (
             usuario TEXT PRIMARY KEY,
@@ -149,10 +153,12 @@ def criar_banco():
             pode_logs INTEGER DEFAULT 0,
             email TEXT,
             plano TEXT DEFAULT 'basico',
-            nome_empresa TEXT
+            nome_empresa TEXT,
+            empresa_id TEXT
         )
         """)
 
+        # 🔥 PAGAMENTOS
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS pagamentos (
             id SERIAL PRIMARY KEY,
@@ -164,71 +170,36 @@ def criar_banco():
             status TEXT,
             pagamento_id TEXT,
             data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            vencimento TIMESTAMP
+            vencimento TIMESTAMP,
+            empresa_id TEXT
         )
         """)
 
-        cursor.execute("""
-        ALTER TABLE pagamentos
-        ADD COLUMN IF NOT EXISTS vencimento TIMESTAMP
-        """)
+        # 🔥 OUTRAS TABELAS
+        tabelas = ["estoque", "transferencias", "logs", "financeiro", "vendas"]
 
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS estoque (
-            id SERIAL PRIMARY KEY,
-            produto TEXT,
-            quantidade INTEGER,
-            categoria TEXT,
-            valor DECIMAL(10,2)
-        )
-        """)
+        for t in tabelas:
+            cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS {t} (
+                id SERIAL PRIMARY KEY,
+                empresa_id TEXT
+            )
+            """)
 
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS transferencias (
-            id SERIAL PRIMARY KEY,
-            produto TEXT,
-            quantidade INTEGER,
-            origem TEXT,
-            destino TEXT,
-            usuario TEXT,
-            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
+            cursor.execute(f"""
+            ALTER TABLE {t}
+            ADD COLUMN IF NOT EXISTS empresa_id TEXT
+            """)
 
+        # 🔥 GARANTE EMPRESA_ID NOS USUARIOS
         cursor.execute("""
-        CREATE TABLE IF NOT EXISTS logs (
-            id SERIAL PRIMARY KEY,
-            usuario TEXT,
-            acao TEXT,
-            detalhes TEXT,
-            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
-
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS financeiro (
-            id SERIAL PRIMARY KEY,
-            tipo VARCHAR(10),
-            valor DECIMAL(10,2),
-            descricao TEXT,
-            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            usuario TEXT
-        )
-        """)
-
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS vendas (
-            id SERIAL PRIMARY KEY,
-            produto TEXT,
-            quantidade INTEGER,
-            valor_total DECIMAL(10,2),
-            usuario TEXT,
-            data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
+        UPDATE usuarios
+        SET empresa_id = usuario
+        WHERE empresa_id IS NULL
         """)
 
         conn.commit()
-        print("✅ BANCO OK")
+        print("✅ BANCO OK + SAAS ATIVO")
 
     except Exception as e:
         print("❌ Erro ao criar banco:", e)
