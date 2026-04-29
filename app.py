@@ -17,6 +17,10 @@ from financeiro import financeiro_bp
 from vendas import vendas_bp
 from relatorios import relatorios_bp
 
+# 🔥 NOVO (VEÍCULOS)
+from veiculos import veiculos_bp
+from manutencoes import manutencoes_bp
+
 app = Flask(__name__)
 app.secret_key = "segredo123"
 
@@ -116,6 +120,10 @@ app.register_blueprint(logs_bp)
 app.register_blueprint(ia_bp)
 app.register_blueprint(financeiro_bp)
 app.register_blueprint(relatorios_bp)
+
+# 🔥 NOVO (VEÍCULOS)
+app.register_blueprint(veiculos_bp)
+app.register_blueprint(manutencoes_bp)
 
 # app.register_blueprint(vendas_bp)
 
