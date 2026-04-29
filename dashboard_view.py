@@ -29,7 +29,7 @@ def render_dashboard(
     ano = now.year
     cal = calendar.monthcalendar(ano, mes)
 
-    # 🔥 CALENDÁRIO (MANTIDO)
+    # 🔥 CALENDÁRIO
     html_calendario = f"""
     <div class="box calendario-box">
 
@@ -148,21 +148,30 @@ def render_dashboard(
         border:none;
     }}
 
-    /* 🔥 NOVO LAYOUT DOS GRÁFICOS (SEM REMOVER NADA) */
+    /* 🔥 GRID PROFISSIONAL */
     .grid {{
         display: grid;
         grid-template-columns: 2fr 1fr;
-        gap: 15px;
-        margin-top: 20px;
+        grid-template-rows: 300px 300px;
+        gap: 20px;
+        margin-top: 25px;
     }}
 
-    .box:nth-child(1) {{
+    .grid .box:nth-child(1) {{
         grid-row: span 2;
+    }}
+
+    .box {{
+        background: linear-gradient(145deg, #020617, #0f172a);
+        border: 1px solid #1e293b;
+        border-radius: 16px;
+        padding: 15px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.5);
     }}
 
     canvas {{
         width: 100% !important;
-        height: 250px !important;
+        height: 100% !important;
     }}
 
     </style>
@@ -231,11 +240,45 @@ def render_dashboard(
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
+
     const cores = ["#38bdf8","#60a5fa","#818cf8","#a78bfa","#22d3ee"]
+
+    const configPadrao = {{
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {{
+            legend: {{ labels: {{ color: "#cbd5e1" }} }}
+        }},
+        scales: {{
+            x: {{
+                ticks: {{ color: "#94a3b8" }},
+                grid: {{ color: "rgba(255,255,255,0.05)" }}
+            }},
+            y: {{
+                ticks: {{ color: "#94a3b8" }},
+                grid: {{ color: "rgba(255,255,255,0.05)" }}
+            }}
+        }}
+    }}
 
     new Chart(document.getElementById('pizza'), {{
         type:'doughnut',
-        data:{{labels:{json.dumps(nomes)}, datasets:[{{data:{json.dumps(valores)}, backgroundColor:cores}}]}}
+        data:{{
+            labels:{json.dumps(nomes)},
+            datasets:[{{
+                data:{json.dumps(valores)},
+                backgroundColor: cores,
+                borderWidth:0
+            }}]
+        }},
+        options:{{
+            responsive:true,
+            maintainAspectRatio:false,
+            cutout:'70%',
+            plugins:{{
+                legend:{{ position:'bottom', labels:{{ color:'#cbd5e1' }} }}
+            }}
+        }}
     }});
 
     new Chart(document.getElementById('linha'), {{
@@ -245,21 +288,42 @@ def render_dashboard(
             datasets:[{{
                 data:{json.dumps(dias_valores)},
                 borderColor:"#38bdf8",
+                backgroundColor:"rgba(56,189,248,0.2)",
+                fill:true,
                 borderWidth:3,
-                tension:0.4
+                tension:0.4,
+                pointRadius:4
             }}]
-        }}
+        }},
+        options: configPadrao
     }});
 
     new Chart(document.getElementById('top'), {{
         type:'bar',
-        data:{{labels:{json.dumps(top_nomes)}, datasets:[{{data:{json.dumps(top_valores)}}}]}}
+        data:{{
+            labels:{json.dumps(top_nomes)},
+            datasets:[{{
+                data:{json.dumps(top_valores)},
+                backgroundColor:"#3b82f6",
+                borderRadius:8
+            }}]
+        }},
+        options: configPadrao
     }});
 
     new Chart(document.getElementById('baixo'), {{
         type:'bar',
-        data:{{labels:{json.dumps(baixo_nomes)}, datasets:[{{data:{json.dumps(baixo_valores)}}}]}}
+        data:{{
+            labels:{json.dumps(baixo_nomes)},
+            datasets:[{{
+                data:{json.dumps(baixo_valores)},
+                backgroundColor:"#ef4444",
+                borderRadius:8
+            }}]
+        }},
+        options: configPadrao
     }});
+
     </script>
     """
 
