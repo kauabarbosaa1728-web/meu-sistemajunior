@@ -23,26 +23,65 @@ def pagar():
         return redirect("/")
 
     return f"""
-    <body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial;">
-        <div style="background:#0a0a0a;padding:30px;border-radius:10px;width:400px;text-align:center;">
-            
-            <h2>💰 Escolha seu plano</h2>
+    <body style="
+        margin:0;
+        height:100vh;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        font-family:Inter;
+        background:
+        radial-gradient(circle at top left, rgba(59,130,246,0.2), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(34,197,94,0.2), transparent 30%),
+        #020617;
+        color:#fff;
+    ">
 
-            <form method="POST" action="/criar_pagamento">
-                <input type="hidden" name="user" value="{session['user']}">
+    <div style="
+        background:rgba(10,15,26,0.9);
+        padding:35px;
+        border-radius:20px;
+        width:420px;
+        text-align:center;
+        backdrop-filter:blur(20px);
+        box-shadow:0 0 80px rgba(0,0,0,0.6);
+    ">
 
-                <select name="plano" style="width:100%;padding:10px;margin:10px 0;background:#111;color:#fff;">
-                    <option value="basico">Básico - R$39,90</option>
-                    <option value="profissional">Profissional - R$79,90</option>
-                    <option value="premium">Premium - R$129,90</option>
-                </select>
+        <h2>💰 Escolha seu plano</h2>
 
-                <button style="width:100%;padding:15px;background:#00ff00;border:none;font-size:18px;">
-                    🔥 Gerar PIX
-                </button>
-            </form>
+        <form method="POST" action="/criar_pagamento">
+            <input type="hidden" name="user" value="{session['user']}">
 
-        </div>
+            <select name="plano" style="
+                width:100%;
+                padding:12px;
+                margin:15px 0;
+                background:#020617;
+                color:#fff;
+                border-radius:10px;
+                border:1px solid rgba(255,255,255,0.2);
+            ">
+                <option value="basico">Básico - R$39,90</option>
+                <option value="profissional">Profissional - R$79,90</option>
+                <option value="premium">Premium - R$129,90</option>
+            </select>
+
+            <button style="
+                width:100%;
+                padding:14px;
+                background:linear-gradient(135deg,#22c55e,#16a34a);
+                border:none;
+                border-radius:10px;
+                font-size:16px;
+                font-weight:bold;
+                color:#fff;
+                cursor:pointer;
+            ">
+                🔥 Gerar PIX
+            </button>
+        </form>
+
+    </div>
     </body>
     """
 
@@ -81,7 +120,6 @@ def criar_pagamento():
         conn = conectar()
         cursor = conn.cursor()
 
-        # 🔥 BUSCAR USUARIO
         cursor.execute("""
         SELECT email, nome_empresa FROM usuarios WHERE usuario=%s
         """, (usuario,))
@@ -101,14 +139,13 @@ def criar_pagamento():
 
         vencimento = datetime.now() + timedelta(days=30)
 
-        # 🔥 INSERT COMPLETO (SEM ERRO)
         cursor.execute("""
         INSERT INTO pagamentos (usuario, email, senha, nome_empresa, plano, status, pagamento_id, vencimento)
         VALUES (%s,%s,%s,%s,%s,'pendente',%s,%s)
         """, (
             usuario,
             email,
-            "temp123",  # 🔥 resolve erro de senha
+            "temp123",
             nome_empresa,
             plano,
             pagamento_id,
@@ -123,47 +160,90 @@ def criar_pagamento():
         qr = resposta["point_of_interaction"]["transaction_data"]
 
         return f"""
-        <body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial;">
-            <div style="background:#0a0a0a;padding:30px;border-radius:10px;width:400px;text-align:center;">
-                
-                <h2>💳 Pagamento PIX</h2>
-                <p>Plano: {plano}</p>
-                <p>Valor: R$ {valor}</p>
+        <body style="
+            margin:0;
+            height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            font-family:Inter;
+            background:
+            radial-gradient(circle at top left, rgba(34,197,94,0.2), transparent 30%),
+            radial-gradient(circle at bottom right, rgba(59,130,246,0.2), transparent 30%),
+            #020617;
+            color:#fff;
+        ">
 
-                <img src="data:image/png;base64,{qr["qr_code_base64"]}" style="width:220px;margin:20px;">
+        <div style="
+            width:420px;
+            background:rgba(10,15,26,0.9);
+            border-radius:20px;
+            padding:30px;
+            text-align:center;
+            backdrop-filter:blur(20px);
+            box-shadow:0 0 80px rgba(0,0,0,0.6);
+        ">
 
-                <textarea id="pix" style="width:100%;height:100px;background:#111;color:#fff;">
-{qr["qr_code"]}
-                </textarea>
+            <h2>💳 Pagamento Seguro</h2>
+            <p style="color:#9ca3af;">Plano: {plano} • R$ {valor}</p>
 
-                <button onclick="copiar()" style="margin-top:10px;padding:10px;background:#00ff00;">
-                    📋 Copiar PIX
-                </button>
+            <img src="data:image/png;base64,{qr["qr_code_base64"]}" style="width:220px;margin:20px;border-radius:10px;">
 
-                <h3 id="status">⏳ Aguardando pagamento...</h3>
+            <textarea id="pix" style="
+                width:100%;
+                height:80px;
+                background:#020617;
+                border-radius:10px;
+                border:1px solid rgba(255,255,255,0.2);
+                color:#fff;
+                padding:10px;
+            ">{qr["qr_code"]}</textarea>
 
-                <script>
-                function copiar() {{
-                    let pix = document.getElementById("pix");
-                    pix.select();
-                    document.execCommand("copy");
-                    alert("PIX copiado!");
-                }}
+            <button onclick="copiar()" style="
+                width:100%;
+                padding:12px;
+                margin-top:10px;
+                background:linear-gradient(135deg,#22c55e,#16a34a);
+                border:none;
+                border-radius:10px;
+                color:#fff;
+                font-weight:bold;
+                cursor:pointer;
+            ">
+                📋 Copiar PIX
+            </button>
 
-                async function verificar() {{
-                    let r = await fetch("/verificar_pagamento_auto");
-                    let t = await r.text();
-
-                    if (t.includes("APROVADO")) {{
-                        document.getElementById("status").innerHTML = "✅ PAGAMENTO APROVADO!";
-                        setTimeout(() => window.location.href="/painel", 2000);
-                    }}
-                }}
-
-                setInterval(verificar, 3000);
-                </script>
-
+            <div id="status" style="margin-top:20px;color:#94a3b8;">
+                ⏳ Aguardando pagamento...
             </div>
+
+        </div>
+
+        <script>
+
+        function copiar(){{
+            let pix = document.getElementById("pix");
+            pix.select();
+            document.execCommand("copy");
+            alert("PIX copiado!");
+        }}
+
+        async function verificar(){{
+            let r = await fetch("/verificar_pagamento_auto");
+            let t = await r.text();
+
+            if (t.includes("APROVADO")){{
+                document.getElementById("status").innerHTML =
+                    "<span style='color:#22c55e;font-weight:bold;'>Pagamento aprovado! Redirecionando...</span>";
+
+                setTimeout(() => window.location.href="/painel", 2000);
+            }}
+        }}
+
+        setInterval(verificar, 3000);
+
+        </script>
+
         </body>
         """
 
@@ -171,7 +251,7 @@ def criar_pagamento():
         return f"❌ ERRO: {str(e)}"
 
 
-# ================= VERIFICAR PAGAMENTO =================
+# ================= VERIFICAR =================
 @pagamento_routes.route("/verificar_pagamento_auto")
 def verificar_pagamento_auto():
     try:
