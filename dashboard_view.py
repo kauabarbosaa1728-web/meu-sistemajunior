@@ -49,8 +49,9 @@ def render_dashboard(
             if dia == 0:
                 html_calendario += "<div class='dia vazio'></div>"
             else:
+                hoje_classe = "hoje" if dia == now.day else ""
                 html_calendario += f"""
-                <div class="dia">
+                <div class="dia {hoje_classe}">
                     <div class="num">{dia}</div>
                     <div class="mini-info">-</div>
                 </div>
@@ -59,6 +60,65 @@ def render_dashboard(
     html_calendario += "</div></div>"
 
     html = f"""
+    <style>
+
+    .calendario-box {{
+        margin-top:20px;
+    }}
+
+    .topo-cal {{
+        color:#94a3b8;
+        margin-bottom:10px;
+    }}
+
+    .cal-grid {{
+        display:grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap:6px;
+    }}
+
+    .dia-semana {{
+        text-align:center;
+        font-size:12px;
+        color:#64748b;
+    }}
+
+    .dia {{
+        background: linear-gradient(145deg, #020617, #0f172a);
+        border:1px solid #1e293b;
+        border-radius:8px;
+        padding:8px;
+        min-height:60px;
+        transition:0.2s;
+    }}
+
+    .dia:hover {{
+        background:#0f172a;
+        transform:scale(1.05);
+    }}
+
+    .dia.hoje {{
+        border:2px solid #3b82f6;
+        box-shadow:0 0 10px #3b82f6;
+    }}
+
+    .num {{
+        font-weight:bold;
+        color:#fff;
+    }}
+
+    .mini-info {{
+        font-size:11px;
+        color:#38bdf8;
+    }}
+
+    .vazio {{
+        background:transparent;
+        border:none;
+    }}
+
+    </style>
+
     <div class="wrap">
 
         <div class="topo-dashboard">
@@ -134,7 +194,12 @@ def render_dashboard(
         type:'line',
         data:{{
             labels:{json.dumps(dias_labels)},
-            datasets:[{{data:{json.dumps(dias_valores)}, borderColor:"#38bdf8", borderWidth:3, tension:0.4}}]
+            datasets:[{{
+                data:{json.dumps(dias_valores)},
+                borderColor:"#38bdf8",
+                borderWidth:3,
+                tension:0.4
+            }}]
         }}
     }});
 
