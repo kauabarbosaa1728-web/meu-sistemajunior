@@ -40,7 +40,7 @@ if request.method == "POST":
                     empresa_id = user[2] or request.form["user"]
                     session["empresa_id"] = empresa_id
 
-                    # 🔥 CORRIGE USUÁRIO ANTIGO SEM EMPRESA_ID
+                    # 🔥 CORRIGE USUÁRIO ANTIGO
                     if not user[2]:
                         cursor.execute("""
                         UPDATE usuarios SET empresa_id=%s WHERE usuario=%s
@@ -100,7 +100,6 @@ backdrop-filter: blur(20px);
 .left {{
 width:50%;
 display:flex;
-flex-direction:column;
 align-items:center;
 justify-content:center;
 border-right:1px solid rgba(255,255,255,0.05);
@@ -137,6 +136,7 @@ background: linear-gradient(135deg, #3b82f6, #2563eb);
 border:none;
 border-radius:10px;
 color:#fff;
+cursor:pointer;
 }}
 
 .erro {{
@@ -282,6 +282,7 @@ button {{
     border:none;
     border-radius:10px;
     color:#fff;
+    cursor:pointer;
 }}
 
 .msg {{
