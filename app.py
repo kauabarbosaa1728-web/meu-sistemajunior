@@ -3,7 +3,7 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash
 import os
 
-from banco import criar_banco, verificar_pagamento, conectar, devolver_conexao
+from banco import criar_banco, conectar, devolver_conexao
 from layout import acesso_negado
 
 from auth import auth_bp
@@ -15,8 +15,6 @@ from logs import logs_bp
 from ia_routes import ia_bp
 from financeiro import financeiro_bp
 from vendas import vendas_bp
-
-# 🔥 NOVO (RELATÓRIOS)
 from relatorios import relatorios_bp
 
 app = Flask(__name__)
@@ -33,11 +31,66 @@ except Exception as e:
 def ping():
     return "ok"
 
-# ================= BLOQUEIO GLOBAL =================
+# ================= BLOQUEIO GLOBAL SAAS =================
 @app.before_request
 def bloquear_sistema():
-    # 🔥 DESATIVADO POR ENQUANTO
-    pass
+
+    # 🔥 ROTAS LIBERADAS
+    rotas_livres = [
+        "/",
+        "/cadastro",
+        "/criar_pagamento",
+        "/verificar_pagamento_auto",
+        "/webhook",
+        "/static"
+    ]
+
+    if any(request.path.startswith(r) for r in rotas_livres):
+        return
+
+    # 🔥 NÃO LOGADO
+    if "user" not in session:
+        return redirect("/")
+
+    # 🔥 ADMIN NÃO BLOQUEIA
+    if session.get("cargo") == "admin":
+        return
+
+    conn = conectar()
+    if conn is None:
+        return
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    SELECT vencimento
+    FROM pagamentos
+    WHERE usuario=%s AND status='pago'
+    """, (session["user"],))
+
+    dado = cursor.fetchone()
+
+    # 🔥 SEM PAGAMENTO
+    if not dado:
+        return """
+        <h2 style='text-align:center;margin-top:100px;'>
+        ⚠️ Sistema bloqueado<br><br>
+        <a href="/pagar">Ir para pagamento</a>
+        </h2>
+        """
+
+    vencimento = dado[0]
+
+    # 🔥 VENCEU
+    if vencimento and vencimento < datetime.now():
+        return """
+        <h2 style='text-align:center;margin-top:100px;color:red;'>
+        ⚠️ Seu plano expirou<br><br>
+        <a href="/pagar">Renovar agora</a>
+        </h2>
+        """
+
+    devolver_conexao(conn)
 
 # ================= BLUEPRINTS =================
 app.register_blueprint(auth_bp)
@@ -48,11 +101,8 @@ app.register_blueprint(pagamento_routes)
 app.register_blueprint(logs_bp)
 app.register_blueprint(ia_bp)
 app.register_blueprint(financeiro_bp)
-
-# 🔥 ATIVA RELATÓRIOS
 app.register_blueprint(relatorios_bp)
 
-# (deixa vendas comentado se ainda não usa)
 # app.register_blueprint(vendas_bp)
 
 # ================= ROTAS DIRETAS =================
