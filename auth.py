@@ -2,6 +2,7 @@ from flask import Blueprint, request, redirect, session
 from werkzeug.security import check_password_hash
 from banco import conectar, devolver_conexao, registrar_log
 from permissoes import carregar_permissoes
+import uuid
 
 auth_bp = Blueprint("auth_bp", __name__)
 
@@ -20,8 +21,9 @@ def login():
             else:
                 cursor = conn.cursor()
 
+                # 🔥 AGORA PEGA EMPRESA_ID
                 cursor.execute("""
-                SELECT senha, cargo
+                SELECT senha, cargo, empresa_id
                 FROM usuarios
                 WHERE usuario=%s
                 """, (request.form["user"],))
@@ -33,7 +35,12 @@ def login():
                         session["user"] = request.form["user"]
                         session["cargo"] = user[1]
 
-                        cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
+                        # 🔥 SAAS
+                        session["empresa_id"] = user[2]
+
+                        cursor.execute("""
+                        UPDATE usuarios SET online=1 WHERE usuario=%s
+                        """, (request.form["user"],))
                         conn.commit()
 
                         carregar_permissoes(request.form["user"])
@@ -60,7 +67,6 @@ def login():
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
 
 <style>
-
 body {{
     margin:0;
     height:100vh;
@@ -135,13 +141,6 @@ input {{
     border:1px solid rgba(255,255,255,0.2);
     border-radius:10px;
     color:#fff;
-    transition:0.2s;
-}}
-
-input:focus {{
-    outline:none;
-    border:1px solid #3b82f6;
-    box-shadow:0 0 12px rgba(59,130,246,0.4);
 }}
 
 button {{
@@ -152,14 +151,7 @@ button {{
     border:none;
     border-radius:10px;
     font-weight:bold;
-    cursor:pointer;
     color:#fff;
-    transition:0.2s;
-}}
-
-button:hover {{
-    transform:scale(1.03);
-    box-shadow:0 0 20px rgba(59,130,246,0.5);
 }}
 
 .erro {{
@@ -167,21 +159,6 @@ button:hover {{
     text-align:center;
     margin-top:12px;
 }}
-
-.link {{
-    text-align:center;
-    margin-top:15px;
-}}
-
-.link a {{
-    color:#9ca3af;
-    text-decoration:none;
-}}
-
-.link a:hover {{
-    color:#fff;
-}}
-
 </style>
 </head>
 
@@ -204,7 +181,6 @@ button:hover {{
         <form method="POST">
             <input name="user" placeholder="Usuário" required>
             <input name="senha" type="password" placeholder="Senha" required>
-
             <button type="submit">Entrar no sistema</button>
         </form>
 
@@ -238,20 +214,28 @@ def cadastro():
             nome_empresa = request.form.get("nome_empresa")
             plano = request.form.get("plano")
 
+            # 🔥 GERA EMPRESA
+            empresa_id = str(uuid.uuid4())
+
             cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", (usuario,))
             if cursor.fetchone():
                 mensagem = "Usuário já existe"
             else:
+                cursor.execute("""
+                INSERT INTO usuarios (usuario, senha, email, nome_empresa, plano, empresa_id)
+                VALUES (%s,%s,%s,%s,%s,%s)
+                """, (usuario, senha, email, nome_empresa, plano, empresa_id))
+
+                conn.commit()
+
                 return f"""
 <form id="auto" action="/criar_pagamento" method="POST">
 <input type="hidden" name="user" value="{usuario}">
-<input type="hidden" name="senha" value="{senha}">
-<input type="hidden" name="email" value="{email}">
-<input type="hidden" name="nome_empresa" value="{nome_empresa}">
 <input type="hidden" name="plano" value="{plano}">
 </form>
 <script>document.getElementById("auto").submit();</script>
 """
+
         except Exception as e:
             mensagem = str(e)
         finally:
