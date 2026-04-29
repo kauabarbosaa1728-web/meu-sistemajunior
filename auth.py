@@ -1,5 +1,5 @@
 from flask import Blueprint, request, redirect, session
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from banco import conectar, devolver_conexao, registrar_log
 from permissoes import carregar_permissoes
 import uuid
@@ -21,7 +21,6 @@ def login():
             else:
                 cursor = conn.cursor()
 
-                # 🔥 AGORA PEGA EMPRESA_ID
                 cursor.execute("""
                 SELECT senha, cargo, empresa_id
                 FROM usuarios
@@ -34,13 +33,9 @@ def login():
 
                         session["user"] = request.form["user"]
                         session["cargo"] = user[1]
-
-                        # 🔥 SAAS
                         session["empresa_id"] = user[2]
 
-                        cursor.execute("""
-                        UPDATE usuarios SET online=1 WHERE usuario=%s
-                        """, (request.form["user"],))
+                        cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
                         conn.commit()
 
                         carregar_permissoes(request.form["user"])
@@ -63,9 +58,7 @@ def login():
 <html>
 <head>
 <title>KBSISTEMAS</title>
-
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-
 <style>
 body {{
     margin:0;
@@ -86,10 +79,8 @@ body {{
     width:1000px;
     height:550px;
     background:rgba(10,15,26,0.9);
-    border:1px solid rgba(255,255,255,0.08);
     border-radius:18px;
     backdrop-filter: blur(20px);
-    box-shadow:0 0 80px rgba(0,0,0,0.6);
 }}
 
 .left {{
@@ -99,37 +90,18 @@ body {{
     align-items:center;
     justify-content:center;
     border-right:1px solid rgba(255,255,255,0.05);
-    text-align:center;
 }}
 
 .logo {{
     font-size:90px;
     font-weight:900;
-    letter-spacing:6px;
     background: linear-gradient(135deg, #3b82f6, #38bdf8);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }}
 
-.logo span {{
-    display:block;
-    font-size:16px;
-    margin-top:10px;
-    color:#9ca3af;
-}}
-
-.desc {{
-    margin-top:20px;
-    font-size:14px;
-    color:#94a3b8;
-    max-width:250px;
-}}
-
 .right {{
     width:50%;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
     padding:50px;
 }}
 
@@ -150,7 +122,6 @@ button {{
     background: linear-gradient(135deg, #3b82f6, #2563eb);
     border:none;
     border-radius:10px;
-    font-weight:bold;
     color:#fff;
 }}
 
@@ -163,36 +134,26 @@ button {{
 </head>
 
 <body>
-
 <div class="container">
-
-    <div class="left">
-        <div class="logo">
-            KB
-            <span>SISTEMAS</span>
-        </div>
-
-        <div class="desc">
-            Controle total do seu negócio em um só lugar.
-        </div>
-    </div>
-
-    <div class="right">
-        <form method="POST">
-            <input name="user" placeholder="Usuário" required>
-            <input name="senha" type="password" placeholder="Senha" required>
-            <button type="submit">Entrar no sistema</button>
-        </form>
-
-        <p class="erro">{erro}</p>
-
-        <div class="link">
-            <a href="/cadastro">Criar conta</a>
-        </div>
-    </div>
-
+<div class="left">
+<div class="logo">KB</div>
 </div>
 
+<div class="right">
+<form method="POST">
+<input name="user" placeholder="Usuário" required>
+<input name="senha" type="password" placeholder="Senha" required>
+<button>Entrar no sistema</button>
+</form>
+
+<p class="erro">{erro}</p>
+
+<div style="margin-top:15px;">
+<a href="/cadastro" style="color:#60a5fa;">Criar conta</a>
+</div>
+
+</div>
+</div>
 </body>
 </html>
 """
@@ -214,7 +175,6 @@ def cadastro():
             nome_empresa = request.form.get("nome_empresa")
             plano = request.form.get("plano")
 
-            # 🔥 GERA EMPRESA
             empresa_id = str(uuid.uuid4())
 
             cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", (usuario,))
@@ -224,7 +184,14 @@ def cadastro():
                 cursor.execute("""
                 INSERT INTO usuarios (usuario, senha, email, nome_empresa, plano, empresa_id)
                 VALUES (%s,%s,%s,%s,%s,%s)
-                """, (usuario, senha, email, nome_empresa, plano, empresa_id))
+                """, (
+                    usuario,
+                    generate_password_hash(senha),
+                    email,
+                    nome_empresa,
+                    plano,
+                    empresa_id
+                ))
 
                 conn.commit()
 
@@ -243,26 +210,97 @@ def cadastro():
                 devolver_conexao(conn)
 
     return f"""
-<body style="background:#000;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;">
-<form method="POST" style="background:#111;padding:30px;border-radius:10px;">
-<h2>KBSISTEMAS</h2>
+<html>
+<head>
+<title>Criar Conta</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
 
-<input name="user" placeholder="Usuário" required><br><br>
-<input name="senha" type="password" placeholder="Senha" required><br><br>
-<input name="email" placeholder="Email" required><br><br>
-<input name="nome_empresa" placeholder="Nome da empresa" required><br><br>
+<style>
+body {{
+    margin:0;
+    height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:Inter;
+    background:
+    radial-gradient(circle at top left, rgba(59,130,246,0.2), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(56,189,248,0.15), transparent 30%),
+    #020617;
+    color:#fff;
+}}
+
+.box {{
+    width:420px;
+    background:rgba(10,15,26,0.9);
+    padding:35px;
+    border-radius:20px;
+    backdrop-filter:blur(20px);
+}}
+
+h2 {{
+    text-align:center;
+    margin-bottom:20px;
+}}
+
+input, select {{
+    width:100%;
+    padding:14px;
+    margin-top:10px;
+    background:#020617;
+    border:1px solid rgba(255,255,255,0.2);
+    border-radius:10px;
+    color:#fff;
+}}
+
+button {{
+    width:100%;
+    padding:14px;
+    margin-top:20px;
+    background: linear-gradient(135deg,#3b82f6,#2563eb);
+    border:none;
+    border-radius:10px;
+    color:#fff;
+}}
+
+.msg {{
+    text-align:center;
+    margin-top:10px;
+    color:#f87171;
+}}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+<h2>Criar Conta 🚀</h2>
+
+<form method="POST">
+<input name="user" placeholder="Usuário" required>
+<input name="senha" type="password" placeholder="Senha" required>
+<input name="email" placeholder="Email" required>
+<input name="nome_empresa" placeholder="Nome da empresa" required>
 
 <select name="plano">
-<option value="basico">Básico</option>
-<option value="profissional">Profissional</option>
-<option value="premium">Premium</option>
-</select><br><br>
+<option value="basico">Básico - R$39,90</option>
+<option value="profissional">Profissional - R$79,90</option>
+<option value="premium">Premium - R$129,90</option>
+</select>
 
-<button type="submit">Continuar</button>
-
-<p style="color:red;">{mensagem}</p>
+<button>Criar conta</button>
 </form>
+
+<p class="msg">{mensagem}</p>
+
+<div style="text-align:center;margin-top:10px;">
+<a href="/" style="color:#60a5fa;">Voltar</a>
+</div>
+
+</div>
+
 </body>
+</html>
 """
 
 # ================= LOGOUT =================
