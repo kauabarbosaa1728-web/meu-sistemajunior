@@ -245,7 +245,8 @@ def render_dashboard(
 
     flatpickr(".calendario-input", {{
         dateFormat: "Y-m-d",
-        locale: "pt"
+        locale: "pt",
+        defaultDate: "today"
     }});
 
     const cores = ["#38bdf8","#60a5fa","#818cf8","#a78bfa","#22d3ee"]
