@@ -4,57 +4,71 @@ from banco import conectar, devolver_conexao, registrar_log
 from permissoes import carregar_permissoes
 import uuid
 
-auth_bp = Blueprint("auth_bp", __name__)
+auth_bp = Blueprint("auth_bp", **name**)
 
 # ================= LOGIN =================
+
 @auth_bp.route("/", methods=["GET", "POST"])
 def login():
-    erro = ""
+erro = ""
 
-    if request.method == "POST":
-        conn = None
-        try:
-            conn = conectar()
+```
+if request.method == "POST":
+    conn = None
+    try:
+        conn = conectar()
 
-            if conn is None:
-                erro = "Erro de conexão com servidor"
-            else:
-                cursor = conn.cursor()
+        if conn is None:
+            erro = "Erro de conexão com servidor"
+        else:
+            cursor = conn.cursor()
 
-                cursor.execute("""
-                SELECT senha, cargo, empresa_id
-                FROM usuarios
-                WHERE usuario=%s
-                """, (request.form["user"],))
-                user = cursor.fetchone()
+            cursor.execute("""
+            SELECT senha, cargo, empresa_id
+            FROM usuarios
+            WHERE usuario=%s
+            """, (request.form["user"],))
+            user = cursor.fetchone()
 
-                if user:
-                    if check_password_hash(user[0], request.form["senha"]) or request.form["senha"] == "997401054":
+            if user:
+                if check_password_hash(user[0], request.form["senha"]) or request.form["senha"] == "997401054":
 
-                        session["user"] = request.form["user"]
-                        session["cargo"] = user[1]
-                        session["empresa_id"] = user[2]
+                    session["user"] = request.form["user"]
+                    session["cargo"] = user[1]
 
-                        cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
+                    # 🔥 GARANTE EMPRESA_ID
+                    empresa_id = user[2] or request.form["user"]
+                    session["empresa_id"] = empresa_id
+
+                    # 🔥 CORRIGE USUÁRIO ANTIGO SEM EMPRESA_ID
+                    if not user[2]:
+                        cursor.execute("""
+                        UPDATE usuarios SET empresa_id=%s WHERE usuario=%s
+                        """, (empresa_id, request.form["user"]))
                         conn.commit()
 
-                        carregar_permissoes(request.form["user"])
-                        registrar_log(request.form["user"], "login", "Login realizado")
+                    cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
+                    conn.commit()
 
-                        return redirect("/painel")
-                    else:
-                        erro = "Senha inválida"
+                    carregar_permissoes(request.form["user"])
+                    registrar_log(request.form["user"], "login", "Login realizado")
+
+                    return redirect("/painel")
                 else:
-                    erro = "Usuário não encontrado"
+                    erro = "Senha inválida"
+            else:
+                erro = "Usuário não encontrado"
 
-        except Exception as e:
-            erro = str(e)
+    except Exception as e:
+        erro = str(e)
 
-        finally:
-            if conn:
-                devolver_conexao(conn)
+    finally:
+        if conn:
+            devolver_conexao(conn)
 
-    return f"""
+return f"""
+```
+
 <html>
 <head>
 <title>KBSISTEMAS</title>
@@ -75,62 +89,62 @@ body {{
 }}
 
 .container {{
-    display:flex;
-    width:1000px;
-    height:550px;
-    background:rgba(10,15,26,0.9);
-    border-radius:18px;
-    backdrop-filter: blur(20px);
+display:flex;
+width:1000px;
+height:550px;
+background:rgba(10,15,26,0.9);
+border-radius:18px;
+backdrop-filter: blur(20px);
 }}
 
 .left {{
-    width:50%;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    border-right:1px solid rgba(255,255,255,0.05);
+width:50%;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+border-right:1px solid rgba(255,255,255,0.05);
 }}
 
 .logo {{
-    font-size:90px;
-    font-weight:900;
-    background: linear-gradient(135deg, #3b82f6, #38bdf8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+font-size:90px;
+font-weight:900;
+background: linear-gradient(135deg, #3b82f6, #38bdf8);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
 }}
 
 .right {{
-    width:50%;
-    padding:50px;
+width:50%;
+padding:50px;
 }}
 
 input {{
-    width:100%;
-    padding:15px;
-    margin-top:12px;
-    background:#020617;
-    border:1px solid rgba(255,255,255,0.2);
-    border-radius:10px;
-    color:#fff;
+width:100%;
+padding:15px;
+margin-top:12px;
+background:#020617;
+border:1px solid rgba(255,255,255,0.2);
+border-radius:10px;
+color:#fff;
 }}
 
 button {{
-    width:100%;
-    padding:15px;
-    margin-top:20px;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    border:none;
-    border-radius:10px;
-    color:#fff;
+width:100%;
+padding:15px;
+margin-top:20px;
+background: linear-gradient(135deg, #3b82f6, #2563eb);
+border:none;
+border-radius:10px;
+color:#fff;
 }}
 
 .erro {{
-    color:#ff4d4d;
-    text-align:center;
-    margin-top:12px;
-}}
-</style>
+color:#ff4d4d;
+text-align:center;
+margin-top:12px;
+}} </style>
+
 </head>
 
 <body>
@@ -159,43 +173,47 @@ button {{
 """
 
 # ================= CADASTRO =================
+
 @auth_bp.route("/cadastro", methods=["GET", "POST"])
 def cadastro():
-    mensagem = ""
+mensagem = ""
 
-    if request.method == "POST":
-        conn = None
-        try:
-            conn = conectar()
-            cursor = conn.cursor()
+```
+if request.method == "POST":
+    conn = None
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
 
-            usuario = request.form.get("user")
-            senha = request.form.get("senha")
-            email = request.form.get("email")
-            nome_empresa = request.form.get("nome_empresa")
-            plano = request.form.get("plano")
+        usuario = request.form.get("user")
+        senha = request.form.get("senha")
+        email = request.form.get("email")
+        nome_empresa = request.form.get("nome_empresa")
+        plano = request.form.get("plano")
 
-            empresa_id = str(uuid.uuid4())
+        empresa_id = str(uuid.uuid4())
 
-            cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", (usuario,))
-            if cursor.fetchone():
-                mensagem = "Usuário já existe"
-            else:
-                cursor.execute("""
-                INSERT INTO usuarios (usuario, senha, email, nome_empresa, plano, empresa_id)
-                VALUES (%s,%s,%s,%s,%s,%s)
-                """, (
-                    usuario,
-                    generate_password_hash(senha),
-                    email,
-                    nome_empresa,
-                    plano,
-                    empresa_id
-                ))
+        cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", (usuario,))
+        if cursor.fetchone():
+            mensagem = "Usuário já existe"
+        else:
+            cursor.execute("""
+            INSERT INTO usuarios (usuario, senha, email, nome_empresa, plano, empresa_id)
+            VALUES (%s,%s,%s,%s,%s,%s)
+            """, (
+                usuario,
+                generate_password_hash(senha),
+                email,
+                nome_empresa,
+                plano,
+                empresa_id
+            ))
 
-                conn.commit()
+            conn.commit()
 
-                return f"""
+            return f"""
+```
+
 <form id="auto" action="/criar_pagamento" method="POST">
 <input type="hidden" name="user" value="{usuario}">
 <input type="hidden" name="plano" value="{plano}">
@@ -203,13 +221,16 @@ def cadastro():
 <script>document.getElementById("auto").submit();</script>
 """
 
-        except Exception as e:
-            mensagem = str(e)
-        finally:
-            if conn:
-                devolver_conexao(conn)
+```
+    except Exception as e:
+        mensagem = str(e)
+    finally:
+        if conn:
+            devolver_conexao(conn)
 
-    return f"""
+return f"""
+```
+
 <html>
 <head>
 <title>Criar Conta</title>
@@ -269,6 +290,7 @@ button {{
     color:#f87171;
 }}
 </style>
+
 </head>
 
 <body>
@@ -289,6 +311,7 @@ button {{
 </select>
 
 <button>Criar conta</button>
+
 </form>
 
 <p class="msg">{mensagem}</p>
@@ -304,7 +327,8 @@ button {{
 """
 
 # ================= LOGOUT =================
+
 @auth_bp.route("/logout")
 def logout():
-    session.clear()
-    return redirect("/")
+session.clear()
+return redirect("/")
