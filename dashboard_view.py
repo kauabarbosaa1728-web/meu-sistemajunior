@@ -148,7 +148,6 @@ def render_dashboard(
         border:none;
     }}
 
-    /* 🔥 GRID PROFISSIONAL */
     .grid {{
         display: grid;
         grid-template-columns: 2fr 1fr;
@@ -174,6 +173,17 @@ def render_dashboard(
         height: 100% !important;
     }}
 
+    /* 🔥 estilo calendário popup */
+    .flatpickr-calendar {{
+        background:#020617;
+        border:1px solid #1e293b;
+        border-radius:12px;
+    }}
+
+    .flatpickr-day {{ color:#cbd5e1; }}
+    .flatpickr-day.selected {{ background:#3b82f6; }}
+    .flatpickr-day.today {{ border:1px solid #3b82f6; }}
+
     </style>
 
     <div class="wrap">
@@ -187,12 +197,12 @@ def render_dashboard(
             <form method="get" class="filtro-data">
                 <div class="campo">
                     <label>De</label>
-                    <input type="date" name="inicio">
+                    <input type="text" id="inicio" name="inicio" placeholder="Selecionar data">
                 </div>
 
                 <div class="campo">
                     <label>Até</label>
-                    <input type="date" name="fim">
+                    <input type="text" id="fim" name="fim" placeholder="Selecionar data">
                 </div>
 
                 <button>Filtrar</button>
@@ -237,9 +247,15 @@ def render_dashboard(
 
     </div>
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
+
+    flatpickr("#inicio", {{ dateFormat: "Y-m-d" }});
+    flatpickr("#fim", {{ dateFormat: "Y-m-d" }});
 
     const cores = ["#38bdf8","#60a5fa","#818cf8","#a78bfa","#22d3ee"]
 
@@ -250,77 +266,31 @@ def render_dashboard(
             legend: {{ labels: {{ color: "#cbd5e1" }} }}
         }},
         scales: {{
-            x: {{
-                ticks: {{ color: "#94a3b8" }},
-                grid: {{ color: "rgba(255,255,255,0.05)" }}
-            }},
-            y: {{
-                ticks: {{ color: "#94a3b8" }},
-                grid: {{ color: "rgba(255,255,255,0.05)" }}
-            }}
+            x: {{ ticks: {{ color: "#94a3b8" }}, grid: {{ color: "rgba(255,255,255,0.05)" }} }},
+            y: {{ ticks: {{ color: "#94a3b8" }}, grid: {{ color: "rgba(255,255,255,0.05)" }} }}
         }}
     }}
 
     new Chart(document.getElementById('pizza'), {{
         type:'doughnut',
-        data:{{
-            labels:{json.dumps(nomes)},
-            datasets:[{{
-                data:{json.dumps(valores)},
-                backgroundColor: cores,
-                borderWidth:0
-            }}]
-        }},
-        options:{{
-            responsive:true,
-            maintainAspectRatio:false,
-            cutout:'70%',
-            plugins:{{
-                legend:{{ position:'bottom', labels:{{ color:'#cbd5e1' }} }}
-            }}
-        }}
+        data:{{labels:{json.dumps(nomes)}, datasets:[{{data:{json.dumps(valores)}, backgroundColor:cores, borderWidth:0}}]}}
     }});
 
     new Chart(document.getElementById('linha'), {{
         type:'line',
-        data:{{
-            labels:{json.dumps(dias_labels)},
-            datasets:[{{
-                data:{json.dumps(dias_valores)},
-                borderColor:"#38bdf8",
-                backgroundColor:"rgba(56,189,248,0.2)",
-                fill:true,
-                borderWidth:3,
-                tension:0.4,
-                pointRadius:4
-            }}]
-        }},
+        data:{{labels:{json.dumps(dias_labels)}, datasets:[{{data:{json.dumps(dias_valores)}, borderColor:"#38bdf8", tension:0.4}}]}},
         options: configPadrao
     }});
 
     new Chart(document.getElementById('top'), {{
         type:'bar',
-        data:{{
-            labels:{json.dumps(top_nomes)},
-            datasets:[{{
-                data:{json.dumps(top_valores)},
-                backgroundColor:"#3b82f6",
-                borderRadius:8
-            }}]
-        }},
+        data:{{labels:{json.dumps(top_nomes)}, datasets:[{{data:{json.dumps(top_valores)}}}]}},
         options: configPadrao
     }});
 
     new Chart(document.getElementById('baixo'), {{
         type:'bar',
-        data:{{
-            labels:{json.dumps(baixo_nomes)},
-            datasets:[{{
-                data:{json.dumps(baixo_valores)},
-                backgroundColor:"#ef4444",
-                borderRadius:8
-            }}]
-        }},
+        data:{{labels:{json.dumps(baixo_nomes)}, datasets:[{{data:{json.dumps(baixo_valores)}}}]}},
         options: configPadrao
     }});
 
