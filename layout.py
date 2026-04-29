@@ -80,7 +80,10 @@ def container(c):
         body {{
             margin: 0;
             font-family: 'Inter', Arial;
-            background: #05070d;
+            background:
+                radial-gradient(circle at top left, rgba(59,130,246,0.14), transparent 32%),
+                radial-gradient(circle at top right, rgba(56,189,248,0.10), transparent 30%),
+                #05070d;
             color: #e5e7eb;
         }}
 
@@ -91,10 +94,11 @@ def container(c):
             justify-content: space-between;
             align-items: center;
             padding: 12px 20px;
-            background: #0a0f1a;
+            background: rgba(10,15,26,0.88);
             border-bottom: 1px solid rgba(255,255,255,0.08);
             flex-wrap: wrap;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.35);
         }}
 
         .logo-area {{
@@ -107,12 +111,14 @@ def container(c):
             width: 35px;
             height: 35px;
             border-radius: 6px;
+            box-shadow: 0 0 16px rgba(59,130,246,0.35);
         }}
 
         .logo-text {{
             font-weight: 600;
             font-size: 16px;
             color: #ffffff;
+            letter-spacing: 0.4px;
         }}
 
         .menu {{
@@ -140,15 +146,23 @@ def container(c):
             cursor: pointer;
             border-radius: 8px;
             user-select: none;
+            transition: 0.22s ease;
         }}
 
         .menu a:hover,
         .menu-toggle:hover {{
-            background: rgba(255,255,255,0.08);
+            background: rgba(59,130,246,0.16);
+            color: #ffffff;
+            box-shadow: inset 0 0 0 1px rgba(59,130,246,0.18);
         }}
 
         .logout {{
             color: #ff4d4d !important;
+        }}
+
+        .logout:hover {{
+            background: rgba(239,68,68,0.12) !important;
+            box-shadow: inset 0 0 0 1px rgba(239,68,68,0.22) !important;
         }}
 
         .submenu {{
@@ -156,7 +170,7 @@ def container(c):
             position: absolute;
             top: calc(100% + 6px);
             left: 0;
-            background: #0b0f1a;
+            background: rgba(11,15,26,0.96);
             list-style: none;
             padding: 6px 0;
             margin: 0;
@@ -165,7 +179,8 @@ def container(c):
             border-radius: 10px;
             overflow: hidden;
             z-index: 99999;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+            box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+            backdrop-filter: blur(12px);
         }}
 
         .has-submenu.open > .submenu {{
@@ -185,7 +200,7 @@ def container(c):
         }}
 
         .submenu a:hover {{
-            background: rgba(255,255,255,0.08);
+            background: rgba(59,130,246,0.15);
         }}
 
         .conteudo {{
@@ -208,11 +223,18 @@ def container(c):
         }}
 
         .card {{
-            background: linear-gradient(145deg, #0a0f1a, #05070d);
+            background: linear-gradient(145deg, rgba(10,15,26,0.96), rgba(5,7,13,0.98));
             border: 1px solid rgba(255,255,255,0.08);
             padding: 20px;
             border-radius: 16px;
             margin-bottom: 15px;
+            box-shadow: 0 14px 35px rgba(0,0,0,0.28);
+            transition: 0.22s ease;
+        }}
+
+        .card:hover {{
+            border-color: rgba(59,130,246,0.32);
+            box-shadow: 0 18px 42px rgba(0,0,0,0.38), 0 0 18px rgba(59,130,246,0.10);
         }}
 
         .erro {{
@@ -233,17 +255,31 @@ def container(c):
             border: 1px solid #1f2937;
             background: #0b0f1a;
             color: #fff;
+            outline: none;
+            transition: 0.2s ease;
+        }}
+
+        input:focus,
+        select:focus {{
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.18);
         }}
 
         button {{
-            background: #ffffff;
+            background: linear-gradient(135deg, #ffffff, #dbeafe);
             color: #000;
             font-weight: bold;
             cursor: pointer;
         }}
 
         button:hover {{
-            background: #e5e5e5;
+            background: linear-gradient(135deg, #f8fafc, #bfdbfe);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px rgba(59,130,246,0.22);
+        }}
+
+        a {{
+            color: #38bdf8;
         }}
 
         @media (max-width: 768px) {{
