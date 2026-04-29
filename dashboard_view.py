@@ -14,7 +14,8 @@ def render_dashboard(
     dias_labels,
     dias_valores,
     baixo_nomes,
-    baixo_valores
+    baixo_valores,
+    calendario
 ):
     now = datetime.now()
 
@@ -24,16 +25,15 @@ def render_dashboard(
         "Novembro","Dezembro"
     ][now.month]
 
-    # 🔥 CALENDÁRIO
     mes = now.month
     ano = now.year
     cal = calendar.monthcalendar(ano, mes)
 
+    # 🔥 CALENDÁRIO PROFISSIONAL
     html_calendario = f"""
     <div class="box calendario-box">
-
         <div class="topo-cal">
-            <span>📅 Calendário • {nome_mes} {ano}</span>
+            📅 Calendário • {nome_mes} {ano}
         </div>
 
         <div class="cal-grid">
@@ -49,11 +49,25 @@ def render_dashboard(
             if dia == 0:
                 html_calendario += "<div class='dia vazio'></div>"
             else:
-                hoje_classe = "hoje" if dia == now.day else ""
+                data_str = f"{ano}-{mes:02d}-{dia:02d}"
+                info = calendario.get(data_str, {})
+
+                entrada = info.get("entrada", 0)
+                saida = info.get("saida", 0)
+                transf = info.get("transf", 0)
+                total = info.get("total", 0)
+
+                hoje = "hoje" if dia == now.day else ""
+
                 html_calendario += f"""
-                <div class="dia {hoje_classe}">
+                <div class="dia {hoje}">
                     <div class="num">{dia}</div>
-                    <div class="mini-info">-</div>
+
+                    <div class="linha verde">Entrada: {entrada}</div>
+                    <div class="linha vermelho">Saída: {saida}</div>
+                    <div class="linha azul">Transf: {transf}</div>
+
+                    <div class="total">Total: {total}</div>
                 </div>
                 """
 
@@ -69,12 +83,13 @@ def render_dashboard(
     .topo-cal {{
         color:#94a3b8;
         margin-bottom:10px;
+        font-weight:bold;
     }}
 
     .cal-grid {{
         display:grid;
         grid-template-columns: repeat(7, 1fr);
-        gap:6px;
+        gap:8px;
     }}
 
     .dia-semana {{
@@ -86,15 +101,16 @@ def render_dashboard(
     .dia {{
         background: linear-gradient(145deg, #020617, #0f172a);
         border:1px solid #1e293b;
-        border-radius:8px;
-        padding:8px;
-        min-height:60px;
+        border-radius:12px;
+        padding:10px;
+        min-height:110px;
+        position:relative;
         transition:0.2s;
     }}
 
     .dia:hover {{
-        background:#0f172a;
-        transform:scale(1.05);
+        transform:scale(1.06);
+        box-shadow:0 0 20px rgba(59,130,246,0.4);
     }}
 
     .dia.hoje {{
@@ -105,11 +121,25 @@ def render_dashboard(
     .num {{
         font-weight:bold;
         color:#fff;
+        margin-bottom:5px;
     }}
 
-    .mini-info {{
+    .linha {{
         font-size:11px;
-        color:#38bdf8;
+        margin:2px 0;
+    }}
+
+    .verde {{ color:#22c55e; }}
+    .vermelho {{ color:#ef4444; }}
+    .azul {{ color:#38bdf8; }}
+
+    .total {{
+        position:absolute;
+        bottom:6px;
+        right:10px;
+        font-size:12px;
+        color:#fff;
+        font-weight:bold;
     }}
 
     .vazio {{
