@@ -29,11 +29,12 @@ def render_dashboard(
     ano = now.year
     cal = calendar.monthcalendar(ano, mes)
 
-    # 🔥 CALENDÁRIO PROFISSIONAL
+    # 🔥 CALENDÁRIO (MANTIDO)
     html_calendario = f"""
     <div class="box calendario-box">
+
         <div class="topo-cal">
-            📅 Calendário • {nome_mes} {ano}
+            <span>📅 Calendário • {nome_mes} {ano}</span>
         </div>
 
         <div class="cal-grid">
@@ -57,10 +58,10 @@ def render_dashboard(
                 transf = info.get("transf", 0)
                 total = info.get("total", 0)
 
-                hoje = "hoje" if dia == now.day else ""
+                hoje_classe = "hoje" if dia == now.day else ""
 
                 html_calendario += f"""
-                <div class="dia {hoje}">
+                <div class="dia {hoje_classe}">
                     <div class="num">{dia}</div>
 
                     <div class="linha verde">Entrada: {entrada}</div>
@@ -109,8 +110,8 @@ def render_dashboard(
     }}
 
     .dia:hover {{
-        transform:scale(1.06);
-        box-shadow:0 0 20px rgba(59,130,246,0.4);
+        transform:scale(1.05);
+        box-shadow:0 0 15px rgba(59,130,246,0.3);
     }}
 
     .dia.hoje {{
@@ -145,6 +146,23 @@ def render_dashboard(
     .vazio {{
         background:transparent;
         border:none;
+    }}
+
+    /* 🔥 NOVO LAYOUT DOS GRÁFICOS (SEM REMOVER NADA) */
+    .grid {{
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 15px;
+        margin-top: 20px;
+    }}
+
+    .box:nth-child(1) {{
+        grid-row: span 2;
+    }}
+
+    canvas {{
+        width: 100% !important;
+        height: 250px !important;
     }}
 
     </style>
@@ -202,8 +220,8 @@ def render_dashboard(
         {html_calendario}
 
         <div class="grid">
-            <div class="box"><canvas id="pizza"></canvas></div>
             <div class="box"><canvas id="linha"></canvas></div>
+            <div class="box"><canvas id="pizza"></canvas></div>
             <div class="box"><canvas id="top"></canvas></div>
             <div class="box"><canvas id="baixo"></canvas></div>
         </div>
