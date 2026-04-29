@@ -57,18 +57,22 @@ def login():
 <head>
 <title>KBSISTEMAS</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
 
 <style>
+
 body {{
     margin:0;
     height:100vh;
-    background: radial-gradient(circle at top, #0a0f1a, #000);
     font-family:'Inter', sans-serif;
     display:flex;
     align-items:center;
     justify-content:center;
     color:#e5e7eb;
+    background:
+        radial-gradient(circle at top left, rgba(59,130,246,0.2), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(56,189,248,0.15), transparent 30%),
+        #020617;
 }}
 
 .container {{
@@ -79,29 +83,40 @@ body {{
     border:1px solid rgba(255,255,255,0.08);
     border-radius:18px;
     backdrop-filter: blur(20px);
-    box-shadow:0 0 80px rgba(255,255,255,0.05);
+    box-shadow:0 0 80px rgba(0,0,0,0.6);
 }}
 
 .left {{
     width:50%;
     display:flex;
+    flex-direction:column;
     align-items:center;
     justify-content:center;
     border-right:1px solid rgba(255,255,255,0.05);
+    text-align:center;
 }}
 
 .logo {{
     font-size:90px;
     font-weight:900;
-    text-align:center;
     letter-spacing:6px;
+    background: linear-gradient(135deg, #3b82f6, #38bdf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }}
 
 .logo span {{
     display:block;
-    font-size:18px;
+    font-size:16px;
     margin-top:10px;
     color:#9ca3af;
+}}
+
+.desc {{
+    margin-top:20px;
+    font-size:14px;
+    color:#94a3b8;
+    max-width:250px;
 }}
 
 .right {{
@@ -120,28 +135,31 @@ input {{
     border:1px solid rgba(255,255,255,0.2);
     border-radius:10px;
     color:#fff;
+    transition:0.2s;
 }}
 
 input:focus {{
     outline:none;
-    border:1px solid #fff;
-    box-shadow:0 0 10px rgba(255,255,255,0.2);
+    border:1px solid #3b82f6;
+    box-shadow:0 0 12px rgba(59,130,246,0.4);
 }}
 
 button {{
     width:100%;
     padding:15px;
     margin-top:20px;
-    background:#ffffff;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
     border:none;
     border-radius:10px;
     font-weight:bold;
     cursor:pointer;
-    color:#000;
+    color:#fff;
+    transition:0.2s;
 }}
 
 button:hover {{
-    transform:scale(1.02);
+    transform:scale(1.03);
+    box-shadow:0 0 20px rgba(59,130,246,0.5);
 }}
 
 .erro {{
@@ -163,6 +181,7 @@ button:hover {{
 .link a:hover {{
     color:#fff;
 }}
+
 </style>
 </head>
 
@@ -175,13 +194,18 @@ button:hover {{
             KB
             <span>SISTEMAS</span>
         </div>
+
+        <div class="desc">
+            Controle total do seu negócio em um só lugar.
+        </div>
     </div>
 
     <div class="right">
         <form method="POST">
             <input name="user" placeholder="Usuário" required>
             <input name="senha" type="password" placeholder="Senha" required>
-            <button type="submit">ACESSAR</button>
+
+            <button type="submit">Entrar no sistema</button>
         </form>
 
         <p class="erro">{erro}</p>
