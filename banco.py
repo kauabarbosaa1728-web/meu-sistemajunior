@@ -1,7 +1,7 @@
 from werkzeug.security import generate_password_hash
 from psycopg2 import pool
 
-# ================= POOL DE CONEXÃO =================
+# ================= POOL =================
 db_pool = None
 
 def criar_pool():
@@ -23,14 +23,11 @@ def criar_pool():
 
 criar_pool()
 
-
 # ================= CONEXÃO =================
 def conectar():
     global db_pool
-
     try:
         if db_pool is None:
-            print("⚠️ Recriando pool...")
             criar_pool()
 
         conn = db_pool.getconn()
@@ -56,7 +53,7 @@ def devolver_conexao(conn):
         print("Erro ao devolver conexão:", e)
 
 
-# ================= LOGS =================
+# ================= LOG =================
 def registrar_log(usuario, acao, detalhes=""):
     conn = None
     try:
@@ -88,44 +85,7 @@ def registrar_log(usuario, acao, detalhes=""):
             devolver_conexao(conn)
 
 
-# ================= PERMISSÕES =================
-def permissoes_por_plano(plano):
-    plano = (plano or "").lower()
-
-    if plano == "premium":
-        return {
-            "pode_estoque": 1,
-            "pode_transferencia": 1,
-            "pode_historico": 1,
-            "pode_usuarios": 0,
-            "pode_editar_estoque": 1,
-            "pode_excluir_estoque": 1,
-            "pode_logs": 0
-        }
-
-    if plano == "profissional":
-        return {
-            "pode_estoque": 1,
-            "pode_transferencia": 1,
-            "pode_historico": 1,
-            "pode_usuarios": 0,
-            "pode_editar_estoque": 1,
-            "pode_excluir_estoque": 0,
-            "pode_logs": 0
-        }
-
-    return {
-        "pode_estoque": 1,
-        "pode_transferencia": 0,
-        "pode_historico": 1,
-        "pode_usuarios": 0,
-        "pode_editar_estoque": 0,
-        "pode_excluir_estoque": 0,
-        "pode_logs": 0
-    }
-
-
-# ================= CRIAR BANCO =================
+# ================= BANCO =================
 def criar_banco():
     conn = None
     try:
@@ -153,9 +113,14 @@ def criar_banco():
             pode_logs INTEGER DEFAULT 0,
             email TEXT,
             plano TEXT DEFAULT 'basico',
-            nome_empresa TEXT,
-            empresa_id TEXT
+            nome_empresa TEXT
         )
+        """)
+
+        # 🔥 GARANTE COLUNA (ANTES DE USAR)
+        cursor.execute("""
+        ALTER TABLE usuarios 
+        ADD COLUMN IF NOT EXISTS empresa_id TEXT
         """)
 
         # 🔥 PAGAMENTOS
@@ -170,9 +135,13 @@ def criar_banco():
             status TEXT,
             pagamento_id TEXT,
             data TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            vencimento TIMESTAMP,
-            empresa_id TEXT
+            vencimento TIMESTAMP
         )
+        """)
+
+        cursor.execute("""
+        ALTER TABLE pagamentos 
+        ADD COLUMN IF NOT EXISTS empresa_id TEXT
         """)
 
         # 🔥 OUTRAS TABELAS
@@ -181,8 +150,7 @@ def criar_banco():
         for t in tabelas:
             cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {t} (
-                id SERIAL PRIMARY KEY,
-                empresa_id TEXT
+                id SERIAL PRIMARY KEY
             )
             """)
 
@@ -191,7 +159,7 @@ def criar_banco():
             ADD COLUMN IF NOT EXISTS empresa_id TEXT
             """)
 
-        # 🔥 GARANTE EMPRESA_ID NOS USUARIOS
+        # 🔥 AGORA SIM USA
         cursor.execute("""
         UPDATE usuarios
         SET empresa_id = usuario
@@ -210,6 +178,6 @@ def criar_banco():
             devolver_conexao(conn)
 
 
-# ================= VERIFICAR PAGAMENTO =================
+# ================= PAGAMENTO =================
 def verificar_pagamento(usuario):
     return "pago"
