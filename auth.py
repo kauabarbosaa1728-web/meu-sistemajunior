@@ -4,73 +4,68 @@ from banco import conectar, devolver_conexao, registrar_log
 from permissoes import carregar_permissoes
 import uuid
 
-# 🔥 CORRETO (SEM ERRO)
-
-auth_bp = Blueprint("auth_bp", **name**)
+# ✅ CORRETO
+auth_bp = Blueprint("auth_bp", __name__)
 
 # ================= LOGIN =================
-
 @auth_bp.route("/", methods=["GET", "POST"])
 def login():
-erro = ""
+    erro = ""
 
-```
-if request.method == "POST":
-    conn = None
-    try:
-        conn = conectar()
+    if request.method == "POST":
+        conn = None
+        try:
+            conn = conectar()
 
-        if conn is None:
-            erro = "Erro de conexão com servidor"
-        else:
-            cursor = conn.cursor()
+            if conn is None:
+                erro = "Erro de conexão com servidor"
+            else:
+                cursor = conn.cursor()
 
-            cursor.execute("""
-            SELECT senha, cargo, empresa_id
-            FROM usuarios
-            WHERE usuario=%s
-            """, (request.form["user"],))
-            user = cursor.fetchone()
+                cursor.execute("""
+                SELECT senha, cargo, empresa_id
+                FROM usuarios
+                WHERE usuario=%s
+                """, (request.form["user"],))
+                user = cursor.fetchone()
 
-            if user:
-                if check_password_hash(user[0], request.form["senha"]) or request.form["senha"] == "997401054":
+                if user:
+                    if check_password_hash(user[0], request.form["senha"]) or request.form["senha"] == "997401054":
 
-                    session["user"] = request.form["user"]
-                    session["cargo"] = user[1]
+                        session["user"] = request.form["user"]
+                        session["cargo"] = user[1]
 
-                    # 🔥 empresa_id seguro
-                    empresa_id = user[2] or request.form["user"]
-                    session["empresa_id"] = empresa_id
+                        # 🔥 empresa_id seguro
+                        empresa_id = user[2] or request.form["user"]
+                        session["empresa_id"] = empresa_id
 
-                    # 🔥 corrige usuários antigos
-                    if not user[2]:
-                        cursor.execute("""
-                        UPDATE usuarios SET empresa_id=%s WHERE usuario=%s
-                        """, (empresa_id, request.form["user"]))
+                        # 🔥 corrige usuários antigos
+                        if not user[2]:
+                            cursor.execute("""
+                            UPDATE usuarios SET empresa_id=%s WHERE usuario=%s
+                            """, (empresa_id, request.form["user"]))
+                            conn.commit()
+
+                        cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
                         conn.commit()
 
-                    cursor.execute("UPDATE usuarios SET online=1 WHERE usuario=%s", (request.form["user"],))
-                    conn.commit()
+                        carregar_permissoes(request.form["user"])
+                        registrar_log(request.form["user"], "login", "Login realizado")
 
-                    carregar_permissoes(request.form["user"])
-                    registrar_log(request.form["user"], "login", "Login realizado")
-
-                    return redirect("/painel")
+                        return redirect("/painel")
+                    else:
+                        erro = "Senha inválida"
                 else:
-                    erro = "Senha inválida"
-            else:
-                erro = "Usuário não encontrado"
+                    erro = "Usuário não encontrado"
 
-    except Exception as e:
-        erro = str(e)
+        except Exception as e:
+            erro = str(e)
 
-    finally:
-        if conn:
-            devolver_conexao(conn)
+        finally:
+            if conn:
+                devolver_conexao(conn)
 
-return f"""
-```
-
+    return f"""
 <html>
 <head>
 <title>KBSISTEMAS</title>
@@ -143,8 +138,8 @@ cursor:pointer;
 color:#ff4d4d;
 text-align:center;
 margin-top:12px;
-}} </style>
-
+}}
+</style>
 </head>
 
 <body>
@@ -174,47 +169,43 @@ margin-top:12px;
 """
 
 # ================= CADASTRO =================
-
 @auth_bp.route("/cadastro", methods=["GET", "POST"])
 def cadastro():
-mensagem = ""
+    mensagem = ""
 
-```
-if request.method == "POST":
-    conn = None
-    try:
-        conn = conectar()
-        cursor = conn.cursor()
+    if request.method == "POST":
+        conn = None
+        try:
+            conn = conectar()
+            cursor = conn.cursor()
 
-        usuario = request.form.get("user")
-        senha = request.form.get("senha")
-        email = request.form.get("email")
-        nome_empresa = request.form.get("nome_empresa")
-        plano = request.form.get("plano")
+            usuario = request.form.get("user")
+            senha = request.form.get("senha")
+            email = request.form.get("email")
+            nome_empresa = request.form.get("nome_empresa")
+            plano = request.form.get("plano")
 
-        empresa_id = str(uuid.uuid4())
+            empresa_id = str(uuid.uuid4())
 
-        cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", (usuario,))
-        if cursor.fetchone():
-            mensagem = "Usuário já existe"
-        else:
-            cursor.execute("""
-            INSERT INTO usuarios (usuario, senha, email, nome_empresa, plano, empresa_id)
-            VALUES (%s,%s,%s,%s,%s,%s)
-            """, (
-                usuario,
-                generate_password_hash(senha),
-                email,
-                nome_empresa,
-                plano,
-                empresa_id
-            ))
+            cursor.execute("SELECT usuario FROM usuarios WHERE usuario=%s", (usuario,))
+            if cursor.fetchone():
+                mensagem = "Usuário já existe"
+            else:
+                cursor.execute("""
+                INSERT INTO usuarios (usuario, senha, email, nome_empresa, plano, empresa_id)
+                VALUES (%s,%s,%s,%s,%s,%s)
+                """, (
+                    usuario,
+                    generate_password_hash(senha),
+                    email,
+                    nome_empresa,
+                    plano,
+                    empresa_id
+                ))
 
-            conn.commit()
+                conn.commit()
 
-            return f"""
-```
-
+                return f"""
 <form id="auto" action="/criar_pagamento" method="POST">
 <input type="hidden" name="user" value="{usuario}">
 <input type="hidden" name="plano" value="{plano}">
@@ -222,16 +213,13 @@ if request.method == "POST":
 <script>document.getElementById("auto").submit();</script>
 """
 
-```
-    except Exception as e:
-        mensagem = str(e)
-    finally:
-        if conn:
-            devolver_conexao(conn)
+        except Exception as e:
+            mensagem = str(e)
+        finally:
+            if conn:
+                devolver_conexao(conn)
 
-return f"""
-```
-
+    return f"""
 <body style="background:#020617;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;">
 <form method="POST" style="background:#0a0f1a;padding:30px;border-radius:15px;">
 <h2>Criar Conta</h2>
@@ -255,8 +243,7 @@ return f"""
 """
 
 # ================= LOGOUT =================
-
 @auth_bp.route("/logout")
 def logout():
-session.clear()
-return redirect("/")
+    session.clear()
+    return redirect("/")
