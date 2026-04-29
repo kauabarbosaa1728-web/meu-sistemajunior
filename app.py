@@ -3,6 +3,10 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash
 import os
 
+# 🔥 CORREÇÃO DE CAMINHO (RESOLVE VEICULOS / MODULOS)
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from banco import criar_banco, conectar, devolver_conexao
 from layout import acesso_negado
 
@@ -17,7 +21,7 @@ from financeiro import financeiro_bp
 from vendas import vendas_bp
 from relatorios import relatorios_bp
 
-# 🔥 NOVO (VEÍCULOS)
+# 🔥 VEÍCULOS
 from veiculos import veiculos_bp
 from manutencoes import manutencoes_bp
 
@@ -121,7 +125,7 @@ app.register_blueprint(ia_bp)
 app.register_blueprint(financeiro_bp)
 app.register_blueprint(relatorios_bp)
 
-# 🔥 NOVO (VEÍCULOS)
+# 🔥 VEÍCULOS
 app.register_blueprint(veiculos_bp)
 app.register_blueprint(manutencoes_bp)
 
