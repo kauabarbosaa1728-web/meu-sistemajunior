@@ -4,7 +4,7 @@ from banco import conectar, devolver_conexao, registrar_log
 from permissoes import carregar_permissoes
 import uuid
 
-# ✅ CORRETO
+# 🔥 CORRETO (SEM ERRO)
 
 auth_bp = Blueprint("auth_bp", **name**)
 
@@ -89,58 +89,67 @@ body {{
         radial-gradient(circle at bottom right, rgba(56,189,248,0.15), transparent 30%),
         #020617;
 }}
+
 .container {{
-    display:flex;
-    width:1000px;
-    height:550px;
-    background:rgba(10,15,26,0.9);
-    border-radius:18px;
+display:flex;
+width:1000px;
+height:550px;
+background:rgba(10,15,26,0.9);
+border-radius:18px;
 }}
+
 .left {{
-    width:50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+width:50%;
+display:flex;
+align-items:center;
+justify-content:center;
 }}
+
 .logo {{
-    font-size:90px;
-    font-weight:900;
-    background: linear-gradient(135deg, #3b82f6, #38bdf8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+font-size:90px;
+font-weight:900;
+background: linear-gradient(135deg, #3b82f6, #38bdf8);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
 }}
+
 .right {{
-    width:50%;
-    padding:50px;
+width:50%;
+padding:50px;
 }}
+
 input {{
-    width:100%;
-    padding:15px;
-    margin-top:12px;
-    background:#020617;
-    border:1px solid rgba(255,255,255,0.2);
-    border-radius:10px;
-    color:#fff;
+width:100%;
+padding:15px;
+margin-top:12px;
+background:#020617;
+border:1px solid rgba(255,255,255,0.2);
+border-radius:10px;
+color:#fff;
 }}
+
 button {{
-    width:100%;
-    padding:15px;
-    margin-top:20px;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    border:none;
-    border-radius:10px;
-    color:#fff;
+width:100%;
+padding:15px;
+margin-top:20px;
+background: linear-gradient(135deg, #3b82f6, #2563eb);
+border:none;
+border-radius:10px;
+color:#fff;
+cursor:pointer;
 }}
+
 .erro {{
-    color:#ff4d4d;
-    text-align:center;
-    margin-top:12px;
-}}
-</style>
+color:#ff4d4d;
+text-align:center;
+margin-top:12px;
+}} </style>
+
 </head>
 
 <body>
 <div class="container">
+
 <div class="left">
 <div class="logo">KB</div>
 </div>
