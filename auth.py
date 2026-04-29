@@ -4,6 +4,8 @@ from banco import conectar, devolver_conexao, registrar_log
 from permissoes import carregar_permissoes
 import uuid
 
+# ✅ CORRETO
+
 auth_bp = Blueprint("auth_bp", **name**)
 
 # ================= LOGIN =================
@@ -36,11 +38,11 @@ if request.method == "POST":
                     session["user"] = request.form["user"]
                     session["cargo"] = user[1]
 
-                    # 🔥 GARANTE EMPRESA_ID
+                    # 🔥 empresa_id seguro
                     empresa_id = user[2] or request.form["user"]
                     session["empresa_id"] = empresa_id
 
-                    # 🔥 CORRIGE USUÁRIO ANTIGO
+                    # 🔥 corrige usuários antigos
                     if not user[2]:
                         cursor.execute("""
                         UPDATE usuarios SET empresa_id=%s WHERE usuario=%s
@@ -87,64 +89,54 @@ body {{
         radial-gradient(circle at bottom right, rgba(56,189,248,0.15), transparent 30%),
         #020617;
 }}
-
 .container {{
-display:flex;
-width:1000px;
-height:550px;
-background:rgba(10,15,26,0.9);
-border-radius:18px;
-backdrop-filter: blur(20px);
+    display:flex;
+    width:1000px;
+    height:550px;
+    background:rgba(10,15,26,0.9);
+    border-radius:18px;
 }}
-
 .left {{
-width:50%;
-display:flex;
-align-items:center;
-justify-content:center;
-border-right:1px solid rgba(255,255,255,0.05);
+    width:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 }}
-
 .logo {{
-font-size:90px;
-font-weight:900;
-background: linear-gradient(135deg, #3b82f6, #38bdf8);
--webkit-background-clip: text;
--webkit-text-fill-color: transparent;
+    font-size:90px;
+    font-weight:900;
+    background: linear-gradient(135deg, #3b82f6, #38bdf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }}
-
 .right {{
-width:50%;
-padding:50px;
+    width:50%;
+    padding:50px;
 }}
-
 input {{
-width:100%;
-padding:15px;
-margin-top:12px;
-background:#020617;
-border:1px solid rgba(255,255,255,0.2);
-border-radius:10px;
-color:#fff;
+    width:100%;
+    padding:15px;
+    margin-top:12px;
+    background:#020617;
+    border:1px solid rgba(255,255,255,0.2);
+    border-radius:10px;
+    color:#fff;
 }}
-
 button {{
-width:100%;
-padding:15px;
-margin-top:20px;
-background: linear-gradient(135deg, #3b82f6, #2563eb);
-border:none;
-border-radius:10px;
-color:#fff;
-cursor:pointer;
+    width:100%;
+    padding:15px;
+    margin-top:20px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border:none;
+    border-radius:10px;
+    color:#fff;
 }}
-
 .erro {{
-color:#ff4d4d;
-text-align:center;
-margin-top:12px;
-}} </style>
-
+    color:#ff4d4d;
+    text-align:center;
+    margin-top:12px;
+}}
+</style>
 </head>
 
 <body>
@@ -231,100 +223,26 @@ if request.method == "POST":
 return f"""
 ```
 
-<html>
-<head>
-<title>Criar Conta</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<body style="background:#020617;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;">
+<form method="POST" style="background:#0a0f1a;padding:30px;border-radius:15px;">
+<h2>Criar Conta</h2>
 
-<style>
-body {{
-    margin:0;
-    height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-family:Inter;
-    background:
-    radial-gradient(circle at top left, rgba(59,130,246,0.2), transparent 30%),
-    radial-gradient(circle at bottom right, rgba(56,189,248,0.15), transparent 30%),
-    #020617;
-    color:#fff;
-}}
-
-.box {{
-    width:420px;
-    background:rgba(10,15,26,0.9);
-    padding:35px;
-    border-radius:20px;
-    backdrop-filter:blur(20px);
-}}
-
-h2 {{
-    text-align:center;
-    margin-bottom:20px;
-}}
-
-input, select {{
-    width:100%;
-    padding:14px;
-    margin-top:10px;
-    background:#020617;
-    border:1px solid rgba(255,255,255,0.2);
-    border-radius:10px;
-    color:#fff;
-}}
-
-button {{
-    width:100%;
-    padding:14px;
-    margin-top:20px;
-    background: linear-gradient(135deg,#3b82f6,#2563eb);
-    border:none;
-    border-radius:10px;
-    color:#fff;
-    cursor:pointer;
-}}
-
-.msg {{
-    text-align:center;
-    margin-top:10px;
-    color:#f87171;
-}}
-</style>
-
-</head>
-
-<body>
-
-<div class="box">
-<h2>Criar Conta 🚀</h2>
-
-<form method="POST">
 <input name="user" placeholder="Usuário" required>
 <input name="senha" type="password" placeholder="Senha" required>
 <input name="email" placeholder="Email" required>
-<input name="nome_empresa" placeholder="Nome da empresa" required>
+<input name="nome_empresa" placeholder="Empresa" required>
 
 <select name="plano">
-<option value="basico">Básico - R$39,90</option>
-<option value="profissional">Profissional - R$79,90</option>
-<option value="premium">Premium - R$129,90</option>
+<option value="basico">Básico</option>
+<option value="profissional">Profissional</option>
+<option value="premium">Premium</option>
 </select>
 
 <button>Criar conta</button>
 
+<p style="color:red;">{mensagem}</p>
 </form>
-
-<p class="msg">{mensagem}</p>
-
-<div style="text-align:center;margin-top:10px;">
-<a href="/" style="color:#60a5fa;">Voltar</a>
-</div>
-
-</div>
-
 </body>
-</html>
 """
 
 # ================= LOGOUT =================
