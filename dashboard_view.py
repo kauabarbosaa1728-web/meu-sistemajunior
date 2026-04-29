@@ -1,4 +1,5 @@
 import json
+import calendar
 from datetime import datetime
 
 def render_dashboard(
@@ -22,6 +23,40 @@ def render_dashboard(
         "Junho","Julho","Agosto","Setembro","Outubro",
         "Novembro","Dezembro"
     ][now.month]
+
+    # 🔥 CALENDÁRIO
+    mes = now.month
+    ano = now.year
+    cal = calendar.monthcalendar(ano, mes)
+
+    html_calendario = f"""
+    <div class="box calendario-box">
+
+        <div class="topo-cal">
+            <span>📅 Calendário • {nome_mes} {ano}</span>
+        </div>
+
+        <div class="cal-grid">
+    """
+
+    dias_semana = ["Dom","Seg","Ter","Qua","Qui","Sex","Sab"]
+
+    for d in dias_semana:
+        html_calendario += f"<div class='dia-semana'>{d}</div>"
+
+    for semana in cal:
+        for dia in semana:
+            if dia == 0:
+                html_calendario += "<div class='dia vazio'></div>"
+            else:
+                html_calendario += f"""
+                <div class="dia">
+                    <div class="num">{dia}</div>
+                    <div class="mini-info">-</div>
+                </div>
+                """
+
+    html_calendario += "</div></div>"
 
     html = f"""
     <div class="wrap">
@@ -74,6 +109,8 @@ def render_dashboard(
             </div>
         </div>
 
+        {html_calendario}
+
         <div class="grid">
             <div class="box"><canvas id="pizza"></canvas></div>
             <div class="box"><canvas id="linha"></canvas></div>
@@ -97,7 +134,7 @@ def render_dashboard(
         type:'line',
         data:{{
             labels:{json.dumps(dias_labels)},
-            datasets:[{{data:{json.dumps(dias_valores)}, borderColor:"#38bdf8"}}]
+            datasets:[{{data:{json.dumps(dias_valores)}, borderColor:"#38bdf8", borderWidth:3, tension:0.4}}]
         }}
     }});
 
