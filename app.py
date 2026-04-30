@@ -3,10 +3,6 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash
 import os
 
-# 🔥 CORREÇÃO DE CAMINHO (RESOLVE VEICULOS / MODULOS)
-import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 from banco import criar_banco, conectar, devolver_conexao
 from layout import acesso_negado
 
@@ -45,7 +41,7 @@ def bloquear_sistema():
 
     rotas_livres = [
         "/", "/cadastro", "/criar_pagamento",
-        "/verificar_pagamento_auto", "/webhook", "/static"
+        "/verificar_pagamento_auto", "/webhook", "/static/"
     ]
 
     if any(request.path.startswith(r) for r in rotas_livres):
