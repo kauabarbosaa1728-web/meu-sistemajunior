@@ -5,58 +5,63 @@ from layout import container
 veiculos_bp = Blueprint("veiculos_bp", __name__)
 
 @veiculos_bp.route("/veiculos", methods=["GET", "POST"])
-def veiculos_page():
+def veiculos():
 
     if "user" not in session:
         return redirect("/")
 
     empresa_id = session.get("empresa_id")
 
+    if not empresa_id:
+        return container("<h2>❌ Empresa não definida</h2>")
+
     conn = conectar()
-    cursor = conn.cursor()
+    if conn is None:
+        return "Erro ao conectar banco"
 
-    if request.method == "POST":
-        placa = request.form.get("placa")
-        nome = request.form.get("nome")
+    try:
+        cursor = conn.cursor()
 
+        # CADASTRAR
+        if request.method == "POST":
+            placa = request.form.get("placa")
+
+            cursor.execute("""
+            INSERT INTO veiculos (placa, empresa_id)
+            VALUES (%s, %s)
+            """, (placa, empresa_id))
+
+            conn.commit()
+            return redirect("/veiculos")
+
+        # LISTAR
         cursor.execute("""
-        INSERT INTO veiculos (placa, nome, empresa_id)
-        VALUES (%s, %s, %s)
-        """, (placa, nome, empresa_id))
+        SELECT id, placa FROM veiculos
+        WHERE empresa_id=%s
+        ORDER BY id DESC
+        """, (empresa_id,))
 
-        conn.commit()
-        return redirect("/veiculos")
+        dados = cursor.fetchall()
 
-    cursor.execute("""
-    SELECT placa, nome
-    FROM veiculos
-    WHERE empresa_id=%s
-    """, (empresa_id,))
+        lista = ""
+        for d in dados:
+            lista += f"<li>{d[1]}</li>"
 
-    dados = cursor.fetchall()
+    except Exception as e:
+        return f"ERRO: {str(e)}"
 
-    lista_html = ""
-    for v in dados:
-        lista_html += f"""
-        <li style="margin:8px 0;">
-            🚗 <b>{v[0]}</b> - {v[1]}
-        </li>
-        """
-
-    cursor.close()
-    devolver_conexao(conn)
+    finally:
+        cursor.close()
+        devolver_conexao(conn)
 
     return container(f"""
         <h2>🚗 Veículos</h2>
 
         <form method="POST">
             <input name="placa" placeholder="Placa" required>
-            <input name="nome" placeholder="Nome do veículo" required>
-            <button>Cadastrar</button>
+            <button>Salvar</button>
         </form>
 
-        <h3>Lista de veículos:</h3>
-        <ul>
-            {lista_html}
-        </ul>
+        <h3>Lista:</h3>
+        <ul>{lista}</ul>
     """)
