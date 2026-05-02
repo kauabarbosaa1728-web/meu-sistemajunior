@@ -1,4 +1,5 @@
 from flask import session
+from banco import conectar, devolver_conexao
 
 # 🔥 PERMISSÃO
 def tem_permissao(nome):
@@ -8,6 +9,21 @@ def tem_permissao(nome):
 
 
 def container(conteudo):
+
+    # 🔥 ALERTA DE PROBLEMAS
+    alerta = 0
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM problemas WHERE status='aberto'")
+        resultado = cursor.fetchone()
+        if resultado:
+            alerta = resultado[0]
+        cursor.close()
+        devolver_conexao(conn)
+    except:
+        alerta = 0
+
     return f"""
     <html>
     <head>
@@ -65,11 +81,24 @@ def container(conteudo):
                 text-decoration: none;
                 font-weight: bold;
                 transition: 0.2s;
+                position: relative;
             }}
 
             .menu a:hover {{
                 background: #2563eb;
                 transform: scale(1.05);
+            }}
+
+            /* 🔴 ALERTA */
+            .badge {{
+                background: red;
+                color: white;
+                border-radius: 50%;
+                padding: 4px 8px;
+                font-size: 12px;
+                position: absolute;
+                top: -8px;
+                right: -8px;
             }}
 
             .conteudo {{
@@ -85,32 +114,6 @@ def container(conteudo):
                 border: 1px solid #1f2937;
                 box-shadow: 0 0 10px rgba(0,0,0,0.5);
                 margin-bottom: 20px;
-            }}
-
-            .grid-botoes {{
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-                gap: 20px;
-                margin-top: 20px;
-            }}
-
-            .grid-botoes a {{
-                background: linear-gradient(145deg, #1e3a8a, #2563eb);
-                padding: 30px 15px;
-                border-radius: 15px;
-                text-align: center;
-                text-decoration: none;
-                color: white;
-                font-weight: bold;
-                font-size: 18px;
-                box-shadow: 0 6px 15px rgba(0,0,0,0.5);
-                transition: 0.2s;
-                display: block;
-            }}
-
-            .grid-botoes a:hover {{
-                transform: scale(1.08);
-                background: linear-gradient(145deg, #2563eb, #3b82f6);
             }}
 
             input, select, textarea {{
@@ -137,29 +140,6 @@ def container(conteudo):
 
             button:hover {{
                 background: #2563eb;
-            }}
-
-            table {{
-                width: 100%;
-                margin-top: 15px;
-                overflow-x: auto;
-                font-size: 12px;
-                background: #020617;
-                border-radius: 8px;
-                border-collapse: collapse;
-            }}
-
-            th, td {{
-                padding: 10px;
-                border: 1px solid #1f2937;
-            }}
-
-            th {{
-                background: #1e3a8a;
-            }}
-
-            tr:nth-child(even) {{
-                background: #0f172a;
             }}
 
             img {{
@@ -199,6 +179,11 @@ def container(conteudo):
             {"<a href='/dashboard-veiculos'>📊 Dashboard</a>" if tem_permissao("pode_dashboard") else ""}
 
             <a href="/problemas">⚠️ Problemas</a>
+
+            <a href="/problemas-lista">
+                📋 Ocorrências
+                {"<span class='badge'>" + str(alerta) + "</span>" if alerta > 0 else ""}
+            </a>
 
         </div>
 
