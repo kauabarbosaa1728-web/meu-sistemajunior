@@ -110,13 +110,23 @@ def manutencoes_page():
     padding:20px;
     border-radius:12px;
     margin-bottom:20px;
-    box-shadow:0 0 10px rgba(0,0,0,0.3);
 }}
 
 .form-grid {{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-    gap:10px;
+    gap:12px;
+}}
+
+.campo {{
+    display:flex;
+    flex-direction:column;
+}}
+
+.campo label {{
+    margin-bottom:5px;
+    font-size:13px;
+    color:#94a3b8;
 }}
 
 input, select {{
@@ -127,8 +137,12 @@ input, select {{
     color:white;
 }}
 
+input[type="date"] {{
+    cursor:pointer;
+}}
+
 .btn {{
-    margin-top:10px;
+    margin-top:15px;
     padding:12px;
     width:100%;
     background:#2563eb;
@@ -158,25 +172,54 @@ input, select {{
 <h2>🔧 Manutenções</h2>
 
 <div class="card">
+
 <form method="POST">
 
 <div class="form-grid">
-<input type="date" name="data" required>
-<input type="number" step="0.01" name="valor" placeholder="Valor" required>
 
+<div class="campo">
+<label>📅 Dia que arrumou</label>
+<input type="date" name="data" required>
+</div>
+
+<div class="campo">
+<label>💰 Valor</label>
+<input type="number" step="0.01" name="valor" placeholder="Valor">
+</div>
+
+<div class="campo">
+<label>🚗 Veículo</label>
 <select name="veiculo_id">
 {opcoes}
 </select>
+</div>
 
+<div class="campo">
+<label>🏢 Oficina</label>
 <input name="oficina" placeholder="Oficina">
+</div>
+
+<div class="campo">
+<label>📝 Descrição</label>
 <input name="descricao" placeholder="Descrição">
+</div>
+
+<div class="campo">
+<label>📦 Quantidade</label>
 <input type="number" name="quantidade" placeholder="Qtd">
+</div>
+
+<div class="campo">
+<label>📆 Data de validade</label>
 <input type="date" name="validade">
+</div>
+
 </div>
 
 <button class="btn">💾 Salvar</button>
 
 </form>
+
 </div>
 
 <h3>📋 Histórico</h3>
