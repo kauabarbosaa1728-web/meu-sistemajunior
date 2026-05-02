@@ -17,9 +17,10 @@ from financeiro import financeiro_bp
 from vendas import vendas_bp
 from relatorios import relatorios_bp
 
-# 🔥 VEÍCULOS
-from veiculos import veiculos_bp
-from manutencoes import manutencoes_bp
+# 🔥 VEÍCULOS (AGORA CORRETO COM PASTA)
+from veiculos.veiculos import veiculos_bp
+from veiculos.manutencoes import manutencoes_bp
+from veiculos.dashboard_veiculos import dashboard_veiculos_bp
 
 app = Flask(__name__)
 app.secret_key = "segredo123"
@@ -98,7 +99,7 @@ def bloquear_sistema():
             </h2>
             """
 
-        # ⚠️ AVISO 3 DIAS ANTES
+        # ⚠️ AVISO
         if vencimento:
             dias_restantes = (vencimento - datetime.now()).days
             if dias_restantes <= 3:
@@ -121,9 +122,10 @@ app.register_blueprint(ia_bp)
 app.register_blueprint(financeiro_bp)
 app.register_blueprint(relatorios_bp)
 
-# 🔥 VEÍCULOS
+# 🔥 VEÍCULOS (AGORA INTEGRADO COMPLETO)
 app.register_blueprint(veiculos_bp)
 app.register_blueprint(manutencoes_bp)
+app.register_blueprint(dashboard_veiculos_bp)
 
 # app.register_blueprint(vendas_bp)
 
