@@ -17,10 +17,11 @@ from financeiro import financeiro_bp
 from vendas import vendas_bp
 from relatorios import relatorios_bp
 
-# 🔥 VEÍCULOS (AGORA CORRETO COM PASTA)
+# 🔥 VEÍCULOS
 from veiculos.veiculos import veiculos_bp
 from veiculos.manutencoes import manutencoes_bp
 from veiculos.dashboard_veiculos import dashboard_veiculos_bp
+from veiculos.problemas import problemas_bp   # ✅ ADICIONADO
 
 app = Flask(__name__)
 app.secret_key = "segredo123"
@@ -51,7 +52,6 @@ def bloquear_sistema():
     if "user" not in session:
         return redirect("/")
 
-    # 🔥 ADMIN NUNCA BLOQUEIA
     if session.get("cargo") == "admin":
         return
 
@@ -70,7 +70,6 @@ def bloquear_sistema():
 
         dado = cursor.fetchone()
 
-        # ❌ NUNCA PAGOU
         if not dado:
             return """
             <h2 style='text-align:center;margin-top:100px;'>
@@ -81,7 +80,6 @@ def bloquear_sistema():
 
         status, vencimento = dado
 
-        # ❌ PENDENTE
         if status != "pago":
             return """
             <h2 style='text-align:center;margin-top:100px;'>
@@ -90,7 +88,6 @@ def bloquear_sistema():
             </h2>
             """
 
-        # ❌ VENCEU
         if vencimento and vencimento < datetime.now():
             return """
             <h2 style='text-align:center;margin-top:100px;color:red;'>
@@ -99,7 +96,6 @@ def bloquear_sistema():
             </h2>
             """
 
-        # ⚠️ AVISO
         if vencimento:
             dias_restantes = (vencimento - datetime.now()).days
             if dias_restantes <= 3:
@@ -122,10 +118,11 @@ app.register_blueprint(ia_bp)
 app.register_blueprint(financeiro_bp)
 app.register_blueprint(relatorios_bp)
 
-# 🔥 VEÍCULOS (AGORA INTEGRADO COMPLETO)
+# 🔥 VEÍCULOS
 app.register_blueprint(veiculos_bp)
 app.register_blueprint(manutencoes_bp)
 app.register_blueprint(dashboard_veiculos_bp)
+app.register_blueprint(problemas_bp)  # ✅ ADICIONADO
 
 # app.register_blueprint(vendas_bp)
 
