@@ -102,47 +102,103 @@ def manutencoes_page():
     devolver_conexao(conn)
 
     return container(f"""
-        <h2>🔧 Manutenções</h2>
 
-        <div class="card">
+<style>
 
-        <form method="POST">
-            <input type="date" name="data" required>
-            <input type="number" step="0.01" name="valor" placeholder="Valor" required>
+.card {{
+    background:#0f172a;
+    padding:20px;
+    border-radius:12px;
+    margin-bottom:20px;
+    box-shadow:0 0 10px rgba(0,0,0,0.3);
+}}
 
-            <select name="veiculo_id">
-                {opcoes}
-            </select>
+.form-grid {{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:10px;
+}}
 
-            <input name="oficina" placeholder="Oficina">
-            <input name="descricao" placeholder="Descrição">
-            <input type="number" name="quantidade" placeholder="Qtd">
-            <input type="date" name="validade">
+input, select {{
+    padding:10px;
+    border-radius:8px;
+    border:none;
+    background:#020617;
+    color:white;
+}}
 
-            <button class="btn">💾 Salvar</button>
-        </form>
+.btn {{
+    margin-top:10px;
+    padding:12px;
+    width:100%;
+    background:#2563eb;
+    border:none;
+    border-radius:8px;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}}
 
-        </div>
+.btn:hover {{
+    background:#1d4ed8;
+}}
 
-        <h3>📋 Histórico:</h3>
+.tabela {{
+    width:100%;
+    border-collapse:collapse;
+}}
 
-        <div class="card">
-        <table class="tabela">
-            <tr>
-                <th>Data</th>
-                <th>Valor</th>
-                <th>Veículo</th>
-                <th>Oficina</th>
-                <th>Descrição</th>
-                <th>Qtd</th>
-                <th>Validade</th>
-                <th>Status</th>
-                <th>PDF</th>
-            </tr>
-            {tabela}
-        </table>
-        </div>
-    """)
+.tabela th, .tabela td {{
+    padding:10px;
+    border-bottom:1px solid #1e293b;
+}}
+
+</style>
+
+<h2>🔧 Manutenções</h2>
+
+<div class="card">
+<form method="POST">
+
+<div class="form-grid">
+<input type="date" name="data" required>
+<input type="number" step="0.01" name="valor" placeholder="Valor" required>
+
+<select name="veiculo_id">
+{opcoes}
+</select>
+
+<input name="oficina" placeholder="Oficina">
+<input name="descricao" placeholder="Descrição">
+<input type="number" name="quantidade" placeholder="Qtd">
+<input type="date" name="validade">
+</div>
+
+<button class="btn">💾 Salvar</button>
+
+</form>
+</div>
+
+<h3>📋 Histórico</h3>
+
+<div class="card">
+<table class="tabela">
+<tr>
+<th>Data</th>
+<th>Valor</th>
+<th>Veículo</th>
+<th>Oficina</th>
+<th>Descrição</th>
+<th>Qtd</th>
+<th>Validade</th>
+<th>Status</th>
+<th>PDF</th>
+</tr>
+{tabela}
+</table>
+</div>
+
+""")
 
 
 # ================= GERAR PDF =================
@@ -174,7 +230,6 @@ def gerar_pdf(id):
         c.line(100, 810, 450, 810)
 
         c.setFont("Helvetica", 12)
-
         c.drawString(100, 770, f"Data: {d[0]}")
         c.drawString(100, 750, f"Valor: R$ {d[1]}")
         c.drawString(100, 730, f"Veículo: {d[2]}")
