@@ -92,6 +92,11 @@ def dashboard_veiculos():
 
         return container(f"""
 
+<!-- FLATPICKR -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+
 <div class="dashboard">
 
     <div class="sidebar">
@@ -101,10 +106,10 @@ def dashboard_veiculos():
             <select name="veiculo_id">{opcoes}</select>
 
             <label>Data início</label>
-            <input type="date" name="inicio">
+            <input type="text" id="inicio" name="inicio" placeholder="Selecione">
 
             <label>Data fim</label>
-            <input type="date" name="fim">
+            <input type="text" id="fim" name="fim" placeholder="Selecione">
 
             <button>Filtrar</button>
         </form>
@@ -146,6 +151,9 @@ def dashboard_veiculos():
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+flatpickr("#inicio", {{ locale: "pt", dateFormat: "Y-m-d" }});
+flatpickr("#fim", {{ locale: "pt", dateFormat: "Y-m-d" }});
+
 const metaLine = (arr) => Array(arr.length).fill({meta});
 
 new Chart(document.getElementById('melhores'), {{
@@ -157,9 +165,7 @@ new Chart(document.getElementById('melhores'), {{
             {{ type:'line', data: metaLine({json.dumps(top_placas)}), borderColor:'#ef4444', fill:false }}
         ]
     }},
-    options: {{
-        maintainAspectRatio: false
-    }}
+    options: {{ maintainAspectRatio:false }}
 }});
 
 new Chart(document.getElementById('piores'), {{
@@ -171,9 +177,7 @@ new Chart(document.getElementById('piores'), {{
             {{ type:'line', data: metaLine({json.dumps(pior_placas)}), borderColor:'#ef4444', fill:false }}
         ]
     }},
-    options: {{
-        maintainAspectRatio: false
-    }}
+    options: {{ maintainAspectRatio:false }}
 }});
 
 new Chart(document.getElementById('mensal'), {{
@@ -182,79 +186,68 @@ new Chart(document.getElementById('mensal'), {{
         labels: {json.dumps(meses)},
         datasets: [{{ data: {json.dumps(valores_mensais)}, backgroundColor:'#22c55e' }}]
     }},
-    options: {{
-        maintainAspectRatio: false
-    }}
+    options: {{ maintainAspectRatio:false }}
 }});
 </script>
 
 <style>
-
 .dashboard {{
-    display: flex;
-    gap: 20px;
-    max-width: 1400px;
-    margin: auto;
-    padding: 20px;
+    display:flex;
+    gap:20px;
+    max-width:1400px;
+    margin:auto;
+    padding:20px;
 }}
 
 .sidebar {{
-    width: 240px;
-    background: #020617;
-    padding: 20px;
-    border-radius: 12px;
-    border: 1px solid #1f2937;
+    width:240px;
+    background:#020617;
+    padding:20px;
+    border-radius:12px;
 }}
 
 .main {{
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    flex:1;
 }}
 
 .kpis {{
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:15px;
 }}
 
 .kpi {{
-    background: linear-gradient(145deg,#111827,#020617);
-    padding: 20px;
-    border-radius: 12px;
-    text-align: center;
+    background:#111827;
+    padding:20px;
+    border-radius:12px;
+    text-align:center;
 }}
 
 .graficos {{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    margin-top:20px;
 }}
 
 .card {{
-    background: linear-gradient(145deg,#111827,#020617);
-    padding: 20px;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}}
-
-.card h3 {{
-    text-align: center;
+    background:#111827;
+    padding:20px;
+    border-radius:12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
 }}
 
 .full {{
-    grid-column: span 2;
+    grid-column:span 2;
 }}
 
 canvas {{
-    width: 100% !important;
-    aspect-ratio: 1 / 1;
-    max-height: 350px;
+    width:100% !important;
+    aspect-ratio:1/1;
+    max-height:350px;
 }}
-
 </style>
 
         """)
