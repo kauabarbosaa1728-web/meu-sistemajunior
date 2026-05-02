@@ -31,7 +31,7 @@ def dashboard_veiculos():
             filtro += " AND m.data <= %s"
             params.append(data_fim)
 
-        # 💰 TOTAL
+        # TOTAL
         cursor.execute(f"""
             SELECT COALESCE(SUM(valor),0)
             FROM manutencoes m
@@ -39,14 +39,14 @@ def dashboard_veiculos():
         """, params)
         total_geral = float(cursor.fetchone()[0])
 
-        # 🚗 VEÍCULOS
+        # VEÍCULOS
         cursor.execute("SELECT COUNT(*) FROM veiculos")
         total_veiculos = cursor.fetchone()[0]
 
         media = (total_geral / (total_veiculos or 1))
-        custo_km = media  # depois você pode melhorar
+        custo_km = media
 
-        # 🚗 GASTO POR VEÍCULO
+        # GASTOS POR VEÍCULO
         cursor.execute(f"""
             SELECT v.placa, COALESCE(SUM(m.valor),0)
             FROM veiculos v
@@ -60,14 +60,13 @@ def dashboard_veiculos():
         placas = [d[0] for d in dados]
         valores = [float(d[1]) for d in dados]
 
-        # TOP E PIORES
         top_placas = placas[:10]
         top_valores = valores[:10]
 
         pior_placas = placas[-10:]
         pior_valores = valores[-10:]
 
-        # 📅 MENSAL
+        # MENSAL
         cursor.execute(f"""
             SELECT TO_CHAR(data, 'YYYY-MM'), COALESCE(SUM(valor),0)
             FROM manutencoes m
@@ -80,7 +79,7 @@ def dashboard_veiculos():
         meses = [d[0] for d in dados_mensais]
         valores_mensais = [float(d[1]) for d in dados_mensais]
 
-        # 🚗 SELECT
+        # SELECT
         cursor.execute("SELECT id, placa FROM veiculos")
         veiculos = cursor.fetchall()
 
@@ -89,16 +88,14 @@ def dashboard_veiculos():
             selected = "selected" if str(v[0]) == str(veiculo_id) else ""
             opcoes += f"<option value='{v[0]}' {selected}>{v[1]}</option>"
 
-        meta = 3000  # linha vermelha
+        meta = 3000
 
         return container(f"""
 
 <div class="dashboard">
 
-    <!-- SIDEBAR -->
     <div class="sidebar">
         <h3>Filtros</h3>
-
         <form method="GET">
             <label>Veículo</label>
             <select name="veiculo_id">{opcoes}</select>
@@ -113,31 +110,15 @@ def dashboard_veiculos():
         </form>
     </div>
 
-    <!-- MAIN -->
     <div class="main">
 
-        <h2>Top 10 Piores e Melhores</h2>
+        <h2>📊 Top 10 Piores e Melhores</h2>
 
         <div class="kpis">
-            <div class="kpi">
-                <span>Média</span>
-                <h2>{media:,.2f}</h2>
-            </div>
-
-            <div class="kpi">
-                <span>Custo por KM</span>
-                <h2>R$ {custo_km:,.2f}</h2>
-            </div>
-
-            <div class="kpi">
-                <span>Total</span>
-                <h2>R$ {total_geral:,.2f}</h2>
-            </div>
-
-            <div class="kpi">
-                <span>Veículos</span>
-                <h2>{total_veiculos}</h2>
-            </div>
+            <div class="kpi"><span>Média</span><h2>{media:,.2f}</h2></div>
+            <div class="kpi"><span>Custo KM</span><h2>R$ {custo_km:,.2f}</h2></div>
+            <div class="kpi"><span>Total</span><h2>R$ {total_geral:,.2f}</h2></div>
+            <div class="kpi"><span>Veículos</span><h2>{total_veiculos}</h2></div>
         </div>
 
         <div class="graficos">
@@ -172,18 +153,8 @@ new Chart(document.getElementById('melhores'), {{
     data: {{
         labels: {json.dumps(top_placas)},
         datasets: [
-            {{
-                label: 'Média',
-                data: {json.dumps(top_valores)},
-                backgroundColor: '#22c55e'
-            }},
-            {{
-                type: 'line',
-                label: 'Meta',
-                data: metaLine({json.dumps(top_placas)}),
-                borderColor: '#ef4444',
-                fill: false
-            }}
+            {{ data: {json.dumps(top_valores)}, backgroundColor: '#22c55e' }},
+            {{ type:'line', data: metaLine({json.dumps(top_placas)}), borderColor:'#ef4444', fill:false }}
         ]
     }}
 }});
@@ -193,18 +164,8 @@ new Chart(document.getElementById('piores'), {{
     data: {{
         labels: {json.dumps(pior_placas)},
         datasets: [
-            {{
-                label: 'Média',
-                data: {json.dumps(pior_valores)},
-                backgroundColor: '#22c55e'
-            }},
-            {{
-                type: 'line',
-                label: 'Meta',
-                data: metaLine({json.dumps(pior_placas)}),
-                borderColor: '#ef4444',
-                fill: false
-            }}
+            {{ data: {json.dumps(pior_valores)}, backgroundColor: '#22c55e' }},
+            {{ type:'line', data: metaLine({json.dumps(pior_placas)}), borderColor:'#ef4444', fill:false }}
         ]
     }}
 }});
@@ -213,53 +174,47 @@ new Chart(document.getElementById('mensal'), {{
     type: 'bar',
     data: {{
         labels: {json.dumps(meses)},
-        datasets: [{{
-            label: 'Gastos',
-            data: {json.dumps(valores_mensais)},
-            backgroundColor: '#22c55e'
-        }}]
+        datasets: [{{ data: {json.dumps(valores_mensais)}, backgroundColor:'#22c55e' }}]
     }}
 }});
 </script>
 
 <style>
+
 .dashboard {{
     display: flex;
     gap: 20px;
+    max-width: 1400px;
+    margin: auto;
+    padding: 20px;
 }}
 
 .sidebar {{
     width: 240px;
     background: #020617;
-    padding: 15px;
-    border-radius: 10px;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #1f2937;
 }}
 
 .main {{
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }}
 
 .kpis {{
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 15px;
 }}
 
 .kpi {{
-    background: #111827;
-    padding: 15px;
-    border-radius: 10px;
+    background: linear-gradient(145deg,#111827,#020617);
+    padding: 20px;
+    border-radius: 12px;
     text-align: center;
-}}
-
-.kpi span {{
-    font-size: 12px;
-    color: #9ca3af;
-}}
-
-.kpi h2 {{
-    margin-top: 5px;
 }}
 
 .graficos {{
@@ -269,14 +224,20 @@ new Chart(document.getElementById('mensal'), {{
 }}
 
 .card {{
-    background: #111827;
-    padding: 15px;
-    border-radius: 10px;
+    background: linear-gradient(145deg,#111827,#020617);
+    padding: 20px;
+    border-radius: 12px;
 }}
 
 .full {{
     grid-column: span 2;
 }}
+
+canvas {{
+    width:100% !important;
+    height:300px !important;
+}}
+
 </style>
 
         """)
