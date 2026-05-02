@@ -4,13 +4,15 @@ from veiculos.layout_veiculos import container
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
+from reportlab.pdfgen import canvas
 
 problemas_bp = Blueprint("problemas_bp", __name__)
 
 UPLOAD_FOLDER = "static/uploads"
+PDF_FOLDER = "static/pdfs"
 
-# 🔥 GARANTE PASTA
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(PDF_FOLDER, exist_ok=True)
 
 
 # 🔥 REGISTRAR PROBLEMA
@@ -24,7 +26,6 @@ def problemas():
     cursor = conn.cursor()
 
     try:
-
         if request.method == "POST":
             tipo = request.form.get("tipo")
             descricao = request.form.get("descricao")
@@ -40,7 +41,6 @@ def problemas():
                 caminho_foto = os.path.join(UPLOAD_FOLDER, nome)
                 arquivo.save(caminho_foto)
 
-            # 🔥 INSERT (SEM ERRO DE COLUNA)
             cursor.execute("""
                 INSERT INTO problemas (tipo, descricao, foto, data, usuario, status)
                 VALUES (%s, %s, %s, %s, %s, %s)
@@ -52,7 +52,6 @@ def problemas():
         <h2>🚨 Registrar Problema</h2>
 
         <form method="POST" enctype="multipart/form-data">
-
             <label>Qual foi o problema?</label>
             <select name="tipo" required>
                 <option>Pneu furado</option>
@@ -69,7 +68,6 @@ def problemas():
             <textarea name="descricao"></textarea>
 
             <button>Enviar Problema</button>
-
         </form>
         """)
 
@@ -81,7 +79,7 @@ def problemas():
         devolver_conexao(conn)
 
 
-# 🔥 LISTA DE PROBLEMAS
+# 🔥 LISTA
 @problemas_bp.route("/problemas-lista")
 def problemas_lista():
 
@@ -99,22 +97,15 @@ def problemas_lista():
         """)
 
         dados = cursor.fetchall()
-
         lista = ""
 
         for d in dados:
 
-            # 🔥 DATA SEGURA
-            if d[4]:
-                try:
-                    data_formatada = d[4].strftime('%d/%m/%Y às %H:%M')
-                except:
-                    data_formatada = str(d[4])
-            else:
-                data_formatada = "Sem data"
-
+            data_formatada = d[4].strftime('%d/%m/%Y às %H:%M') if d[4] else "Sem data"
             usuario = d[5] if d[5] else "Desconhecido"
             status = d[6] if d[6] else "aberto"
+
+            pdf_path = f"/static/pdfs/problema_{d[0]}.pdf"
 
             lista += f"""
             <div class="card">
@@ -131,7 +122,10 @@ def problemas_lista():
 
                 <p>Status: {"🟢 Resolvido" if status=='resolvido' else "🔴 Aberto"}</p>
 
-                <a href="/resolver/{d[0]}">✅ Resolver</a>
+                <a href="/resolver/{d[0]}">✅ Resolver</a><br>
+                <a href="/deletar-problema/{d[0]}" onclick="return confirm('Tem certeza?')">🗑️ Deletar</a><br>
+
+                {"<a href='" + pdf_path + "' target='_blank'>📄 Baixar PDF</a>" if status=='resolvido' else ""}
             </div>
             """
 
@@ -148,7 +142,7 @@ def problemas_lista():
         devolver_conexao(conn)
 
 
-# 🔥 RESOLVER PROBLEMA
+# 🔥 RESOLVER + GERAR PDF
 @problemas_bp.route("/resolver/<int:id>")
 def resolver(id):
 
@@ -160,13 +154,54 @@ def resolver(id):
 
     try:
         cursor.execute("""
+        SELECT tipo, descricao, usuario, data
+        FROM problemas WHERE id=%s
+        """, (id,))
+        d = cursor.fetchone()
+
+        if d:
+            tipo, descricao, usuario, data = d
+
+            pdf_file = os.path.join(PDF_FOLDER, f"problema_{id}.pdf")
+
+            c = canvas.Canvas(pdf_file)
+            c.drawString(100, 800, f"Problema: {tipo}")
+            c.drawString(100, 780, f"Usuário: {usuario}")
+            c.drawString(100, 760, f"Data: {data}")
+            c.drawString(100, 740, f"Descrição: {descricao}")
+            c.save()
+
+        cursor.execute("""
         UPDATE problemas SET status='resolvido' WHERE id=%s
         """, (id,))
+
         conn.commit()
 
     except Exception as e:
         return container(f"<pre>{str(e)}</pre>")
 
+    finally:
+        cursor.close()
+        devolver_conexao(conn)
+
+    return redirect("/problemas-lista")
+
+
+# 🔥 DELETAR
+@problemas_bp.route("/deletar-problema/<int:id>")
+def deletar_problema(id):
+
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("DELETE FROM problemas WHERE id=%s", (id,))
+        conn.commit()
+    except Exception as e:
+        return container(f"<pre>{str(e)}</pre>")
     finally:
         cursor.close()
         devolver_conexao(conn)
