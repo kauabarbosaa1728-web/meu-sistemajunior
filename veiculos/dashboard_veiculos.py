@@ -1,12 +1,13 @@
 from flask import Blueprint, request
 from banco import conectar, devolver_conexao
-from layout import layout
+from veiculos.layout_veiculos import container  # ✅ CORRIGIDO
 import json
 
-dashboard_bp = Blueprint("dashboard_bp", __name__)
+dashboard_veiculos_bp = Blueprint("dashboard_veiculos_bp", __name__)
 
-@dashboard_bp.route("/dashboard", methods=["GET", "POST"])
-def dashboard():
+@dashboard_veiculos_bp.route("/dashboard-veiculos", methods=["GET", "POST"])
+def dashboard_veiculos():
+
     conn = conectar()
     cursor = conn.cursor()
 
@@ -77,8 +78,8 @@ def dashboard():
             selected = "selected" if str(v[0]) == str(veiculo_id) else ""
             opcoes += f"<option value='{v[0]}' {selected}>{v[1]}</option>"
 
-        return layout(f"""
-            <h2>📊 Dashboard Avançado</h2>
+        return container(f"""
+            <h2>📊 Dashboard Veículos</h2>
 
             <form method="GET">
                 <select name="veiculo_id">
@@ -139,7 +140,7 @@ def dashboard():
         """)
 
     except Exception as e:
-        return layout(f"<pre>{str(e)}</pre>")
+        return container(f"<pre>{str(e)}</pre>")
 
     finally:
         cursor.close()
