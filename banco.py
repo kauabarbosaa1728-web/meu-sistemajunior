@@ -118,8 +118,7 @@ def criar_banco():
         """)
 
         cursor.execute("""
-        ALTER TABLE usuarios 
-        ADD COLUMN IF NOT EXISTS empresa_id TEXT
+        ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS empresa_id TEXT
         """)
 
         # ================= PAGAMENTOS =================
@@ -139,8 +138,7 @@ def criar_banco():
         """)
 
         cursor.execute("""
-        ALTER TABLE pagamentos 
-        ADD COLUMN IF NOT EXISTS empresa_id TEXT
+        ALTER TABLE pagamentos ADD COLUMN IF NOT EXISTS empresa_id TEXT
         """)
 
         # ================= TABELAS BASE =================
@@ -154,8 +152,7 @@ def criar_banco():
             """)
 
             cursor.execute(f"""
-            ALTER TABLE {t}
-            ADD COLUMN IF NOT EXISTS empresa_id TEXT
+            ALTER TABLE {t} ADD COLUMN IF NOT EXISTS empresa_id TEXT
             """)
 
         # ================= VEICULOS =================
@@ -182,7 +179,7 @@ def criar_banco():
         )
         """)
 
-        # ================= PROBLEMAS (🔥 ADICIONADO) =================
+        # ================= PROBLEMAS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS problemas (
             id SERIAL PRIMARY KEY,
@@ -192,6 +189,15 @@ def criar_banco():
             data TIMESTAMP,
             empresa_id TEXT
         )
+        """)
+
+        # 🔥 GARANTIR COLUNAS (ESSENCIAL)
+        cursor.execute("""
+        ALTER TABLE problemas ADD COLUMN IF NOT EXISTS usuario TEXT
+        """)
+
+        cursor.execute("""
+        ALTER TABLE problemas ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'aberto'
         """)
 
         # ================= AJUSTE FINAL =================
