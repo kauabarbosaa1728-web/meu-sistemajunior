@@ -96,7 +96,7 @@ def criar_banco():
 
         cursor = conn.cursor()
 
-        # 🔥 USUARIOS
+        # ================= USUARIOS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS usuarios (
             usuario TEXT PRIMARY KEY,
@@ -117,13 +117,12 @@ def criar_banco():
         )
         """)
 
-        # 🔥 GARANTE COLUNA (ANTES DE USAR)
         cursor.execute("""
         ALTER TABLE usuarios 
         ADD COLUMN IF NOT EXISTS empresa_id TEXT
         """)
 
-        # 🔥 PAGAMENTOS
+        # ================= PAGAMENTOS =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS pagamentos (
             id SERIAL PRIMARY KEY,
@@ -144,7 +143,7 @@ def criar_banco():
         ADD COLUMN IF NOT EXISTS empresa_id TEXT
         """)
 
-        # 🔥 OUTRAS TABELAS
+        # ================= TABELAS BASE =================
         tabelas = ["estoque", "transferencias", "logs", "financeiro", "vendas"]
 
         for t in tabelas:
@@ -159,7 +158,31 @@ def criar_banco():
             ADD COLUMN IF NOT EXISTS empresa_id TEXT
             """)
 
-        # 🔥 AGORA SIM USA
+        # ================= VEICULOS =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS veiculos (
+            id SERIAL PRIMARY KEY,
+            placa TEXT NOT NULL,
+            empresa_id TEXT
+        )
+        """)
+
+        # ================= MANUTENCOES =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS manutencoes (
+            id SERIAL PRIMARY KEY,
+            data DATE,
+            valor NUMERIC,
+            veiculo_id INTEGER,
+            oficina TEXT,
+            descricao TEXT,
+            quantidade INTEGER,
+            validade DATE,
+            empresa_id TEXT
+        )
+        """)
+
+        # ================= AJUSTE FINAL =================
         cursor.execute("""
         UPDATE usuarios
         SET empresa_id = usuario
@@ -167,7 +190,7 @@ def criar_banco():
         """)
 
         conn.commit()
-        print("✅ BANCO OK + SAAS ATIVO")
+        print("✅ BANCO COMPLETO + VEICULOS OK")
 
     except Exception as e:
         print("❌ Erro ao criar banco:", e)
