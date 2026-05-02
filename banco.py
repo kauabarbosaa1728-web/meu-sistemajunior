@@ -164,6 +164,11 @@ def criar_banco():
         )
         """)
 
+        # 🔥 GARANTIR COLUNAS NOVAS
+        cursor.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS motorista TEXT")
+        cursor.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS nome TEXT")
+        cursor.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS equipe TEXT")
+
         # ================= MANUTENCOES =================
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS manutencoes (
@@ -191,14 +196,8 @@ def criar_banco():
         )
         """)
 
-        # 🔥 GARANTIR COLUNAS (ESSENCIAL)
-        cursor.execute("""
-        ALTER TABLE problemas ADD COLUMN IF NOT EXISTS usuario TEXT
-        """)
-
-        cursor.execute("""
-        ALTER TABLE problemas ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'aberto'
-        """)
+        cursor.execute("ALTER TABLE problemas ADD COLUMN IF NOT EXISTS usuario TEXT")
+        cursor.execute("ALTER TABLE problemas ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'aberto'")
 
         # ================= AJUSTE FINAL =================
         cursor.execute("""
@@ -208,7 +207,7 @@ def criar_banco():
         """)
 
         conn.commit()
-        print("✅ BANCO COMPLETO + VEICULOS + PROBLEMAS OK")
+        print("✅ BANCO COMPLETO ATUALIZADO")
 
     except Exception as e:
         print("❌ Erro ao criar banco:", e)
