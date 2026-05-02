@@ -1,4 +1,4 @@
-from flask import Blueprint, request, redirect, session
+from flask import Blueprint, request, redirect, session, send_file
 from banco import conectar, devolver_conexao
 from veiculos.layout_veiculos import container
 from werkzeug.utils import secure_filename
@@ -15,7 +15,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PDF_FOLDER, exist_ok=True)
 
 
-# 🔥 REGISTRAR PROBLEMA
+# ================= REGISTRAR =================
 @problemas_bp.route("/problemas", methods=["GET", "POST"])
 def problemas():
 
@@ -52,7 +52,7 @@ def problemas():
         <h2>🚨 Registrar Problema</h2>
 
         <form method="POST" enctype="multipart/form-data">
-            <label>Qual foi o problema?</label>
+            <label>Problema:</label>
             <select name="tipo" required>
                 <option>Pneu furado</option>
                 <option>Sem gasolina</option>
@@ -67,7 +67,7 @@ def problemas():
             <label>Descrição</label>
             <textarea name="descricao"></textarea>
 
-            <button>Enviar Problema</button>
+            <button>Enviar</button>
         </form>
         """)
 
@@ -79,7 +79,7 @@ def problemas():
         devolver_conexao(conn)
 
 
-# 🔥 LISTA
+# ================= LISTA =================
 @problemas_bp.route("/problemas-lista")
 def problemas_lista():
 
@@ -101,11 +101,9 @@ def problemas_lista():
 
         for d in dados:
 
-            data_formatada = d[4].strftime('%d/%m/%Y às %H:%M') if d[4] else "Sem data"
-            usuario = d[5] if d[5] else "Desconhecido"
-            status = d[6] if d[6] else "aberto"
-
-            pdf_path = f"/static/pdfs/problema_{d[0]}.pdf"
+            data_formatada = d[4].strftime('%d/%m/%Y %H:%M') if d[4] else "Sem data"
+            usuario = d[5] or "Desconhecido"
+            status = d[6] or "aberto"
 
             lista += f"""
             <div class="card">
@@ -125,7 +123,7 @@ def problemas_lista():
                 <a href="/resolver/{d[0]}">✅ Resolver</a><br>
                 <a href="/deletar-problema/{d[0]}" onclick="return confirm('Tem certeza?')">🗑️ Deletar</a><br>
 
-                {"<a href='" + pdf_path + "' target='_blank'>📄 Baixar PDF</a>" if status=='resolvido' else ""}
+                {"<a href='/baixar-pdf/" + str(d[0]) + "'>📄 Baixar PDF</a>" if status=='resolvido' else ""}
             </div>
             """
 
@@ -142,7 +140,7 @@ def problemas_lista():
         devolver_conexao(conn)
 
 
-# 🔥 RESOLVER + GERAR PDF
+# ================= RESOLVER + PDF =================
 @problemas_bp.route("/resolver/<int:id>")
 def resolver(id):
 
@@ -162,9 +160,9 @@ def resolver(id):
         if d:
             tipo, descricao, usuario, data = d
 
-            pdf_file = os.path.join(PDF_FOLDER, f"problema_{id}.pdf")
+            caminho_pdf = os.path.join(PDF_FOLDER, f"problema_{id}.pdf")
 
-            c = canvas.Canvas(pdf_file)
+            c = canvas.Canvas(caminho_pdf)
             c.drawString(100, 800, f"Problema: {tipo}")
             c.drawString(100, 780, f"Usuário: {usuario}")
             c.drawString(100, 760, f"Data: {data}")
@@ -187,7 +185,22 @@ def resolver(id):
     return redirect("/problemas-lista")
 
 
-# 🔥 DELETAR
+# ================= BAIXAR PDF =================
+@problemas_bp.route("/baixar-pdf/<int:id>")
+def baixar_pdf(id):
+
+    if "user" not in session:
+        return redirect("/")
+
+    caminho = os.path.join(PDF_FOLDER, f"problema_{id}.pdf")
+
+    if os.path.exists(caminho):
+        return send_file(caminho, as_attachment=True)
+    else:
+        return container("<p>PDF não encontrado.</p>")
+
+
+# ================= DELETAR =================
 @problemas_bp.route("/deletar-problema/<int:id>")
 def deletar_problema(id):
 
