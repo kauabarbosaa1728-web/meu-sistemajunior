@@ -156,6 +156,9 @@ new Chart(document.getElementById('melhores'), {{
             {{ data: {json.dumps(top_valores)}, backgroundColor: '#22c55e' }},
             {{ type:'line', data: metaLine({json.dumps(top_placas)}), borderColor:'#ef4444', fill:false }}
         ]
+    }},
+    options: {{
+        maintainAspectRatio: false
     }}
 }});
 
@@ -167,6 +170,9 @@ new Chart(document.getElementById('piores'), {{
             {{ data: {json.dumps(pior_valores)}, backgroundColor: '#22c55e' }},
             {{ type:'line', data: metaLine({json.dumps(pior_placas)}), borderColor:'#ef4444', fill:false }}
         ]
+    }},
+    options: {{
+        maintainAspectRatio: false
     }}
 }});
 
@@ -175,6 +181,9 @@ new Chart(document.getElementById('mensal'), {{
     data: {{
         labels: {json.dumps(meses)},
         datasets: [{{ data: {json.dumps(valores_mensais)}, backgroundColor:'#22c55e' }}]
+    }},
+    options: {{
+        maintainAspectRatio: false
     }}
 }});
 </script>
@@ -227,6 +236,13 @@ new Chart(document.getElementById('mensal'), {{
     background: linear-gradient(145deg,#111827,#020617);
     padding: 20px;
     border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}}
+
+.card h3 {{
+    text-align: center;
 }}
 
 .full {{
@@ -234,8 +250,9 @@ new Chart(document.getElementById('mensal'), {{
 }}
 
 canvas {{
-    width:100% !important;
-    height:300px !important;
+    width: 100% !important;
+    aspect-ratio: 1 / 1;
+    max-height: 350px;
 }}
 
 </style>
