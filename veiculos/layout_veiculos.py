@@ -7,7 +7,6 @@ def tem_permissao(nome):
     return session.get(nome) == 1
 
 
-# 🔥 AGORA PADRÃO = container (compatível com seu sistema)
 def container(conteudo):
     return f"""
     <html>
@@ -194,15 +193,13 @@ def container(conteudo):
         </div>
 
         <div class="menu">
-            <a href="/">🏠 Início</a>
 
             {"<a href='/veiculos'>🚗 Veículos</a>" if tem_permissao("pode_veiculos") else ""}
             {"<a href='/manutencoes'>🔧 Manutenções</a>" if tem_permissao("pode_manutencoes") else ""}
             {"<a href='/dashboard-veiculos'>📊 Dashboard</a>" if tem_permissao("pode_dashboard") else ""}
-            {"<a href='/usuarios'>👤 Usuários</a>" if tem_permissao("pode_usuarios") else ""}
 
             <a href="/problemas">⚠️ Problemas</a>
-            <a href="/logout">🚪 Sair</a>
+
         </div>
 
         <div class="conteudo">
