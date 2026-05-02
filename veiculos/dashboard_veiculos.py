@@ -1,6 +1,6 @@
 from flask import Blueprint, request
 from banco import conectar, devolver_conexao
-from veiculos.layout_veiculos import container  # ✅ CORRIGIDO
+from veiculos.layout_veiculos import container
 import json
 
 dashboard_veiculos_bp = Blueprint("dashboard_veiculos_bp", __name__)
@@ -37,8 +37,7 @@ def dashboard_veiculos():
             FROM manutencoes m
             {filtro}
         """, params)
-
-        total_geral = cursor.fetchone()[0]
+        total_geral = float(cursor.fetchone()[0])
 
         # 🚗 GASTO POR VEÍCULO
         cursor.execute(f"""
@@ -51,11 +50,18 @@ def dashboard_veiculos():
         """, params)
 
         dados = cursor.fetchall()
-
         placas = [d[0] for d in dados]
         valores = [float(d[1]) for d in dados]
 
-        # 📊 GASTO MENSAL
+        # 🔝 TOP 10
+        top_placas = placas[:10]
+        top_valores = valores[:10]
+
+        # 🔻 PIORES 10
+        pior_placas = placas[-10:]
+        pior_valores = valores[-10:]
+
+        # 📅 GASTO MENSAL
         cursor.execute(f"""
             SELECT TO_CHAR(data, 'YYYY-MM'), COALESCE(SUM(valor),0)
             FROM manutencoes m
@@ -65,9 +71,12 @@ def dashboard_veiculos():
         """, params)
 
         dados_mensais = cursor.fetchall()
-
         meses = [d[0] for d in dados_mensais]
         valores_mensais = [float(d[1]) for d in dados_mensais]
+
+        # 🚗 TOTAL VEÍCULOS
+        cursor.execute("SELECT COUNT(*) FROM veiculos")
+        total_veiculos = cursor.fetchone()[0]
 
         # 🚗 VEÍCULOS PARA FILTRO
         cursor.execute("SELECT id, placa FROM veiculos")
@@ -79,64 +88,143 @@ def dashboard_veiculos():
             opcoes += f"<option value='{v[0]}' {selected}>{v[1]}</option>"
 
         return container(f"""
-            <h2>📊 Dashboard Veículos</h2>
 
-            <form method="GET">
-                <select name="veiculo_id">
-                    {opcoes}
-                </select>
+        <h2 style="text-align:center;">📊 Dashboard Veículos</h2>
 
-                <input type="date" name="inicio">
-                <input type="date" name="fim">
+        <!-- FILTRO -->
+        <form method="GET">
+            <select name="veiculo_id">{opcoes}</select>
+            <input type="date" name="inicio">
+            <input type="date" name="fim">
+            <button>Filtrar</button>
+        </form>
 
-                <button>Filtrar</button>
-            </form>
+        <br>
 
-            <br>
-
-            <div style="background:#1e3a8a;padding:20px;border-radius:10px;">
-                <h3>💰 Total Geral</h3>
-                <h1>R$ {total_geral}</h1>
+        <!-- KPIs -->
+        <div class="kpis">
+            <div class="kpi">
+                <h3>🚗 Veículos</h3>
+                <p>{total_veiculos}</p>
             </div>
 
-            <br>
+            <div class="kpi">
+                <h3>💰 Total</h3>
+                <p>R$ {total_geral:,.2f}</p>
+            </div>
 
-            <h3>🚗 Gastos por Veículo</h3>
-            <canvas id="grafico1"></canvas>
+            <div class="kpi">
+                <h3>📊 Média</h3>
+                <p>R$ {(total_geral/(total_veiculos or 1)):,.2f}</p>
+            </div>
+        </div>
 
-            <br><br>
+        <!-- GRÁFICOS -->
+        <div class="graficos">
 
-            <h3>📅 Gastos Mensais</h3>
-            <canvas id="grafico2"></canvas>
+            <div class="card">
+                <h3>🔝 Top 10 Veículos</h3>
+                <canvas id="top"></canvas>
+            </div>
 
-            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <div class="card">
+                <h3>🔻 Piores 10 Veículos</h3>
+                <canvas id="piores"></canvas>
+            </div>
 
-            <script>
-                new Chart(document.getElementById('grafico1'), {{
-                    type: 'bar',
-                    data: {{
-                        labels: {json.dumps(placas)},
-                        datasets: [{{
-                            label: 'Gastos por Veículo',
-                            data: {json.dumps(valores)},
-                            backgroundColor: '#3b82f6'
-                        }}]
-                    }}
-                }});
+            <div class="card full">
+                <h3>📅 Gastos Mensais</h3>
+                <canvas id="mensal"></canvas>
+            </div>
 
-                new Chart(document.getElementById('grafico2'), {{
-                    type: 'line',
-                    data: {{
-                        labels: {json.dumps(meses)},
-                        datasets: [{{
-                            label: 'Gastos Mensais',
-                            data: {json.dumps(valores_mensais)},
-                            borderColor: '#60a5fa',
-                            fill: false
-                        }}]
-                    }}
-                }});
-            </script>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+        <script>
+
+        new Chart(document.getElementById('top'), {{
+            type: 'bar',
+            data: {{
+                labels: {json.dumps(top_placas)},
+                datasets: [{{
+                    label: 'Top 10',
+                    data: {json.dumps(top_valores)},
+                    backgroundColor: '#22c55e'
+                }}]
+            }}
+        }});
+
+        new Chart(document.getElementById('piores'), {{
+            type: 'bar',
+            data: {{
+                labels: {json.dumps(pior_placas)},
+                datasets: [{{
+                    label: 'Piores 10',
+                    data: {json.dumps(pior_valores)},
+                    backgroundColor: '#ef4444'
+                }}]
+            }}
+        }});
+
+        new Chart(document.getElementById('mensal'), {{
+            type: 'line',
+            data: {{
+                labels: {json.dumps(meses)},
+                datasets: [{{
+                    label: 'Gastos Mensais',
+                    data: {json.dumps(valores_mensais)},
+                    borderColor: '#3b82f6',
+                    fill: false
+                }}]
+            }}
+        }});
+
+        </script>
+
+        <style>
+
+        .kpis {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }}
+
+        .kpi {{
+            background: #111827;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }}
+
+        .kpi h3 {{
+            color: #60a5fa;
+        }}
+
+        .kpi p {{
+            font-size: 28px;
+            font-weight: bold;
+        }}
+
+        .graficos {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }}
+
+        .card {{
+            background: #111827;
+            padding: 20px;
+            border-radius: 12px;
+        }}
+
+        .full {{
+            grid-column: span 2;
+        }}
+
+        </style>
+
         """)
 
     except Exception as e:
