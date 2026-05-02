@@ -72,48 +72,65 @@ def problemas():
         devolver_conexao(conn)
 
 
-# 🔥 LISTA DE PROBLEMAS (NOVA ABA)
+# 🔥 LISTA DE PROBLEMAS
 @problemas_bp.route("/problemas-lista")
 def problemas_lista():
 
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    SELECT id, tipo, descricao, foto, data, usuario, status
-    FROM problemas
-    ORDER BY data DESC
-    """)
+    try:
+        cursor.execute("""
+        SELECT id, tipo, descricao, foto, data, usuario, status
+        FROM problemas
+        ORDER BY data DESC
+        """)
 
-    dados = cursor.fetchall()
+        dados = cursor.fetchall()
 
-    lista = ""
+        lista = ""
 
-    for d in dados:
-        lista += f"""
-        <div class="card">
-            <h3>🚨 {d[1]}</h3>
+        for d in dados:
 
-            <p><b>Usuário:</b> {d[5]}</p>
-            <p><b>Data:</b> {d[4].strftime('%d/%m/%Y')}</p>
-            <p><b>Hora:</b> {d[4].strftime('%H:%M')}</p>
+            # 🔥 CORREÇÃO DA DATA (NÃO QUEBRA MAIS)
+            if d[4]:
+                try:
+                    data_formatada = d[4].strftime('%d/%m/%Y às %H:%M')
+                except:
+                    data_formatada = str(d[4])
+            else:
+                data_formatada = "Sem data"
 
-            <p>{d[2]}</p>
+            lista += f"""
+            <div class="card">
+                <h3>🚨 {d[1]}</h3>
 
-            {"<img src='/" + d[3] + "' style='max-width:250px'>" if d[3] else ""}
+                <p><b>Usuário:</b> {d[5]}</p>
+                <p><b>Data:</b> {data_formatada}</p>
 
-            <br><br>
+                <p>{d[2]}</p>
 
-            <p>Status: {"🟢 Resolvido" if d[6]=='resolvido' else "🔴 Aberto"}</p>
+                {"<img src='/" + d[3] + "' style='max-width:250px'>" if d[3] else ""}
 
-            <a href="/resolver/{d[0]}">✅ Resolver</a>
-        </div>
-        """
+                <br><br>
 
-    return container(f"""
-    <h2>📋 Ocorrências</h2>
-    {lista}
-    """)
+                <p>Status: {"🟢 Resolvido" if d[6]=='resolvido' else "🔴 Aberto"}</p>
+
+                <a href="/resolver/{d[0]}">✅ Resolver</a>
+            </div>
+            """
+
+        return container(f"""
+        <h2>📋 Ocorrências</h2>
+        {lista}
+        """)
+
+    except Exception as e:
+        return container(f"<pre>{str(e)}</pre>")
+
+    finally:
+        cursor.close()
+        devolver_conexao(conn)
 
 
 # 🔥 RESOLVER PROBLEMA
