@@ -5,6 +5,7 @@ from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
 from reportlab.pdfgen import canvas
+from reportlab.lib import colors
 
 problemas_bp = Blueprint("problemas_bp", __name__)
 
@@ -163,10 +164,34 @@ def resolver(id):
             caminho_pdf = os.path.join(PDF_FOLDER, f"problema_{id}.pdf")
 
             c = canvas.Canvas(caminho_pdf)
-            c.drawString(100, 800, f"Problema: {tipo}")
-            c.drawString(100, 780, f"Usuário: {usuario}")
-            c.drawString(100, 760, f"Data: {data}")
-            c.drawString(100, 740, f"Descrição: {descricao}")
+
+            # ===== TÍTULO =====
+            c.setFont("Helvetica-Bold", 16)
+            c.drawString(100, 820, "RELATÓRIO DE OCORRÊNCIA")
+
+            # ===== LINHA VERDE =====
+            c.setStrokeColor(colors.green)
+            c.setLineWidth(3)
+            c.line(100, 810, 450, 810)
+
+            # ===== DADOS =====
+            c.setFont("Helvetica", 12)
+            c.setFillColor(colors.black)
+
+            c.drawString(100, 770, f"Problema: {tipo}")
+            c.drawString(100, 750, f"Usuário: {usuario}")
+            c.drawString(100, 730, f"Data: {data}")
+            c.drawString(100, 710, f"Descrição: {descricao}")
+
+            # ===== STATUS =====
+            c.setFont("Helvetica-Bold", 14)
+            c.setFillColor(colors.green)
+            c.drawString(100, 660, "✔ PROBLEMA RESOLVIDO")
+
+            # ===== LINHA FINAL =====
+            c.setLineWidth(2)
+            c.line(100, 650, 450, 650)
+
             c.save()
 
         cursor.execute("""
