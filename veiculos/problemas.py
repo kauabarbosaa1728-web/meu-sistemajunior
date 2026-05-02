@@ -9,6 +9,10 @@ problemas_bp = Blueprint("problemas_bp", __name__)
 
 UPLOAD_FOLDER = "static/uploads"
 
+# 🔥 GARANTE PASTA
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
 @problemas_bp.route("/problemas", methods=["GET", "POST"])
 def problemas():
 
@@ -30,11 +34,12 @@ def problemas():
 
             caminho_foto = ""
 
-            if arquivo and arquivo.filename != "":
+            if arquivo and arquivo.filename:
                 nome = secure_filename(arquivo.filename)
                 caminho_foto = os.path.join(UPLOAD_FOLDER, nome)
                 arquivo.save(caminho_foto)
 
+            # 🔥 INSERÇÃO SEGURA
             cursor.execute("""
                 INSERT INTO problemas (tipo, descricao, foto, data, usuario, status)
                 VALUES (%s, %s, %s, %s, %s, 'aberto')
@@ -67,6 +72,9 @@ def problemas():
         </form>
         """)
 
+    except Exception as e:
+        return container(f"<pre>{str(e)}</pre>")
+
     finally:
         cursor.close()
         devolver_conexao(conn)
@@ -92,7 +100,7 @@ def problemas_lista():
 
         for d in dados:
 
-            # 🔥 CORREÇÃO DA DATA (NÃO QUEBRA MAIS)
+            # 🔥 DATA SEGURA
             if d[4]:
                 try:
                     data_formatada = d[4].strftime('%d/%m/%Y às %H:%M')
@@ -101,11 +109,14 @@ def problemas_lista():
             else:
                 data_formatada = "Sem data"
 
+            usuario = d[5] if d[5] else "Desconhecido"
+            status = d[6] if d[6] else "aberto"
+
             lista += f"""
             <div class="card">
                 <h3>🚨 {d[1]}</h3>
 
-                <p><b>Usuário:</b> {d[5]}</p>
+                <p><b>Usuário:</b> {usuario}</p>
                 <p><b>Data:</b> {data_formatada}</p>
 
                 <p>{d[2]}</p>
@@ -114,7 +125,7 @@ def problemas_lista():
 
                 <br><br>
 
-                <p>Status: {"🟢 Resolvido" if d[6]=='resolvido' else "🔴 Aberto"}</p>
+                <p>Status: {"🟢 Resolvido" if status=='resolvido' else "🔴 Aberto"}</p>
 
                 <a href="/resolver/{d[0]}">✅ Resolver</a>
             </div>
@@ -122,7 +133,7 @@ def problemas_lista():
 
         return container(f"""
         <h2>📋 Ocorrências</h2>
-        {lista}
+        {lista if lista else "<p>Nenhum problema registrado.</p>"}
         """)
 
     except Exception as e:
@@ -140,10 +151,17 @@ def resolver(id):
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("""
-    UPDATE problemas SET status='resolvido' WHERE id=%s
-    """, (id,))
+    try:
+        cursor.execute("""
+        UPDATE problemas SET status='resolvido' WHERE id=%s
+        """, (id,))
+        conn.commit()
 
-    conn.commit()
+    except Exception as e:
+        return container(f"<pre>{str(e)}</pre>")
+
+    finally:
+        cursor.close()
+        devolver_conexao(conn)
 
     return redirect("/problemas-lista")
