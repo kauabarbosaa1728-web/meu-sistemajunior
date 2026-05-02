@@ -31,13 +31,20 @@ def dashboard_veiculos():
             filtro += " AND m.data <= %s"
             params.append(data_fim)
 
-        # 💰 TOTAL GERAL
+        # 💰 TOTAL
         cursor.execute(f"""
             SELECT COALESCE(SUM(valor),0)
             FROM manutencoes m
             {filtro}
         """, params)
         total_geral = float(cursor.fetchone()[0])
+
+        # 🚗 VEÍCULOS
+        cursor.execute("SELECT COUNT(*) FROM veiculos")
+        total_veiculos = cursor.fetchone()[0]
+
+        media = (total_geral / (total_veiculos or 1))
+        custo_km = media  # depois você pode melhorar
 
         # 🚗 GASTO POR VEÍCULO
         cursor.execute(f"""
@@ -53,15 +60,14 @@ def dashboard_veiculos():
         placas = [d[0] for d in dados]
         valores = [float(d[1]) for d in dados]
 
-        # 🔝 TOP 10
+        # TOP E PIORES
         top_placas = placas[:10]
         top_valores = valores[:10]
 
-        # 🔻 PIORES 10
         pior_placas = placas[-10:]
         pior_valores = valores[-10:]
 
-        # 📅 GASTO MENSAL
+        # 📅 MENSAL
         cursor.execute(f"""
             SELECT TO_CHAR(data, 'YYYY-MM'), COALESCE(SUM(valor),0)
             FROM manutencoes m
@@ -74,11 +80,7 @@ def dashboard_veiculos():
         meses = [d[0] for d in dados_mensais]
         valores_mensais = [float(d[1]) for d in dados_mensais]
 
-        # 🚗 TOTAL VEÍCULOS
-        cursor.execute("SELECT COUNT(*) FROM veiculos")
-        total_veiculos = cursor.fetchone()[0]
-
-        # 🚗 VEÍCULOS PARA FILTRO
+        # 🚗 SELECT
         cursor.execute("SELECT id, placa FROM veiculos")
         veiculos = cursor.fetchall()
 
@@ -87,143 +89,195 @@ def dashboard_veiculos():
             selected = "selected" if str(v[0]) == str(veiculo_id) else ""
             opcoes += f"<option value='{v[0]}' {selected}>{v[1]}</option>"
 
+        meta = 3000  # linha vermelha
+
         return container(f"""
 
-        <h2 style="text-align:center;">📊 Dashboard Veículos</h2>
+<div class="dashboard">
 
-        <!-- FILTRO -->
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <h3>Filtros</h3>
+
         <form method="GET">
+            <label>Veículo</label>
             <select name="veiculo_id">{opcoes}</select>
+
+            <label>Data início</label>
             <input type="date" name="inicio">
+
+            <label>Data fim</label>
             <input type="date" name="fim">
+
             <button>Filtrar</button>
         </form>
+    </div>
 
-        <br>
+    <!-- MAIN -->
+    <div class="main">
 
-        <!-- KPIs -->
+        <h2>Top 10 Piores e Melhores</h2>
+
         <div class="kpis">
             <div class="kpi">
-                <h3>🚗 Veículos</h3>
-                <p>{total_veiculos}</p>
+                <span>Média</span>
+                <h2>{media:,.2f}</h2>
             </div>
 
             <div class="kpi">
-                <h3>💰 Total</h3>
-                <p>R$ {total_geral:,.2f}</p>
+                <span>Custo por KM</span>
+                <h2>R$ {custo_km:,.2f}</h2>
             </div>
 
             <div class="kpi">
-                <h3>📊 Média</h3>
-                <p>R$ {(total_geral/(total_veiculos or 1)):,.2f}</p>
+                <span>Total</span>
+                <h2>R$ {total_geral:,.2f}</h2>
+            </div>
+
+            <div class="kpi">
+                <span>Veículos</span>
+                <h2>{total_veiculos}</h2>
             </div>
         </div>
 
-        <!-- GRÁFICOS -->
         <div class="graficos">
 
             <div class="card">
-                <h3>🔝 Top 10 Veículos</h3>
-                <canvas id="top"></canvas>
+                <h3>Top 10 Melhores</h3>
+                <canvas id="melhores"></canvas>
             </div>
 
             <div class="card">
-                <h3>🔻 Piores 10 Veículos</h3>
+                <h3>Top 10 Piores</h3>
                 <canvas id="piores"></canvas>
             </div>
 
             <div class="card full">
-                <h3>📅 Gastos Mensais</h3>
+                <h3>Gastos Mensais</h3>
                 <canvas id="mensal"></canvas>
             </div>
 
         </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </div>
+</div>
 
-        <script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        new Chart(document.getElementById('top'), {{
-            type: 'bar',
-            data: {{
-                labels: {json.dumps(top_placas)},
-                datasets: [{{
-                    label: 'Top 10',
-                    data: {json.dumps(top_valores)},
-                    backgroundColor: '#22c55e'
-                }}]
+<script>
+const metaLine = (arr) => Array(arr.length).fill({meta});
+
+new Chart(document.getElementById('melhores'), {{
+    type: 'bar',
+    data: {{
+        labels: {json.dumps(top_placas)},
+        datasets: [
+            {{
+                label: 'Média',
+                data: {json.dumps(top_valores)},
+                backgroundColor: '#22c55e'
+            }},
+            {{
+                type: 'line',
+                label: 'Meta',
+                data: metaLine({json.dumps(top_placas)}),
+                borderColor: '#ef4444',
+                fill: false
             }}
-        }});
+        ]
+    }}
+}});
 
-        new Chart(document.getElementById('piores'), {{
-            type: 'bar',
-            data: {{
-                labels: {json.dumps(pior_placas)},
-                datasets: [{{
-                    label: 'Piores 10',
-                    data: {json.dumps(pior_valores)},
-                    backgroundColor: '#ef4444'
-                }}]
+new Chart(document.getElementById('piores'), {{
+    type: 'bar',
+    data: {{
+        labels: {json.dumps(pior_placas)},
+        datasets: [
+            {{
+                label: 'Média',
+                data: {json.dumps(pior_valores)},
+                backgroundColor: '#22c55e'
+            }},
+            {{
+                type: 'line',
+                label: 'Meta',
+                data: metaLine({json.dumps(pior_placas)}),
+                borderColor: '#ef4444',
+                fill: false
             }}
-        }});
+        ]
+    }}
+}});
 
-        new Chart(document.getElementById('mensal'), {{
-            type: 'line',
-            data: {{
-                labels: {json.dumps(meses)},
-                datasets: [{{
-                    label: 'Gastos Mensais',
-                    data: {json.dumps(valores_mensais)},
-                    borderColor: '#3b82f6',
-                    fill: false
-                }}]
-            }}
-        }});
+new Chart(document.getElementById('mensal'), {{
+    type: 'bar',
+    data: {{
+        labels: {json.dumps(meses)},
+        datasets: [{{
+            label: 'Gastos',
+            data: {json.dumps(valores_mensais)},
+            backgroundColor: '#22c55e'
+        }}]
+    }}
+}});
+</script>
 
-        </script>
+<style>
+.dashboard {{
+    display: flex;
+    gap: 20px;
+}}
 
-        <style>
+.sidebar {{
+    width: 240px;
+    background: #020617;
+    padding: 15px;
+    border-radius: 10px;
+}}
 
-        .kpis {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }}
+.main {{
+    flex: 1;
+}}
 
-        .kpi {{
-            background: #111827;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-        }}
+.kpis {{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}}
 
-        .kpi h3 {{
-            color: #60a5fa;
-        }}
+.kpi {{
+    background: #111827;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+}}
 
-        .kpi p {{
-            font-size: 28px;
-            font-weight: bold;
-        }}
+.kpi span {{
+    font-size: 12px;
+    color: #9ca3af;
+}}
 
-        .graficos {{
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }}
+.kpi h2 {{
+    margin-top: 5px;
+}}
 
-        .card {{
-            background: #111827;
-            padding: 20px;
-            border-radius: 12px;
-        }}
+.graficos {{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}}
 
-        .full {{
-            grid-column: span 2;
-        }}
+.card {{
+    background: #111827;
+    padding: 15px;
+    border-radius: 10px;
+}}
 
-        </style>
+.full {{
+    grid-column: span 2;
+}}
+</style>
 
         """)
 
