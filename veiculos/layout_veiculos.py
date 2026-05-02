@@ -7,11 +7,12 @@ def tem_permissao(nome):
     return session.get(nome) == 1
 
 
-def layout(conteudo):
+# 🔥 AGORA PADRÃO = container (compatível com seu sistema)
+def container(conteudo):
     return f"""
     <html>
     <head>
-        <title>KBSISTEMAS AUTO</title>
+        <title>KBS AUTO</title>
         <link rel="manifest" href="/static/manifest.json">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -197,7 +198,7 @@ def layout(conteudo):
 
             {"<a href='/veiculos'>🚗 Veículos</a>" if tem_permissao("pode_veiculos") else ""}
             {"<a href='/manutencoes'>🔧 Manutenções</a>" if tem_permissao("pode_manutencoes") else ""}
-            {"<a href='/dashboard'>📊 Dashboard</a>" if tem_permissao("pode_dashboard") else ""}
+            {"<a href='/dashboard-veiculos'>📊 Dashboard</a>" if tem_permissao("pode_dashboard") else ""}
             {"<a href='/usuarios'>👤 Usuários</a>" if tem_permissao("pode_usuarios") else ""}
 
             <a href="/problemas">⚠️ Problemas</a>
