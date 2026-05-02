@@ -1,13 +1,3 @@
-def acesso_negado():
-    return container("""
-    <div class="card">
-        <h2 class="erro">⛔ Acesso negado</h2>
-        <p>Você não tem permissão para acessar esta área.</p>
-        <p><a href="/painel">⬅ Voltar para o painel</a></p>
-    </div>
-    """)
-
-
 def topo():
     return """
     <div class="navbar">
@@ -43,6 +33,16 @@ def topo():
                 </ul>
             </li>
 
+            <!-- 🔥 NOVO MENU VEÍCULOS -->
+            <li class="has-submenu">
+                <span class="menu-toggle">🚗 Veículos</span>
+                <ul class="submenu">
+                    <li><a href="/veiculos">📋 Ver Veículos</a></li>
+                    <li><a href="/manutencoes">🔧 Manutenções</a></li>
+                    <li><a href="/dashboard-veiculos">📊 Dashboard</a></li>
+                </ul>
+            </li>
+
             <li class="has-submenu">
                 <span class="menu-toggle">⚙️ Sistema</span>
                 <ul class="submenu">
@@ -57,35 +57,6 @@ def topo():
         </ul>
     </div>
     """
-
-
-def container(c):
-    return f"""
-    <html>
-    <head>
-        <title>KBSISTEMAS</title>
-        <link rel="icon" href="/static/logo.png">
-
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-        <style>
-
-        * {{
-            box-sizing: border-box;
-        }}
-
-        body {{
-            margin: 0;
-            font-family: 'Inter', Arial;
-            background:
-                radial-gradient(circle at top left, rgba(59,130,246,0.14), transparent 32%),
-                radial-gradient(circle at top right, rgba(56,189,248,0.10), transparent 30%),
-                #05070d;
-            color: #e5e7eb;
-        }}
 
         .navbar {{
             position: relative;
