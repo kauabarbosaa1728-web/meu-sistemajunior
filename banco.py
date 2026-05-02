@@ -182,6 +182,18 @@ def criar_banco():
         )
         """)
 
+        # ================= PROBLEMAS (🔥 ADICIONADO) =================
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS problemas (
+            id SERIAL PRIMARY KEY,
+            tipo TEXT,
+            descricao TEXT,
+            foto TEXT,
+            data TIMESTAMP,
+            empresa_id TEXT
+        )
+        """)
+
         # ================= AJUSTE FINAL =================
         cursor.execute("""
         UPDATE usuarios
@@ -190,7 +202,7 @@ def criar_banco():
         """)
 
         conn.commit()
-        print("✅ BANCO COMPLETO + VEICULOS OK")
+        print("✅ BANCO COMPLETO + VEICULOS + PROBLEMAS OK")
 
     except Exception as e:
         print("❌ Erro ao criar banco:", e)
