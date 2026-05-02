@@ -13,6 +13,7 @@ UPLOAD_FOLDER = "static/uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
+# 🔥 REGISTRAR PROBLEMA
 @problemas_bp.route("/problemas", methods=["GET", "POST"])
 def problemas():
 
@@ -39,11 +40,11 @@ def problemas():
                 caminho_foto = os.path.join(UPLOAD_FOLDER, nome)
                 arquivo.save(caminho_foto)
 
-            # 🔥 INSERÇÃO SEGURA
+            # 🔥 INSERT (SEM ERRO DE COLUNA)
             cursor.execute("""
                 INSERT INTO problemas (tipo, descricao, foto, data, usuario, status)
-                VALUES (%s, %s, %s, %s, %s, 'aberto')
-            """, (tipo, descricao, caminho_foto, agora, usuario))
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (tipo, descricao, caminho_foto, agora, usuario, 'aberto'))
 
             conn.commit()
 
@@ -83,6 +84,9 @@ def problemas():
 # 🔥 LISTA DE PROBLEMAS
 @problemas_bp.route("/problemas-lista")
 def problemas_lista():
+
+    if "user" not in session:
+        return redirect("/")
 
     conn = conectar()
     cursor = conn.cursor()
@@ -147,6 +151,9 @@ def problemas_lista():
 # 🔥 RESOLVER PROBLEMA
 @problemas_bp.route("/resolver/<int:id>")
 def resolver(id):
+
+    if "user" not in session:
+        return redirect("/")
 
     conn = conectar()
     cursor = conn.cursor()
