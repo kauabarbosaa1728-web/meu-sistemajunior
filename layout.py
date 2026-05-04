@@ -9,8 +9,7 @@ def acesso_negado():
 
 
 def topo():
-    return """
-   return f"""
+    return f"""
     <div class="navbar">
 
         <!-- LOGO -->
@@ -33,18 +32,14 @@ def topo():
                 </ul>
             </li>
 
-            <!-- 💰 FINANCEIRO (ADICIONADO MAIS OPÇÕES) -->
+            <!-- 💰 FINANCEIRO -->
             <li class="has-submenu">
                 <span class="menu-toggle">💰 Financeiro</span>
                 <ul class="submenu">
                     <li><a href="/financeiro">💰 Ver Financeiro</a></li>
-
                     <li><a href="/relatorio-financeiro">📊 Relatório</a></li>
-
                     <li><a href="/entrada-financeiro">➕ Entradas</a></li>
-
                     <li><a href="/saida-financeiro">➖ Saídas</a></li>
-
                     <li><a href="/resumo-financeiro">📈 Resumo Geral</a></li>
                 </ul>
             </li>
@@ -90,7 +85,7 @@ def topo():
 
 
 def container(c):
-    return """
+    return f"""
     <html>
     <head>
         <title>KBSISTEMAS</title>
@@ -121,7 +116,6 @@ def container(c):
             color: #e5e7eb;
         }}
 
-        /* NAVBAR */
         .navbar {{
             position: relative;
             z-index: 99999;
@@ -155,7 +149,6 @@ def container(c):
             color: #ffffff;
         }}
 
-        /* MENU */
         .menu {{
             list-style: none;
             display: flex;
@@ -194,7 +187,6 @@ def container(c):
             color: #ff4d4d !important;
         }}
 
-        /* SUBMENU */
         .submenu {{
             display: none;
             position: absolute;
@@ -216,14 +208,12 @@ def container(c):
             padding: 10px 14px;
         }}
 
-        /* CONTEÚDO */
         .conteudo {{
             padding: 20px;
             max-width: 1400px;
             margin: auto;
         }}
 
-        /* CARD */
         .card {{
             background: linear-gradient(145deg, rgba(10,15,26,0.96), rgba(5,7,13,0.98));
             border: 1px solid rgba(255,255,255,0.08);
@@ -236,7 +226,6 @@ def container(c):
             color: #ff4d4d;
         }}
 
-        /* INPUTS */
         input, select, button {{
             width: 100%;
             padding: 12px;
