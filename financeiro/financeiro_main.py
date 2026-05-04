@@ -64,4 +64,109 @@ def financeiro():
     labels_json = json.dumps(["Entradas", "Saídas"])
     valores_json = json.dumps([total_entrada, total_saida])
 
-    return container(f"""SEU HTML ORIGINAL AQUI""")
+    return container(f"""
+    <div class="wrap">
+
+        <h2 style="margin-bottom:20px;">💰 Financeiro</h2>
+
+        <input id="busca" placeholder="🔍 Pesquisar..." onkeyup="filtrar()" style="margin-bottom:15px;">
+
+        <div class="cards">
+
+            <div class="card green">
+                <h3>Entradas</h3>
+                <p>R$ {total_entrada:.2f}</p>
+            </div>
+
+            <div class="card red">
+                <h3>Saídas</h3>
+                <p>R$ {total_saida:.2f}</p>
+            </div>
+
+            <div class="card blue">
+                <h3>Saldo</h3>
+                <p>R$ {saldo:.2f}</p>
+            </div>
+
+        </div>
+
+        <div class="box" style="margin-bottom:20px;">
+            <h3>📊 Visão Financeira</h3>
+            <canvas id="graficoFinanceiro"></canvas>
+        </div>
+
+        <div class="grid">
+
+            <div class="box">
+                <h3>➕ Nova movimentação</h3>
+
+                <form method="POST">
+                    <select name="tipo" required>
+                        <option value="entrada">Entrada</option>
+                        <option value="saida">Saída</option>
+                    </select>
+
+                    <input type="number" step="0.01" name="valor" placeholder="Valor" required>
+                    <input type="text" name="descricao" placeholder="Descrição">
+
+                    <button>Salvar</button>
+                </form>
+
+                <p>{mensagem}</p>
+            </div>
+
+            <div class="box">
+                <h3>📋 Histórico</h3>
+
+                <table id="tabela">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tipo</th>
+                            <th>Valor</th>
+                            <th>Descrição</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {tabela}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+    new Chart(document.getElementById('graficoFinanceiro'), {{
+        type: 'bar',
+        data: {{
+            labels: {labels_json},
+            datasets: [{{
+                data: {valores_json},
+                backgroundColor: ["#22c55e", "#ef4444"],
+                borderRadius: 12
+            }}]
+        }},
+        options: {{
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins: {{
+                legend: {{display:false}}
+            }}
+        }}
+    }});
+
+    function filtrar(){{
+        let input = document.getElementById("busca").value.toLowerCase();
+        let linhas = document.querySelectorAll("#tabela tbody tr");
+
+        linhas.forEach(l => {{
+            l.style.display = l.innerText.toLowerCase().includes(input) ? "" : "none";
+        }});
+    }}
+    </script>
+    """)
