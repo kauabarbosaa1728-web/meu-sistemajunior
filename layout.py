@@ -9,7 +9,7 @@ def acesso_negado():
 
 
 def topo():
-    return """
+   return f"""
     <div class="navbar">
 
         <!-- LOGO -->
