@@ -78,11 +78,15 @@ def historico_estoque():
 
     <div class="card">
         <h2>📦 Estoque</h2>
+
+        <!-- 🔍 BUSCA -->
+        <input id="busca" placeholder="🔍 Buscar produto...">
+
         <canvas id="grafico"></canvas>
     </div>
 
     <div class="card">
-        <table style="width:100%">
+        <table id="tabela" style="width:100%">
             <tr><th>Produto</th><th>Qtd</th><th>Categoria</th><th>Valor</th></tr>
             {linhas}
         </table>
@@ -95,6 +99,13 @@ def historico_estoque():
             labels:{nomes},
             datasets:[{{label:'Quantidade', data:{valores}}}]
         }}
+    }});
+
+    document.getElementById("busca").addEventListener("keyup", function() {{
+        let v = this.value.toLowerCase();
+        document.querySelectorAll("#tabela tr").forEach(tr => {{
+            tr.style.display = tr.innerText.toLowerCase().includes(v) ? "" : "none";
+        }});
     }});
     </script>
     """)
@@ -125,7 +136,10 @@ def relatorio_veiculos():
     <div class="card">
         <h2>🚗 Veículos</h2>
 
-        <table style="width:100%">
+        <!-- 🔍 BUSCA -->
+        <input id="busca" placeholder="🔍 Buscar veículo...">
+
+        <table id="tabela" style="width:100%">
         <tr>
         <th>Motorista</th>
         <th>Nome</th>
@@ -135,6 +149,15 @@ def relatorio_veiculos():
         {linhas}
         </table>
     </div>
+
+    <script>
+    document.getElementById("busca").addEventListener("keyup", function() {{
+        let v = this.value.toLowerCase();
+        document.querySelectorAll("#tabela tr").forEach(tr => {{
+            tr.style.display = tr.innerText.toLowerCase().includes(v) ? "" : "none";
+        }});
+    }});
+    </script>
     """)
 
 
@@ -151,6 +174,10 @@ def financeiro():
     return container(f"""
     <div class="card">
         <h2>💸 Financeiro</h2>
+
+        <!-- 🔍 BUSCA (placeholder só visual) -->
+        <input placeholder="🔍 (em breve filtro detalhado)">
+
         <h1 style="color:#22c55e;">R$ {total:.2f}</h1>
     </div>
     """)
@@ -163,16 +190,25 @@ def problemas():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT tipo, status FROM problemas")
+    cursor.execute("SELECT tipo FROM problemas")
     dados = cursor.fetchall()
 
-    tipos = [d[0] for d in dados]
+    contagem = {}
+    for d in dados:
+        contagem[d[0]] = contagem.get(d[0], 0) + 1
+
+    labels = list(contagem.keys())
+    valores = list(contagem.values())
 
     return container(f"""
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <div class="card">
         <h2>🚨 Problemas</h2>
+
+        <!-- 🔍 BUSCA -->
+        <input id="busca" placeholder="🔍 Buscar tipo...">
+
         <canvas id="grafico"></canvas>
     </div>
 
@@ -180,8 +216,8 @@ def problemas():
     new Chart(document.getElementById('grafico'), {{
         type:'pie',
         data:{{
-            labels:{tipos},
-            datasets:[{{data:[1,1,1,1,1]}}]
+            labels:{labels},
+            datasets:[{{data:{valores}}}]
         }}
     }});
     </script>
