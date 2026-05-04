@@ -32,11 +32,19 @@ def topo():
                 </ul>
             </li>
 
-            <!-- FINANCEIRO -->
+            <!-- 💰 FINANCEIRO (ADICIONADO MAIS OPÇÕES) -->
             <li class="has-submenu">
                 <span class="menu-toggle">💰 Financeiro</span>
                 <ul class="submenu">
-                    <li><a href="/financeiro">Ver Financeiro</a></li>
+                    <li><a href="/financeiro">💰 Ver Financeiro</a></li>
+
+                    <li><a href="/relatorio-financeiro">📊 Relatório</a></li>
+
+                    <li><a href="/entrada-financeiro">➕ Entradas</a></li>
+
+                    <li><a href="/saida-financeiro">➖ Saídas</a></li>
+
+                    <li><a href="/resumo-financeiro">📈 Resumo Geral</a></li>
                 </ul>
             </li>
 
@@ -272,7 +280,7 @@ def container(c):
                     parent.classList.add("open");
                 }}
             }});
-        }});
+        });
 
         document.addEventListener("click", function(e) {{
             if (!e.target.closest(".navbar")) {{
@@ -280,7 +288,7 @@ def container(c):
                     item.classList.remove("open");
                 }});
             }}
-        }});
+        });
         </script>
 
     </body>
