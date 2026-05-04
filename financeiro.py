@@ -172,65 +172,194 @@ def financeiro():
 
 
 # ================= ENTRADAS =================
-@financeiro_bp.route("/entrada-financeiro")
-def entrada_financeiro():
+return container(f"""
+<div class="wrap">
 
-    if "user" not in session:
-        return redirect("/")
+    <h2>➕ Entradas</h2>
 
-    conn = conectar()
-    cursor = conn.cursor()
+    <!-- CARDS -->
+    <div class="cards">
+        <div class="card green">
+            <h3>Total de Entradas</h3>
+            <p>R$ {sum([float(d[0]) for d in dados]):.2f}</p>
+        </div>
+    </div>
 
-    cursor.execute("""
-        SELECT valor, descricao, data
-        FROM financeiro
-        WHERE tipo = 'entrada' AND usuario = %s
-        ORDER BY id DESC
-    """, (session["user"],))
+    <!-- FILTROS -->
+    <div class="box filtros">
 
-    dados = cursor.fetchall()
-    devolver_conexao(conn)
+        <input id="busca" placeholder="🔍 Buscar..." onkeyup="filtrar()">
 
-    tabela = ""
-    for d in dados:
-        tabela += f"""
-        <tr>
-            <td>R$ {float(d[0]):.2f}</td>
-            <td>{d[1]}</td>
-            <td>{d[2]}</td>
-        </tr>
-        """
-
-    return container(f"""
-    <div class="wrap">
-
-        <h2>➕ Entradas</h2>
-
-        <div class="box">
-            <input id="busca" placeholder="🔍 Pesquisar..." onkeyup="filtrar()">
-
-            <table id="tabela">
-                <tr>
-                    <th>Valor</th>
-                    <th>Descrição</th>
-                    <th>Data</th>
-                </tr>
-                {tabela}
-            </table>
+        <div class="filtro-data">
+            <input type="date" id="dataInicio" onchange="filtrar()">
+            <input type="date" id="dataFim" onchange="filtrar()">
         </div>
 
     </div>
 
-    <script>
-    function filtrar(){{
-        let v = document.getElementById("busca").value.toLowerCase();
-        document.querySelectorAll("#tabela tr").forEach(tr=>{{
-            tr.style.display = tr.innerText.toLowerCase().includes(v) ? "" : "none";
-        }});
-    }}
-    </script>
-    """)
+    <!-- GRAFICO -->
+    <div class="box">
+        <h3>📊 Entradas ao longo do tempo</h3>
+        <canvas id="graficoEntradas"></canvas>
+    </div>
 
+    <!-- TABELA -->
+    <div class="box">
+
+        <table id="tabela">
+            <thead>
+                <tr>
+                    <th>💰 Valor</th>
+                    <th>📝 Descrição</th>
+                    <th>📅 Data</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {tabela}
+            </tbody>
+        </table>
+
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+// FILTRO
+function filtrar(){{
+    let texto = document.getElementById("busca").value.toLowerCase();
+    let inicio = document.getElementById("dataInicio").value;
+    let fim = document.getElementById("dataFim").value;
+
+    document.querySelectorAll("#tabela tbody tr").forEach(tr=>{{
+        let conteudo = tr.innerText.toLowerCase();
+        let data = tr.children[2].innerText.substring(0,10);
+
+        let mostrar = conteudo.includes(texto);
+
+        if(inicio && data < inicio) mostrar = false;
+        if(fim && data > fim) mostrar = false;
+
+        tr.style.display = mostrar ? "" : "none";
+    }});
+}}
+
+// GRAFICO
+new Chart(document.getElementById('graficoEntradas'), {{
+    type: 'line',
+    data: {{
+        labels: [{",".join([f'"{str(d[2])[:10]}"' for d in dados])}],
+        datasets: [{{
+            label: 'Entradas',
+            data: [{",".join([str(float(d[0])) for d in dados])}],
+            borderColor: '#22c55e',
+            backgroundColor: 'rgba(34,197,94,0.2)',
+            fill: true,
+            tension: 0.4
+        }}]
+    }},
+    options: {{
+        responsive:true,
+        plugins: {{
+            legend: {{display:false}}
+        }}
+    }}
+}});
+
+</script>
+
+<style>
+
+.wrap {{
+    max-width: 1300px;
+    margin: auto;
+}}
+
+.cards {{
+    display:flex;
+    gap:15px;
+    margin-bottom:20px;
+}}
+
+.card {{
+    flex:1;
+    padding:20px;
+    border-radius:12px;
+    background:#020617;
+    border:1px solid rgba(56,189,248,0.2);
+    text-align:center;
+}}
+
+.green {{
+    border-left:4px solid #22c55e;
+}}
+
+.card p {{
+    font-size:24px;
+    font-weight:bold;
+}}
+
+.box {{
+    background:#020617;
+    border:1px solid #1e293b;
+    padding:20px;
+    border-radius:12px;
+    margin-bottom:20px;
+}}
+
+.filtros {{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}}
+
+.filtro-data {{
+    display:flex;
+    gap:10px;
+}}
+
+input {{
+    padding:10px;
+    border-radius:8px;
+    background:#111;
+    color:white;
+    border:1px solid #333;
+}}
+
+table {{
+    width:100%;
+    border-collapse:collapse;
+}}
+
+th {{
+    background:#1a1a1a;
+    padding:12px;
+}}
+
+td {{
+    padding:12px;
+    border-top:1px solid #333;
+}}
+
+tr:hover {{
+    background:#111;
+}}
+
+td:first-child {{
+    color:#22c55e;
+    font-weight:bold;
+}}
+
+canvas {{
+    width:100% !important;
+    height:250px !important;
+}}
+
+</style>
+""")
 
 # ================= SAIDAS =================
 @financeiro_bp.route("/saida-financeiro")
