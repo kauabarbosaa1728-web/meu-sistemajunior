@@ -89,7 +89,7 @@ def topo():
 
 
 def container(c):
-    return """
+    return f"""
     <html>
     <head>
         <title>KBSISTEMAS</title>
