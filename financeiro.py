@@ -48,7 +48,6 @@ def financeiro():
     total_saida = sum([float(d[2]) for d in dados if d[1] == "saida"])
     saldo = total_entrada - total_saida
 
-    # 🔥 PREPARA GRÁFICO
     entradas = [float(d[2]) for d in dados if d[1] == "entrada"]
     saidas = [float(d[2]) for d in dados if d[1] == "saida"]
 
@@ -269,17 +268,126 @@ def financeiro():
     """)
 
 
-# ================= ROTAS QUE FALTAVAM =================
+# ================= ENTRADAS =================
 @financeiro_bp.route("/entrada-financeiro")
 def entrada_financeiro():
-    return redirect("/financeiro")
+
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT valor, descricao, data
+        FROM financeiro
+        WHERE tipo = 'entrada' AND usuario = %s
+        ORDER BY id DESC
+    """, (session["user"],))
+
+    dados = cursor.fetchall()
+    devolver_conexao(conn)
+
+    tabela = ""
+    for d in dados:
+        tabela += f"<tr><td>R$ {float(d[0]):.2f}</td><td>{d[1]}</td><td>{d[2]}</td></tr>"
+
+    return container(f"""
+    <div class="box">
+        <h2>➕ Entradas</h2>
+
+        <input id="busca" placeholder="🔍 Pesquisar..." onkeyup="filtrar()">
+
+        <table id="tabela">
+            <tr><th>Valor</th><th>Descrição</th><th>Data</th></tr>
+            {tabela}
+        </table>
+    </div>
+
+    <script>
+    function filtrar(){{
+        let v = document.getElementById("busca").value.toLowerCase();
+        document.querySelectorAll("#tabela tr").forEach(tr=>{
+            tr.style.display = tr.innerText.toLowerCase().includes(v) ? "" : "none";
+        });
+    }}
+    </script>
+    """)
 
 
+# ================= SAIDAS =================
 @financeiro_bp.route("/saida-financeiro")
 def saida_financeiro():
-    return redirect("/financeiro")
+
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT valor, descricao, data
+        FROM financeiro
+        WHERE tipo = 'saida' AND usuario = %s
+        ORDER BY id DESC
+    """, (session["user"],))
+
+    dados = cursor.fetchall()
+    devolver_conexao(conn)
+
+    tabela = ""
+    for d in dados:
+        tabela += f"<tr><td>R$ {float(d[0]):.2f}</td><td>{d[1]}</td><td>{d[2]}</td></tr>"
+
+    return container(f"""
+    <div class="box">
+        <h2>➖ Saídas</h2>
+
+        <input id="busca" placeholder="🔍 Pesquisar..." onkeyup="filtrar()">
+
+        <table id="tabela">
+            <tr><th>Valor</th><th>Descrição</th><th>Data</th></tr>
+            {tabela}
+        </table>
+    </div>
+
+    <script>
+    function filtrar(){{
+        let v = document.getElementById("busca").value.toLowerCase();
+        document.querySelectorAll("#tabela tr").forEach(tr=>{
+            tr.style.display = tr.innerText.toLowerCase().includes(v) ? "" : "none";
+        });
+    }}
+    </script>
+    """)
 
 
+# ================= RESUMO =================
 @financeiro_bp.route("/resumo-financeiro")
 def resumo_financeiro():
-    return redirect("/financeiro")
+
+    if "user" not in session:
+        return redirect("/")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='entrada' AND usuario=%s", (session["user"],))
+    entradas = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='saida' AND usuario=%s", (session["user"],))
+    saidas = cursor.fetchone()[0]
+
+    devolver_conexao(conn)
+
+    saldo = entradas - saidas
+
+    return container(f"""
+    <div class="box">
+        <h2>📊 Resumo Geral</h2>
+
+        <p>💰 Entradas: R$ {entradas:.2f}</p>
+        <p>💸 Saídas: R$ {saidas:.2f}</p>
+        <h3>Saldo: R$ {saldo:.2f}</h3>
+    </div>
+    """)
