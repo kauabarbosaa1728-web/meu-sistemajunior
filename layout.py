@@ -45,7 +45,11 @@ def topo():
                 <span class="menu-toggle">📄 Relatórios</span>
                 <ul class="submenu">
                     <li><a href="/historico">📜 Histórico</a></li>
+                    <li><a href="/relatorio-geral">📊 Geral</a></li>
                     <li><a href="/historico_estoque">📦 Estoque</a></li>
+                    <li><a href="/relatorio-veiculos">🚗 Veículos</a></li>
+                    <li><a href="/relatorio-financeiro">💸 Financeiro</a></li>
+                    <li><a href="/relatorio-problemas">🚨 Problemas</a></li>
                 </ul>
             </li>
 
