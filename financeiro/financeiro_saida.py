@@ -4,6 +4,7 @@ from layout import container
 from . import financeiro_bp
 import json
 
+
 @financeiro_bp.route("/saida-financeiro")
 def saida_financeiro():
 
@@ -39,4 +40,240 @@ def saida_financeiro():
     labels_json = json.dumps([str(d[2])[:10] for d in dados])
     valores_json = json.dumps([float(d[0]) for d in dados])
 
-    return container(f"""SEU HTML ORIGINAL AQUI""")
+    return container(f"""
+    <div class="wrap">
+
+        <h2>➖ Saídas</h2>
+
+        <div class="cards">
+            <div class="card red">
+                <h3>Total de Saídas</h3>
+                <p>R$ {total_saidas:.2f}</p>
+            </div>
+
+            <div class="card blue">
+                <h3>Registros</h3>
+                <p>{registros}</p>
+            </div>
+        </div>
+
+        <div class="box filtros">
+            <input id="busca" placeholder="🔍 Buscar saída..." onkeyup="filtrar()">
+
+            <div class="filtro-data">
+                <input type="date" id="dataInicio" onchange="filtrar()">
+                <input type="date" id="dataFim" onchange="filtrar()">
+            </div>
+
+            <button type="button" onclick="limparFiltros()">Limpar filtros</button>
+        </div>
+
+        <div class="box">
+            <h3>📉 Saídas ao longo do tempo</h3>
+            <canvas id="graficoSaidas"></canvas>
+        </div>
+
+        <div class="box tabela-box">
+            <table id="tabela">
+                <thead>
+                    <tr>
+                        <th>💸 Valor</th>
+                        <th>📝 Descrição</th>
+                        <th>📅 Data</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {tabela}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+    function filtrar(){{
+        let texto = document.getElementById("busca").value.toLowerCase();
+        let inicio = document.getElementById("dataInicio").value;
+        let fim = document.getElementById("dataFim").value;
+
+        document.querySelectorAll("#tabela tbody tr").forEach(tr=>{{
+            let conteudo = tr.innerText.toLowerCase();
+            let data = tr.children[2].innerText.substring(0,10);
+
+            let mostrar = conteudo.includes(texto);
+
+            if(inicio && data < inicio) mostrar = false;
+            if(fim && data > fim) mostrar = false;
+
+            tr.style.display = mostrar ? "" : "none";
+        }});
+    }}
+
+    function limparFiltros(){{
+        document.getElementById("busca").value = "";
+        document.getElementById("dataInicio").value = "";
+        document.getElementById("dataFim").value = "";
+        filtrar();
+    }}
+
+    new Chart(document.getElementById('graficoSaidas'), {{
+        type: 'line',
+        data: {{
+            labels: {labels_json},
+            datasets: [{{
+                label: 'Saídas',
+                data: {valores_json},
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239,68,68,0.18)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4
+            }}]
+        }},
+        options: {{
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins: {{
+                legend: {{display:false}}
+            }}
+        }}
+    }});
+    </script>
+
+    <style>
+    .wrap {{
+        max-width: 1300px;
+        margin: auto;
+    }}
+
+    .cards {{
+        display:flex;
+        gap:15px;
+        margin-bottom:20px;
+    }}
+
+    .card {{
+        flex:1;
+        padding:22px;
+        border-radius:14px;
+        background:#020617;
+        border:1px solid rgba(56,189,248,0.2);
+        text-align:center;
+        box-shadow:0 10px 25px rgba(0,0,0,0.20);
+    }}
+
+    .red {{ border-left:4px solid #ef4444; }}
+    .blue {{ border-left:4px solid #3b82f6; }}
+
+    .card p {{
+        font-size:26px;
+        font-weight:bold;
+        margin:10px 0 0 0;
+    }}
+
+    .box {{
+        background:#020617;
+        border:1px solid #1e293b;
+        padding:20px;
+        border-radius:14px;
+        margin-bottom:20px;
+        box-shadow:0 10px 25px rgba(0,0,0,0.18);
+    }}
+
+    .filtros {{
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+        align-items:center;
+    }}
+
+    .filtros input {{
+        flex:1;
+        min-width:220px;
+    }}
+
+    .filtro-data {{
+        display:flex;
+        gap:10px;
+    }}
+
+    input {{
+        padding:12px;
+        border-radius:10px;
+        background:#0b0f1a;
+        color:white;
+        border:1px solid #334155;
+    }}
+
+    button {{
+        padding:12px 16px;
+        background:#2563eb;
+        border:none;
+        border-radius:10px;
+        color:white;
+        cursor:pointer;
+        font-weight:bold;
+    }}
+
+    button:hover {{
+        background:#1d4ed8;
+    }}
+
+    .tabela-box {{
+        max-height:430px;
+        overflow:auto;
+    }}
+
+    table {{
+        width:100%;
+        border-collapse:collapse;
+    }}
+
+    thead {{
+        position:sticky;
+        top:0;
+        background:#111827;
+        z-index:2;
+    }}
+
+    th {{
+        padding:14px;
+        text-align:left;
+        color:#93c5fd;
+        border-bottom:1px solid rgba(255,255,255,0.08);
+    }}
+
+    td {{
+        padding:14px;
+        border-top:1px solid #1f2937;
+    }}
+
+    tbody tr:hover {{
+        background:rgba(239,68,68,0.08);
+    }}
+
+    td:first-child {{
+        color:#ef4444;
+        font-weight:bold;
+    }}
+
+    canvas {{
+        width:100% !important;
+        height:280px !important;
+    }}
+
+    @media(max-width: 850px) {{
+        .cards, .filtros, .filtro-data {{
+            display:block;
+        }}
+
+        .card, .box, .filtros input, .filtro-data input, button {{
+            width:100%;
+            margin-bottom:10px;
+        }}
+    }}
+    </style>
+    """)
