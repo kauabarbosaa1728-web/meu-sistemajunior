@@ -4,7 +4,6 @@ from banco import conectar, devolver_conexao, registrar_log
 from permissoes import carregar_permissoes
 import uuid
 
-# ✅ CORRETO
 auth_bp = Blueprint("auth_bp", __name__)
 
 # ================= LOGIN =================
@@ -35,11 +34,9 @@ def login():
                         session["user"] = request.form["user"]
                         session["cargo"] = user[1]
 
-                        # 🔥 empresa_id seguro
                         empresa_id = user[2] or request.form["user"]
                         session["empresa_id"] = empresa_id
 
-                        # 🔥 corrige usuários antigos
                         if not user[2]:
                             cursor.execute("""
                             UPDATE usuarios SET empresa_id=%s WHERE usuario=%s
@@ -220,26 +217,139 @@ def cadastro():
                 devolver_conexao(conn)
 
     return f"""
-<body style="background:#020617;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;">
-<form method="POST" style="background:#0a0f1a;padding:30px;border-radius:15px;">
-<h2>Criar Conta</h2>
+<html>
+<head>
+<title>Criar Conta</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
 
-<input name="user" placeholder="Usuário" required>
-<input name="senha" type="password" placeholder="Senha" required>
-<input name="email" placeholder="Email" required>
-<input name="nome_empresa" placeholder="Empresa" required>
+<style>
+body {{
+    margin:0;
+    height:100vh;
+    font-family:'Inter', sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#e5e7eb;
+    background:
+        radial-gradient(circle at top left, rgba(59,130,246,0.2), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(56,189,248,0.15), transparent 30%),
+        #020617;
+}}
 
+.card {{
+    width:420px;
+    padding:40px;
+    border-radius:18px;
+    background:rgba(10,15,26,0.9);
+    box-shadow:0 0 30px rgba(0,0,0,0.6);
+}}
+
+h2 {{
+    text-align:center;
+    margin-bottom:25px;
+}}
+
+.input-group {{
+    margin-bottom:15px;
+}}
+
+label {{
+    font-size:13px;
+    color:#94a3b8;
+}}
+
+input, select {{
+    width:100%;
+    padding:12px;
+    margin-top:5px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,0.1);
+    background:#020617;
+    color:#fff;
+}}
+
+button {{
+    width:100%;
+    padding:14px;
+    margin-top:20px;
+    border:none;
+    border-radius:10px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color:#fff;
+    font-weight:bold;
+    cursor:pointer;
+}}
+
+.erro {{
+    color:#ff4d4d;
+    text-align:center;
+    margin-top:10px;
+}}
+
+.voltar {{
+    text-align:center;
+    margin-top:15px;
+}}
+
+.voltar a {{
+    color:#60a5fa;
+    text-decoration:none;
+}}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>🚀 Criar Conta</h2>
+
+<form method="POST">
+
+<div class="input-group">
+<label>Usuário</label>
+<input name="user" required>
+</div>
+
+<div class="input-group">
+<label>Senha</label>
+<input type="password" name="senha" required>
+</div>
+
+<div class="input-group">
+<label>Email</label>
+<input name="email" required>
+</div>
+
+<div class="input-group">
+<label>Empresa</label>
+<input name="nome_empresa" required>
+</div>
+
+<div class="input-group">
+<label>Plano</label>
 <select name="plano">
 <option value="basico">Básico</option>
 <option value="profissional">Profissional</option>
 <option value="premium">Premium</option>
 </select>
+</div>
 
-<button>Criar conta</button>
+<button>💾 Criar conta</button>
 
-<p style="color:red;">{mensagem}</p>
 </form>
+
+<p class="erro">{mensagem}</p>
+
+<div class="voltar">
+<a href="/">← Voltar para login</a>
+</div>
+
+</div>
+
 </body>
+</html>
 """
 
 # ================= LOGOUT =================
