@@ -75,6 +75,9 @@ def financeiro():
 
         <h2 style="margin-bottom:20px;">💰 Financeiro</h2>
 
+        <!-- 🔍 BUSCA -->
+        <input id="busca" placeholder="🔍 Pesquisar..." onkeyup="filtrar()" style="margin-bottom:15px;">
+
         <!-- CARDS -->
         <div class="cards">
 
@@ -126,7 +129,7 @@ def financeiro():
             <div class="box">
                 <h3>📋 Histórico</h3>
 
-                <table>
+                <table id="tabela">
                     <tr>
                         <th>ID</th>
                         <th>Tipo</th>
@@ -160,6 +163,15 @@ def financeiro():
             animation:{{duration:1200}}
         }}
     }});
+
+    function filtrar(){{
+        let input = document.getElementById("busca").value.toLowerCase();
+        let linhas = document.querySelectorAll("#tabela tr");
+
+        linhas.forEach(l => {{
+            l.style.display = l.innerText.toLowerCase().includes(input) ? "" : "none";
+        }});
+    }}
     </script>
 
     <style>
@@ -167,12 +179,6 @@ def financeiro():
     .wrap {{
         max-width: 1300px;
         margin: auto;
-        animation: fadeIn 0.5s ease-in-out;
-    }}
-
-    @keyframes fadeIn {{
-        from {{opacity:0; transform:translateY(10px);}}
-        to {{opacity:1; transform:translateY(0);}}
     }}
 
     .cards {{
@@ -188,12 +194,6 @@ def financeiro():
         text-align:center;
         background:#020617;
         border:1px solid rgba(56,189,248,0.2);
-        transition:0.3s;
-    }}
-
-    .card:hover {{
-        transform:translateY(-5px);
-        box-shadow:0 0 20px rgba(56,189,248,0.3);
     }}
 
     .card p {{
@@ -267,3 +267,19 @@ def financeiro():
     </style>
 
     """)
+
+
+# ================= ROTAS QUE FALTAVAM =================
+@financeiro_bp.route("/entrada-financeiro")
+def entrada_financeiro():
+    return redirect("/financeiro")
+
+
+@financeiro_bp.route("/saida-financeiro")
+def saida_financeiro():
+    return redirect("/financeiro")
+
+
+@financeiro_bp.route("/resumo-financeiro")
+def resumo_financeiro():
+    return redirect("/financeiro")
