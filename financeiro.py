@@ -183,6 +183,11 @@ return container(f"""
             <h3>Total de Entradas</h3>
             <p>R$ {sum([float(d[0]) for d in dados]):.2f}</p>
         </div>
+
+        <div class="card">
+            <h3>Registros</h3>
+            <p>{len(dados)}</p>
+        </div>
     </div>
 
     <!-- FILTROS -->
@@ -195,6 +200,8 @@ return container(f"""
             <input type="date" id="dataFim" onchange="filtrar()">
         </div>
 
+        <button onclick="limparFiltros()">Limpar</button>
+
     </div>
 
     <!-- GRAFICO -->
@@ -204,7 +211,7 @@ return container(f"""
     </div>
 
     <!-- TABELA -->
-    <div class="box">
+    <div class="box tabela-box">
 
         <table id="tabela">
             <thead>
@@ -245,6 +252,13 @@ function filtrar(){{
 
         tr.style.display = mostrar ? "" : "none";
     }});
+}}
+
+function limparFiltros(){{
+    document.getElementById("busca").value = "";
+    document.getElementById("dataInicio").value = "";
+    document.getElementById("dataFim").value = "";
+    filtrar();
 }}
 
 // GRAFICO
@@ -314,6 +328,7 @@ new Chart(document.getElementById('graficoEntradas'), {{
     display:flex;
     gap:10px;
     flex-wrap:wrap;
+    align-items:center;
 }}
 
 .filtro-data {{
@@ -329,14 +344,38 @@ input {{
     border:1px solid #333;
 }}
 
+button {{
+    padding:10px 15px;
+    background:#3b82f6;
+    border:none;
+    border-radius:8px;
+    color:white;
+    cursor:pointer;
+}}
+
+button:hover {{
+    background:#2563eb;
+}}
+
+.tabela-box {{
+    max-height:400px;
+    overflow:auto;
+}}
+
 table {{
     width:100%;
     border-collapse:collapse;
 }}
 
-th {{
+thead {{
+    position:sticky;
+    top:0;
     background:#1a1a1a;
+}}
+
+th {{
     padding:12px;
+    text-align:left;
 }}
 
 td {{
@@ -360,111 +399,3 @@ canvas {{
 
 </style>
 """)
-
-# ================= SAIDAS =================
-@financeiro_bp.route("/saida-financeiro")
-def saida_financeiro():
-
-    if "user" not in session:
-        return redirect("/")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT valor, descricao, data
-        FROM financeiro
-        WHERE tipo = 'saida' AND usuario = %s
-        ORDER BY id DESC
-    """, (session["user"],))
-
-    dados = cursor.fetchall()
-    devolver_conexao(conn)
-
-    tabela = ""
-    for d in dados:
-        tabela += f"""
-        <tr>
-            <td>R$ {float(d[0]):.2f}</td>
-            <td>{d[1]}</td>
-            <td>{d[2]}</td>
-        </tr>
-        """
-
-    return container(f"""
-    <div class="wrap">
-
-        <h2>➖ Saídas</h2>
-
-        <div class="box">
-            <input id="busca" placeholder="🔍 Pesquisar..." onkeyup="filtrar()">
-
-            <table id="tabela">
-                <tr>
-                    <th>Valor</th>
-                    <th>Descrição</th>
-                    <th>Data</th>
-                </tr>
-                {tabela}
-            </table>
-        </div>
-
-    </div>
-
-    <script>
-    function filtrar(){{
-        let v = document.getElementById("busca").value.toLowerCase();
-        document.querySelectorAll("#tabela tr").forEach(tr=>{{
-            tr.style.display = tr.innerText.toLowerCase().includes(v) ? "" : "none";
-        }});
-    }}
-    </script>
-    """)
-
-
-# ================= RESUMO =================
-@financeiro_bp.route("/resumo-financeiro")
-def resumo_financeiro():
-
-    if "user" not in session:
-        return redirect("/")
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='entrada' AND usuario=%s", (session["user"],))
-    entradas = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='saida' AND usuario=%s", (session["user"],))
-    saidas = cursor.fetchone()[0]
-
-    devolver_conexao(conn)
-
-    saldo = entradas - saidas
-
-    return container(f"""
-    <div class="wrap">
-
-        <h2>📊 Resumo Geral</h2>
-
-        <div class="cards">
-
-            <div class="card green">
-                <h3>Entradas</h3>
-                <p>R$ {entradas:.2f}</p>
-            </div>
-
-            <div class="card red">
-                <h3>Saídas</h3>
-                <p>R$ {saidas:.2f}</p>
-            </div>
-
-            <div class="card blue">
-                <h3>Saldo</h3>
-                <p>R$ {saldo:.2f}</p>
-            </div>
-
-        </div>
-
-    </div>
-    """)
