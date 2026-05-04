@@ -74,10 +74,8 @@ def financeiro():
 
         <h2 style="margin-bottom:20px;">💰 Financeiro</h2>
 
-        <!-- 🔍 BUSCA -->
         <input id="busca" placeholder="🔍 Pesquisar..." onkeyup="filtrar()" style="margin-bottom:15px;">
 
-        <!-- CARDS -->
         <div class="cards">
 
             <div class="card green">
@@ -97,7 +95,6 @@ def financeiro():
 
         </div>
 
-        <!-- 🔥 GRÁFICO -->
         <div class="box" style="margin-bottom:20px;">
             <h3>📊 Visão Financeira</h3>
             <canvas id="graficoFinanceiro"></canvas>
@@ -105,7 +102,6 @@ def financeiro():
 
         <div class="grid">
 
-            <!-- FORM -->
             <div class="box">
                 <h3>➕ Nova movimentação</h3>
 
@@ -124,7 +120,6 @@ def financeiro():
                 <p>{mensagem}</p>
             </div>
 
-            <!-- TABELA -->
             <div class="box">
                 <h3>📋 Histórico</h3>
 
@@ -173,98 +168,6 @@ def financeiro():
     }}
     </script>
 
-    <style>
-
-    .wrap {{
-        max-width: 1300px;
-        margin: auto;
-    }}
-
-    .cards {{
-        display:flex;
-        gap:15px;
-        margin-bottom:20px;
-    }}
-
-    .card {{
-        flex:1;
-        padding:20px;
-        border-radius:12px;
-        text-align:center;
-        background:#020617;
-        border:1px solid rgba(56,189,248,0.2);
-    }}
-
-    .card p {{
-        font-size:22px;
-        margin-top:10px;
-        font-weight:bold;
-    }}
-
-    .green {{ border-left:4px solid #22c55e; }}
-    .red {{ border-left:4px solid #ef4444; }}
-    .blue {{ border-left:4px solid #3b82f6; }}
-
-    .grid {{
-        display:grid;
-        grid-template-columns:300px 1fr;
-        gap:20px;
-    }}
-
-    .box {{
-        background:#020617;
-        border:1px solid #1e293b;
-        padding:20px;
-        border-radius:12px;
-    }}
-
-    canvas {{
-        width:100% !important;
-        height:250px !important;
-    }}
-
-    input, select {{
-        width:100%;
-        padding:10px;
-        margin-bottom:10px;
-        background:#111;
-        border:1px solid #333;
-        color:white;
-        border-radius:6px;
-    }}
-
-    button {{
-        width:100%;
-        padding:10px;
-        background:#3b82f6;
-        border:none;
-        border-radius:6px;
-        color:white;
-        cursor:pointer;
-    }}
-
-    table {{
-        width:100%;
-        border-collapse:collapse;
-    }}
-
-    th {{
-        background:#1a1a1a;
-        padding:10px;
-        text-align:left;
-    }}
-
-    td {{
-        padding:10px;
-        border-top:1px solid #333;
-    }}
-
-    tr:hover {{
-        background:#111;
-    }}
-
-    </style>
-
     """)
 
 
@@ -290,26 +193,40 @@ def entrada_financeiro():
 
     tabela = ""
     for d in dados:
-        tabela += f"<tr><td>R$ {float(d[0]):.2f}</td><td>{d[1]}</td><td>{d[2]}</td></tr>"
+        tabela += f"""
+        <tr>
+            <td>R$ {float(d[0]):.2f}</td>
+            <td>{d[1]}</td>
+            <td>{d[2]}</td>
+        </tr>
+        """
 
     return container(f"""
-    <div class="box">
+    <div class="wrap">
+
         <h2>➕ Entradas</h2>
 
-        <input id="busca" placeholder="🔍 Pesquisar..." onkeyup="filtrar()">
+        <div class="box">
+            <input id="busca" placeholder="🔍 Pesquisar..." onkeyup="filtrar()">
 
-        <table id="tabela">
-            <tr><th>Valor</th><th>Descrição</th><th>Data</th></tr>
-            {tabela}
-        </table>
+            <table id="tabela">
+                <tr>
+                    <th>Valor</th>
+                    <th>Descrição</th>
+                    <th>Data</th>
+                </tr>
+                {tabela}
+            </table>
+        </div>
+
     </div>
 
     <script>
     function filtrar(){{
         let v = document.getElementById("busca").value.toLowerCase();
-        document.querySelectorAll("#tabela tr").forEach(tr=>{
+        document.querySelectorAll("#tabela tr").forEach(tr=>{{
             tr.style.display = tr.innerText.toLowerCase().includes(v) ? "" : "none";
-        });
+        }});
     }}
     </script>
     """)
@@ -337,26 +254,40 @@ def saida_financeiro():
 
     tabela = ""
     for d in dados:
-        tabela += f"<tr><td>R$ {float(d[0]):.2f}</td><td>{d[1]}</td><td>{d[2]}</td></tr>"
+        tabela += f"""
+        <tr>
+            <td>R$ {float(d[0]):.2f}</td>
+            <td>{d[1]}</td>
+            <td>{d[2]}</td>
+        </tr>
+        """
 
     return container(f"""
-    <div class="box">
+    <div class="wrap">
+
         <h2>➖ Saídas</h2>
 
-        <input id="busca" placeholder="🔍 Pesquisar..." onkeyup="filtrar()">
+        <div class="box">
+            <input id="busca" placeholder="🔍 Pesquisar..." onkeyup="filtrar()">
 
-        <table id="tabela">
-            <tr><th>Valor</th><th>Descrição</th><th>Data</th></tr>
-            {tabela}
-        </table>
+            <table id="tabela">
+                <tr>
+                    <th>Valor</th>
+                    <th>Descrição</th>
+                    <th>Data</th>
+                </tr>
+                {tabela}
+            </table>
+        </div>
+
     </div>
 
     <script>
     function filtrar(){{
         let v = document.getElementById("busca").value.toLowerCase();
-        document.querySelectorAll("#tabela tr").forEach(tr=>{
+        document.querySelectorAll("#tabela tr").forEach(tr=>{{
             tr.style.display = tr.innerText.toLowerCase().includes(v) ? "" : "none";
-        });
+        }});
     }}
     </script>
     """)
@@ -383,11 +314,28 @@ def resumo_financeiro():
     saldo = entradas - saidas
 
     return container(f"""
-    <div class="box">
+    <div class="wrap">
+
         <h2>📊 Resumo Geral</h2>
 
-        <p>💰 Entradas: R$ {entradas:.2f}</p>
-        <p>💸 Saídas: R$ {saidas:.2f}</p>
-        <h3>Saldo: R$ {saldo:.2f}</h3>
+        <div class="cards">
+
+            <div class="card green">
+                <h3>Entradas</h3>
+                <p>R$ {entradas:.2f}</p>
+            </div>
+
+            <div class="card red">
+                <h3>Saídas</h3>
+                <p>R$ {saidas:.2f}</p>
+            </div>
+
+            <div class="card blue">
+                <h3>Saldo</h3>
+                <p>R$ {saldo:.2f}</p>
+            </div>
+
+        </div>
+
     </div>
     """)
