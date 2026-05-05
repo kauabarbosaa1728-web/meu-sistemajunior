@@ -88,6 +88,13 @@ def topo():
                     <li><a href="/usuarios">Usuários</a></li>
                     <li><a href="/logs">Logs</a></li>
                     <li><a href="/ia">IA</a></li>
+
+                    <li style="margin:6px 0;opacity:0.4;">────────</li>
+
+                    <!-- NOVAS OPÇÕES -->
+                    <li><a href="/configuracoes">⚙️ Configurações</a></li>
+                    <li><a href="/idioma">🌍 Idioma</a></li>
+                    <li><a href="/datahora">🕒 Data / Hora</a></li>
                 </ul>
             </li>
 
