@@ -21,7 +21,10 @@ from relatorios import relatorios_bp
 from veiculos.veiculos import veiculos_bp
 from veiculos.manutencoes import manutencoes_bp
 from veiculos.dashboard_veiculos import dashboard_veiculos_bp
-from veiculos.problemas import problemas_bp   # ✅ ADICIONADO
+from veiculos.problemas import problemas_bp
+
+# 🔥 NOVO: ROTAS (GPS)
+from veiculos.rotas import rotas_bp
 
 app = Flask(__name__)
 app.secret_key = "segredo123"
@@ -122,7 +125,10 @@ app.register_blueprint(relatorios_bp)
 app.register_blueprint(veiculos_bp)
 app.register_blueprint(manutencoes_bp)
 app.register_blueprint(dashboard_veiculos_bp)
-app.register_blueprint(problemas_bp)  # ✅ ADICIONADO
+app.register_blueprint(problemas_bp)
+
+# 🔥 NOVO: GPS / ROTAS
+app.register_blueprint(rotas_bp)
 
 # app.register_blueprint(vendas_bp)
 
