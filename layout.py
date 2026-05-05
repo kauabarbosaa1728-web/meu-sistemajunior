@@ -58,6 +58,10 @@ def topo():
                     <li><a href="/veiculos">📋 Ver Veículos</a></li>
                     <li><a href="/manutencoes">🔧 Manutenções</a></li>
                     <li><a href="/dashboard-veiculos">📊 Dashboard</a></li>
+
+                    <!-- 🔥 NOVO GPS -->
+                    <li><a href="/rotas">🗺️ Rotas (GPS)</a></li>
+
                 </ul>
             </li>
 
