@@ -123,8 +123,8 @@ def problemas_lista():
                 <a href="/resolver/{d[0]}">✅ Resolver</a><br>
                 <a href="/deletar-problema/{d[0]}" onclick="return confirm('Tem certeza?')">🗑️ Deletar</a><br>
 
-                <!-- PDF FUNCIONANDO -->
-                <a href="/baixar-pdf/{d[0]}">📄 Baixar PDF</a>
+                <!-- 🔥 NOVA ROTA -->
+                <a href="/pdf/{d[0]}">📄 Baixar PDF</a>
             </div>
             """
 
@@ -167,9 +167,11 @@ def resolver(id):
     return redirect("/problemas-lista")
 
 
-# ================= PDF FUNCIONANDO =================
-@problemas_bp.route("/baixar-pdf/<int:id>")
+# ================= PDF FINAL =================
+@problemas_bp.route("/pdf/<int:id>")
 def baixar_pdf(id):
+
+    print("🔥 PDF NOVO SENDO USADO 🔥")
 
     conn = conectar()
     cursor = conn.cursor()
@@ -182,30 +184,26 @@ def baixar_pdf(id):
         d = cursor.fetchone()
 
         if not d:
-            return "Registro não encontrado"
+            return "REGISTRO NÃO ENCONTRADO"
 
         tipo, descricao, usuario, data, status = d
 
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=letter)
 
-        # TÍTULO
         c.setFont("Helvetica-Bold", 16)
         c.drawString(100, 760, "RELATÓRIO DE OCORRÊNCIA")
 
-        # LINHA
         c.setStrokeColor(colors.blue)
         c.setLineWidth(2)
         c.line(100, 750, 450, 750)
 
-        # DADOS
         c.setFont("Helvetica", 12)
         c.drawString(100, 720, f"Problema: {tipo}")
         c.drawString(100, 700, f"Usuário: {usuario}")
         c.drawString(100, 680, f"Data: {data}")
         c.drawString(100, 660, f"Descrição: {descricao}")
 
-        # STATUS
         if status == "resolvido":
             c.setFillColor(colors.green)
             c.drawString(100, 630, "✔ RESOLVIDO")
@@ -224,7 +222,7 @@ def baixar_pdf(id):
         )
 
     except Exception as e:
-        return f"Erro real: {str(e)}"
+        return f"ERRO REAL: {str(e)}"
 
     finally:
         cursor.close()
