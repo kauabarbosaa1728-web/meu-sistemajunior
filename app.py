@@ -2,6 +2,7 @@ from flask import Flask, session, request, redirect
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 import os
+import pytz
 
 from banco import criar_banco, conectar, devolver_conexao
 from layout import acesso_negado, container
@@ -29,6 +30,17 @@ from veiculos.rotas import rotas_bp
 
 app = Flask(__name__)
 app.secret_key = "segredo123"
+
+
+# ================= FUNÇÃO DE HORA =================
+def agora_sistema():
+    fuso = session.get("fuso", "America/Sao_Paulo")
+    try:
+        tz = pytz.timezone(fuso)
+        return datetime.now(tz)
+    except:
+        return datetime.now()
+
 
 # ================= BANCO =================
 try:
@@ -95,6 +107,8 @@ def configuracoes():
 @app.before_request
 def bloquear_sistema():
 
+    request.idioma = session.get("idioma", "pt")
+
     rotas_livres = [
         "/", "/cadastro", "/criar_pagamento",
         "/verificar_pagamento_auto", "/webhook", "/static/"
@@ -145,7 +159,7 @@ def bloquear_sistema():
             </h2>
             """
 
-        if vencimento and vencimento < datetime.now():
+        if vencimento and vencimento < agora_sistema():
             return """
             <h2 style='text-align:center;margin-top:100px;color:red;'>
             ⚠️ Plano expirado<br><br>
@@ -154,7 +168,7 @@ def bloquear_sistema():
             """
 
         if vencimento:
-            dias_restantes = (vencimento - datetime.now()).days
+            dias_restantes = (vencimento - agora_sistema()).days
             if dias_restantes <= 3:
                 request.aviso_plano = f"⚠️ Seu plano vence em {dias_restantes} dia(s)"
 
