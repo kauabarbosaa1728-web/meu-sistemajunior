@@ -6,6 +6,8 @@ import os
 from datetime import datetime
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+import io
 
 problemas_bp = Blueprint("problemas_bp", __name__)
 
@@ -141,7 +143,7 @@ def problemas_lista():
         devolver_conexao(conn)
 
 
-# ================= RESOLVER + PDF =================
+# ================= RESOLVER =================
 @problemas_bp.route("/resolver/<int:id>")
 def resolver(id):
 
@@ -153,51 +155,8 @@ def resolver(id):
 
     try:
         cursor.execute("""
-        SELECT tipo, descricao, usuario, data
-        FROM problemas WHERE id=%s
-        """, (id,))
-        d = cursor.fetchone()
-
-        if d:
-            tipo, descricao, usuario, data = d
-
-            caminho_pdf = os.path.join(PDF_FOLDER, f"problema_{id}.pdf")
-
-            c = canvas.Canvas(caminho_pdf)
-
-            # ===== TÍTULO =====
-            c.setFont("Helvetica-Bold", 16)
-            c.drawString(100, 820, "RELATÓRIO DE OCORRÊNCIA")
-
-            # ===== LINHA VERDE =====
-            c.setStrokeColor(colors.green)
-            c.setLineWidth(3)
-            c.line(100, 810, 450, 810)
-
-            # ===== DADOS =====
-            c.setFont("Helvetica", 12)
-            c.setFillColor(colors.black)
-
-            c.drawString(100, 770, f"Problema: {tipo}")
-            c.drawString(100, 750, f"Usuário: {usuario}")
-            c.drawString(100, 730, f"Data: {data}")
-            c.drawString(100, 710, f"Descrição: {descricao}")
-
-            # ===== STATUS =====
-            c.setFont("Helvetica-Bold", 14)
-            c.setFillColor(colors.green)
-            c.drawString(100, 660, "✔ PROBLEMA RESOLVIDO")
-
-            # ===== LINHA FINAL =====
-            c.setLineWidth(2)
-            c.line(100, 650, 450, 650)
-
-            c.save()
-
-        cursor.execute("""
         UPDATE problemas SET status='resolvido' WHERE id=%s
         """, (id,))
-
         conn.commit()
 
     except Exception as e:
@@ -210,19 +169,73 @@ def resolver(id):
     return redirect("/problemas-lista")
 
 
-# ================= BAIXAR PDF =================
+# ================= PDF NOVO (CORRIGIDO) =================
 @problemas_bp.route("/baixar-pdf/<int:id>")
 def baixar_pdf(id):
 
     if "user" not in session:
         return redirect("/")
 
-    caminho = os.path.join(PDF_FOLDER, f"problema_{id}.pdf")
+    conn = conectar()
+    cursor = conn.cursor()
 
-    if os.path.exists(caminho):
-        return send_file(caminho, as_attachment=True)
-    else:
-        return container("<p>PDF não encontrado.</p>")
+    try:
+        cursor.execute("""
+        SELECT tipo, descricao, usuario, data, status
+        FROM problemas WHERE id=%s
+        """, (id,))
+        d = cursor.fetchone()
+
+        if not d:
+            return container("<p>PDF não encontrado.</p>")
+
+        tipo, descricao, usuario, data, status = d
+
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=letter)
+
+        # ===== TÍTULO =====
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(100, 750, "RELATÓRIO DE OCORRÊNCIA")
+
+        # ===== LINHA =====
+        c.setStrokeColor(colors.green)
+        c.setLineWidth(2)
+        c.line(100, 740, 450, 740)
+
+        # ===== DADOS =====
+        c.setFont("Helvetica", 12)
+        c.setFillColor(colors.black)
+
+        c.drawString(100, 710, f"Problema: {tipo}")
+        c.drawString(100, 690, f"Usuário: {usuario}")
+        c.drawString(100, 670, f"Data: {data}")
+        c.drawString(100, 650, f"Descrição: {descricao}")
+
+        # ===== STATUS =====
+        if status == "resolvido":
+            c.setFillColor(colors.green)
+            c.drawString(100, 620, "✔ RESOLVIDO")
+        else:
+            c.setFillColor(colors.red)
+            c.drawString(100, 620, "⚠ EM ABERTO")
+
+        c.save()
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f"ocorrencia_{id}.pdf",
+            mimetype="application/pdf"
+        )
+
+    except Exception as e:
+        return container(f"<pre>{str(e)}</pre>")
+
+    finally:
+        cursor.close()
+        devolver_conexao(conn)
 
 
 # ================= DELETAR =================
