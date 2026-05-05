@@ -12,10 +12,7 @@ import io
 problemas_bp = Blueprint("problemas_bp", __name__)
 
 UPLOAD_FOLDER = "static/uploads"
-PDF_FOLDER = "static/pdfs"
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(PDF_FOLDER, exist_ok=True)
 
 
 # ================= REGISTRAR =================
@@ -126,7 +123,7 @@ def problemas_lista():
                 <a href="/resolver/{d[0]}">✅ Resolver</a><br>
                 <a href="/deletar-problema/{d[0]}" onclick="return confirm('Tem certeza?')">🗑️ Deletar</a><br>
 
-                {"<a href='/baixar-pdf/" + str(d[0]) + "'>📄 Baixar PDF</a>" if status=='resolvido' else ""}
+                <a href="/baixar-pdf/{d[0]}">📄 Baixar PDF</a>
             </div>
             """
 
@@ -169,7 +166,7 @@ def resolver(id):
     return redirect("/problemas-lista")
 
 
-# ================= PDF NOVO (CORRIGIDO) =================
+# ================= PDF FINAL (BLINDADO) =================
 @problemas_bp.route("/baixar-pdf/<int:id>")
 def baixar_pdf(id):
 
@@ -186,10 +183,15 @@ def baixar_pdf(id):
         """, (id,))
         d = cursor.fetchone()
 
+        # 🔥 se não achar, ainda gera PDF com aviso
         if not d:
-            return container("<p>PDF não encontrado.</p>")
-
-        tipo, descricao, usuario, data, status = d
+            tipo = "NÃO ENCONTRADO"
+            descricao = "Registro não localizado no banco"
+            usuario = "-"
+            data = "-"
+            status = "erro"
+        else:
+            tipo, descricao, usuario, data, status = d
 
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=letter)
@@ -216,8 +218,11 @@ def baixar_pdf(id):
         if status == "resolvido":
             c.setFillColor(colors.green)
             c.drawString(100, 620, "✔ RESOLVIDO")
-        else:
+        elif status == "erro":
             c.setFillColor(colors.red)
+            c.drawString(100, 620, "❌ REGISTRO NÃO ENCONTRADO")
+        else:
+            c.setFillColor(colors.orange)
             c.drawString(100, 620, "⚠ EM ABERTO")
 
         c.save()
