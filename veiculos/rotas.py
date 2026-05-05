@@ -1,5 +1,6 @@
 from flask import Blueprint, request, redirect, session
 from layout import container
+import requests
 
 rotas_bp = Blueprint("rotas_bp", __name__)
 
@@ -12,72 +13,54 @@ def rotas():
     origem = request.form.get("origem") if request.method == "POST" else ""
     destino = request.form.get("destino") if request.method == "POST" else ""
 
+    coords = []
+
+    if origem and destino:
+        try:
+            geo_url = "https://nominatim.openstreetmap.org/search"
+
+            o = requests.get(geo_url, params={"q": origem, "format": "json"}).json()
+            d = requests.get(geo_url, params={"q": destino, "format": "json"}).json()
+
+            if o and d:
+                origem_coord = [float(o[0]["lat"]), float(o[0]["lon"])]
+                destino_coord = [float(d[0]["lat"]), float(d[0]["lon"])]
+
+                rota_url = f"http://router.project-osrm.org/route/v1/driving/{origem_coord[1]},{origem_coord[0]};{destino_coord[1]},{destino_coord[0]}?overview=full&geometries=geojson"
+
+                rota = requests.get(rota_url).json()
+
+                coords = rota["routes"][0]["geometry"]["coordinates"]
+        except:
+            pass
+
     return container(f"""
-        <h2>🗺️ Rotas (GPS)</h2>
+        <h2>🗺️ Rotas (Grátis)</h2>
 
         <form method="POST">
             <input name="origem" placeholder="📍 Origem" value="{origem}">
             <input name="destino" placeholder="🏁 Destino" value="{destino}">
-            <button>🚀 Calcular Rota</button>
+            <button>🚀 Calcular</button>
         </form>
 
-        <div id="info-rota" style="margin:10px 0; font-size:18px;"></div>
+        <div id="mapa" style="height:500px;"></div>
 
-        <div id="mapa" style="width:100%; height:500px; border-radius:12px;"></div>
-
-        <!-- 🔥 GOOGLE MAPS -->
-        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqiPS7ZDcxqptaYxoGJW8QAes3tEeuE0A"></script>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+        <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
         <script>
-        function iniciarMapa() {{
+        var map = L.map('mapa').setView([-23.55, -46.63], 7);
 
-            var mapa = new google.maps.Map(document.getElementById("mapa"), {{
-                zoom: 7,
-                center: {{ lat: -23.55, lng: -46.63 }},
+        L.tileLayer('https://tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+            maxZoom: 19
+        }}).addTo(map);
 
-                // 🔥 CONTROLES
-                streetViewControl: true,
-                mapTypeControl: true,
-                fullscreenControl: true,
-                zoomControl: true
-            }});
+        var coords = {coords};
 
-            var directionsService = new google.maps.DirectionsService();
-            var directionsRenderer = new google.maps.DirectionsRenderer();
-
-            directionsRenderer.setMap(mapa);
-
-            var origem = "{origem}";
-            var destino = "{destino}";
-
-            if(origem && destino) {{
-
-                var request = {{
-                    origin: origem,
-                    destination: destino,
-                    travelMode: "DRIVING"
-                }};
-
-                directionsService.route(request, function(result, status) {{
-
-                    if (status == "OK") {{
-
-                        directionsRenderer.setDirections(result);
-
-                        let tempo = result.routes[0].legs[0].duration.text;
-                        let distancia = result.routes[0].legs[0].distance.text;
-
-                        document.getElementById("info-rota").innerHTML =
-                            "⏱ Tempo: " + tempo + " | 📏 Distância: " + distancia;
-
-                    }} else {{
-                        document.getElementById("info-rota").innerHTML =
-                            "❌ Não foi possível calcular a rota";
-                    }}
-                }});
-            }}
+        if(coords.length > 0) {{
+            var latlngs = coords.map(c => [c[1], c[0]]);
+            var polyline = L.polyline(latlngs, {{color: 'blue'}}).addTo(map);
+            map.fitBounds(polyline.getBounds());
         }}
-
-        window.onload = iniciarMapa;
         </script>
     """)
