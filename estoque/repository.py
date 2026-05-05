@@ -1,5 +1,6 @@
 from banco import conectar, devolver_conexao
 
+# ================= ESTOQUE =================
 
 def buscar_estoque_completo():
     conn = conectar()
@@ -105,6 +106,8 @@ def buscar_estoque_baixo():
         devolver_conexao(conn)
 
 
+# ================= TRANSFERÊNCIA =================
+
 def listar_produtos_transferencia():
     conn = conectar()
     cursor = conn.cursor()
@@ -186,21 +189,7 @@ def buscar_historico_transferencias():
         devolver_conexao(conn)
 
 
-def buscar_logs(busca):
-    conn = conectar()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("""
-            SELECT usuario, acao, detalhes, data
-            FROM logs
-            WHERE usuario ILIKE %s OR acao ILIKE %s OR detalhes ILIKE %s
-            ORDER BY data DESC
-            LIMIT 100
-        """, (f"%{busca}%", f"%{busca}%", f"%{busca}%"))
-        return cursor.fetchall()
-    finally:
-        devolver_conexao(conn)
-
+# ================= ENTRADAS =================
 
 def criar_tabela_entradas():
     conn = conectar()
@@ -238,11 +227,9 @@ def inserir_entrada(produto, qtd, categoria, fornecedor, valor, usuario):
         """, (produto, qtd, categoria, fornecedor, valor, usuario))
 
         conn.commit()
-
     except Exception:
         conn.rollback()
         raise
-
     finally:
         devolver_conexao(conn)
 
@@ -256,6 +243,133 @@ def buscar_historico_entradas():
             FROM entradas
             ORDER BY id DESC LIMIT 10
         """)
+        return cursor.fetchall()
+    finally:
+        devolver_conexao(conn)
+
+
+# ================= CATEGORIAS =================
+
+def criar_tabela_categorias():
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS categorias (
+                id SERIAL PRIMARY KEY,
+                nome TEXT
+            )
+        """)
+        conn.commit()
+    finally:
+        devolver_conexao(conn)
+
+
+def listar_categorias():
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT nome FROM categorias")
+        return [c[0] for c in cursor.fetchall()]
+    finally:
+        devolver_conexao(conn)
+
+
+def inserir_categoria(nome):
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO categorias (nome) VALUES (%s)", (nome,))
+        conn.commit()
+    finally:
+        devolver_conexao(conn)
+
+
+# ================= FORNECEDORES =================
+
+def criar_tabela_fornecedores():
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS fornecedores (
+                id SERIAL PRIMARY KEY,
+                nome TEXT,
+                contato TEXT
+            )
+        """)
+        conn.commit()
+    finally:
+        devolver_conexao(conn)
+
+
+def listar_fornecedores():
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT nome FROM fornecedores")
+        return [f[0] for f in cursor.fetchall()]
+    finally:
+        devolver_conexao(conn)
+
+
+def inserir_fornecedor(nome, contato):
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO fornecedores (nome, contato)
+            VALUES (%s, %s)
+        """, (nome, contato))
+        conn.commit()
+    finally:
+        devolver_conexao(conn)
+
+
+# ================= NCM =================
+
+def criar_tabela_ncm():
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS ncm (
+                id SERIAL PRIMARY KEY,
+                codigo TEXT,
+                descricao TEXT
+            )
+        """)
+        conn.commit()
+    finally:
+        devolver_conexao(conn)
+
+
+def inserir_ncm(codigo, descricao):
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO ncm (codigo, descricao)
+            VALUES (%s, %s)
+        """, (codigo, descricao))
+        conn.commit()
+    finally:
+        devolver_conexao(conn)
+
+
+# ================= LOGS =================
+
+def buscar_logs(busca):
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT usuario, acao, detalhes, data
+            FROM logs
+            WHERE usuario ILIKE %s OR acao ILIKE %s OR detalhes ILIKE %s
+            ORDER BY data DESC
+            LIMIT 100
+        """, (f"%{busca}%", f"%{busca}%", f"%{busca}%"))
         return cursor.fetchall()
     finally:
         devolver_conexao(conn)
