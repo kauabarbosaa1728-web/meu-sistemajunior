@@ -16,19 +16,22 @@ def rotas():
         <h2>🗺️ Rotas (GPS)</h2>
 
         <form method="POST">
-            <input name="origem" placeholder="Origem" value="{origem}">
-            <input name="destino" placeholder="Destino" value="{destino}">
-            <button>Calcular</button>
+            <input name="origem" placeholder="📍 Origem" value="{origem}">
+            <input name="destino" placeholder="🏁 Destino" value="{destino}">
+            <button>🚀 Calcular Rota</button>
         </form>
 
-        <div id="mapa" style="height:400px;"></div>
+        <div id="info-rota" style="margin:10px 0; font-size:18px;"></div>
 
-        <script src="https://maps.googleapis.com/maps/api/js?key=SUA_CHAVE_AQUI"></script>
+        <div id="mapa" style="width:100%; height:400px; border-radius:10px;"></div>
+
+        <!-- 🔥 SUA CHAVE JÁ APLICADA -->
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqiPS7ZDcxqptaYxoGJW8QAes3tEeuE0A"></script>
 
         <script>
-        function init() {{
+        function iniciarMapa() {{
 
-            var map = new google.maps.Map(document.getElementById("mapa"), {{
+            var mapa = new google.maps.Map(document.getElementById("mapa"), {{
                 zoom: 7,
                 center: {{ lat: -23.55, lng: -46.63 }}
             }});
@@ -36,25 +39,39 @@ def rotas():
             var directionsService = new google.maps.DirectionsService();
             var directionsRenderer = new google.maps.DirectionsRenderer();
 
-            directionsRenderer.setMap(map);
+            directionsRenderer.setMap(mapa);
 
             var origem = "{origem}";
             var destino = "{destino}";
 
             if(origem && destino) {{
-                directionsService.route({{
+
+                var request = {{
                     origin: origem,
                     destination: destino,
                     travelMode: "DRIVING"
-                }}, function(result, status) {{
+                }};
 
-                    if (status === "OK") {{
+                directionsService.route(request, function(result, status) {{
+
+                    if (status == "OK") {{
+
                         directionsRenderer.setDirections(result);
+
+                        let tempo = result.routes[0].legs[0].duration.text;
+                        let distancia = result.routes[0].legs[0].distance.text;
+
+                        document.getElementById("info-rota").innerHTML =
+                            "⏱ Tempo: " + tempo + " | 📏 Distância: " + distancia;
+
+                    }} else {{
+                        document.getElementById("info-rota").innerHTML =
+                            "❌ Não foi possível calcular a rota";
                     }}
                 }});
             }}
         }}
 
-        window.onload = init;
+        window.onload = iniciarMapa;
         </script>
     """)
