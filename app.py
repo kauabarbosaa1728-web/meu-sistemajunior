@@ -8,7 +8,10 @@ from layout import acesso_negado
 
 from auth import auth_bp
 from dashboard import dashboard_bp
-from estoque import estoque_bp
+
+# 🔥 CORRIGIDO AQUI
+from estoque.routes import estoque_bp
+
 from usuarios import usuarios_bp
 from pagamento import pagamento_routes
 from logs import logs_bp
