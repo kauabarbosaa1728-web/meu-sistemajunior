@@ -4,12 +4,12 @@ from werkzeug.security import generate_password_hash
 import os
 
 from banco import criar_banco, conectar, devolver_conexao
-from layout import acesso_negado
+from layout import acesso_negado, container
 
 from auth import auth_bp
 from dashboard import dashboard_bp
 
-# 🔥 CORRIGIDO AQUI
+# 🔥 ESTOQUE
 from estoque.routes import estoque_bp
 
 from usuarios import usuarios_bp
@@ -25,8 +25,6 @@ from veiculos.veiculos import veiculos_bp
 from veiculos.manutencoes import manutencoes_bp
 from veiculos.dashboard_veiculos import dashboard_veiculos_bp
 from veiculos.problemas import problemas_bp
-
-# 🔥 NOVO: ROTAS (GPS)
 from veiculos.rotas import rotas_bp
 
 app = Flask(__name__)
@@ -43,6 +41,56 @@ except Exception as e:
 def ping():
     return "ok"
 
+
+# ================= CONFIGURAÇÕES =================
+@app.route("/configuracoes", methods=["GET", "POST"])
+def configuracoes():
+
+    if "user" not in session:
+        return redirect("/")
+
+    msg = ""
+
+    if request.method == "POST":
+        idioma = request.form.get("idioma")
+        fuso = request.form.get("fuso")
+
+        session["idioma"] = idioma
+        session["fuso"] = fuso
+
+        msg = "✅ Configurações salvas!"
+
+    idioma = session.get("idioma", "pt")
+    fuso = session.get("fuso", "America/Sao_Paulo")
+
+    return container(f"""
+    <div class="card">
+        <h2>⚙️ Configurações</h2>
+
+        <form method="POST">
+
+            <label>🌐 Idioma</label>
+            <select name="idioma">
+                <option value="pt" {"selected" if idioma == "pt" else ""}>Português</option>
+                <option value="en" {"selected" if idioma == "en" else ""}>Inglês</option>
+                <option value="es" {"selected" if idioma == "es" else ""}>Espanhol</option>
+            </select>
+
+            <label>🕒 Fuso horário</label>
+            <select name="fuso">
+                <option value="America/Sao_Paulo" {"selected" if fuso == "America/Sao_Paulo" else ""}>Brasil</option>
+                <option value="America/New_York" {"selected" if fuso == "America/New_York" else ""}>EUA</option>
+                <option value="Europe/Lisbon" {"selected" if fuso == "Europe/Lisbon" else ""}>Portugal</option>
+            </select>
+
+            <button>Salvar</button>
+        </form>
+
+        <p>{msg}</p>
+    </div>
+    """)
+
+
 # ================= BLOQUEIO GLOBAL SAAS =================
 @app.before_request
 def bloquear_sistema():
@@ -52,19 +100,15 @@ def bloquear_sistema():
         "/verificar_pagamento_auto", "/webhook", "/static/"
     ]
 
-    # 🔥 LIBERA PDF
     if request.path.startswith("/baixar-pdf"):
         return
 
-    # 🔥 LIBERA ROTAS PÚBLICAS
     if any(request.path.startswith(r) for r in rotas_livres):
         return
 
-    # 🔒 LOGIN
     if "user" not in session:
         return redirect("/")
 
-    # 🔒 ADMIN NÃO BLOQUEIA
     if session.get("cargo") == "admin":
         return
 
@@ -83,7 +127,6 @@ def bloquear_sistema():
 
         dado = cursor.fetchone()
 
-        # ❌ SEM PLANO
         if not dado:
             return """
             <h2 style='text-align:center;margin-top:100px;'>
@@ -94,7 +137,6 @@ def bloquear_sistema():
 
         status, vencimento = dado
 
-        # ❌ NÃO PAGOU
         if status != "pago":
             return """
             <h2 style='text-align:center;margin-top:100px;'>
@@ -103,7 +145,6 @@ def bloquear_sistema():
             </h2>
             """
 
-        # ❌ EXPIRADO
         if vencimento and vencimento < datetime.now():
             return """
             <h2 style='text-align:center;margin-top:100px;color:red;'>
@@ -112,7 +153,6 @@ def bloquear_sistema():
             </h2>
             """
 
-        # ⚠️ AVISO
         if vencimento:
             dias_restantes = (vencimento - datetime.now()).days
             if dias_restantes <= 3:
@@ -123,6 +163,7 @@ def bloquear_sistema():
 
     finally:
         devolver_conexao(conn)
+
 
 # ================= BLUEPRINTS =================
 app.register_blueprint(auth_bp)
@@ -135,16 +176,13 @@ app.register_blueprint(ia_bp)
 app.register_blueprint(financeiro_bp)
 app.register_blueprint(relatorios_bp)
 
-# 🔥 VEÍCULOS
+# VEÍCULOS
 app.register_blueprint(veiculos_bp)
 app.register_blueprint(manutencoes_bp)
 app.register_blueprint(dashboard_veiculos_bp)
 app.register_blueprint(problemas_bp)
-
-# 🔥 NOVO: GPS / ROTAS
 app.register_blueprint(rotas_bp)
 
-# app.register_blueprint(vendas_bp)
 
 # ================= ROTAS DIRETAS =================
 @app.route("/usuarios/excluir_usuario/<usuario>", methods=["POST"])
@@ -202,6 +240,7 @@ def alterar_senha_direto(usuario):
         devolver_conexao(conn)
 
     return redirect("/usuarios")
+
 
 # ================= START =================
 if __name__ == "__main__":
