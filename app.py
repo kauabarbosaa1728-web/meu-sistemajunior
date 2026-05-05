@@ -49,12 +49,19 @@ def bloquear_sistema():
         "/verificar_pagamento_auto", "/webhook", "/static/"
     ]
 
+    # 🔥 LIBERA PDF
+    if request.path.startswith("/baixar-pdf"):
+        return
+
+    # 🔥 LIBERA ROTAS PÚBLICAS
     if any(request.path.startswith(r) for r in rotas_livres):
         return
 
+    # 🔒 LOGIN
     if "user" not in session:
         return redirect("/")
 
+    # 🔒 ADMIN NÃO BLOQUEIA
     if session.get("cargo") == "admin":
         return
 
@@ -73,6 +80,7 @@ def bloquear_sistema():
 
         dado = cursor.fetchone()
 
+        # ❌ SEM PLANO
         if not dado:
             return """
             <h2 style='text-align:center;margin-top:100px;'>
@@ -83,6 +91,7 @@ def bloquear_sistema():
 
         status, vencimento = dado
 
+        # ❌ NÃO PAGOU
         if status != "pago":
             return """
             <h2 style='text-align:center;margin-top:100px;'>
@@ -91,6 +100,7 @@ def bloquear_sistema():
             </h2>
             """
 
+        # ❌ EXPIRADO
         if vencimento and vencimento < datetime.now():
             return """
             <h2 style='text-align:center;margin-top:100px;color:red;'>
@@ -99,6 +109,7 @@ def bloquear_sistema():
             </h2>
             """
 
+        # ⚠️ AVISO
         if vencimento:
             dias_restantes = (vencimento - datetime.now()).days
             if dias_restantes <= 3:
