@@ -21,14 +21,31 @@ def topo():
 
             <li><a href="/painel">📊 Painel</a></li>
 
+            <!-- 🔥 ESTOQUE COMPLETO -->
             <li class="has-submenu">
                 <span class="menu-toggle">📦 Estoque</span>
                 <ul class="submenu">
-                    <li><a href="/estoque">Ver Estoque</a></li>
-                    <li><a href="/transferencia">Transferência</a></li>
+
+                    <li><a href="/estoque">📋 Ver Estoque</a></li>
+                    <li><a href="/transferencia">🔄 Transferência</a></li>
+                    <li><a href="/entrada">➕ Entrada</a></li>
+                    <li><a href="/historico">📜 Histórico</a></li>
+
+                    <li style="margin:6px 0;opacity:0.4;">────────</li>
+
+                    <li><a href="/categorias">🏷️ Categorias</a></li>
+                    <li><a href="/fornecedores">🚚 Fornecedores</a></li>
+                    <li><a href="/ncm">🔢 NCM</a></li>
+
+                    <li style="margin:6px 0;opacity:0.4;">────────</li>
+
+                    <li><a href="/exportar_estoque">📥 Exportar Excel</a></li>
+                    <li><a href="/exportar_pdf">📄 Exportar PDF</a></li>
+
                 </ul>
             </li>
 
+            <!-- FINANCEIRO -->
             <li class="has-submenu">
                 <span class="menu-toggle">💰 Financeiro</span>
                 <ul class="submenu">
@@ -40,6 +57,7 @@ def topo():
                 </ul>
             </li>
 
+            <!-- RELATÓRIOS -->
             <li class="has-submenu">
                 <span class="menu-toggle">📄 Relatórios</span>
                 <ul class="submenu">
@@ -52,19 +70,18 @@ def topo():
                 </ul>
             </li>
 
+            <!-- VEÍCULOS -->
             <li class="has-submenu">
                 <span class="menu-toggle">🚗 Veículos</span>
                 <ul class="submenu">
                     <li><a href="/veiculos">📋 Ver Veículos</a></li>
                     <li><a href="/manutencoes">🔧 Manutenções</a></li>
                     <li><a href="/dashboard-veiculos">📊 Dashboard</a></li>
-
-                    <!-- 🔥 NOVO GPS -->
                     <li><a href="/rotas">🗺️ Rotas (GPS)</a></li>
-
                 </ul>
             </li>
 
+            <!-- SISTEMA -->
             <li class="has-submenu">
                 <span class="menu-toggle">⚙️ Sistema</span>
                 <ul class="submenu">
@@ -186,7 +203,7 @@ def container(c):
             background: rgba(11,15,26,0.96);
             list-style: none;
             padding: 6px 0;
-            min-width: 190px;
+            min-width: 200px;
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.08);
         }
