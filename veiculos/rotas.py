@@ -23,9 +23,9 @@ def rotas():
 
         <div id="info-rota" style="margin:10px 0; font-size:18px;"></div>
 
-        <div id="mapa" style="width:100%; height:400px; border-radius:10px;"></div>
+        <div id="mapa" style="width:100%; height:500px; border-radius:12px;"></div>
 
-        <!-- 🔥 SUA CHAVE JÁ APLICADA -->
+        <!-- 🔥 GOOGLE MAPS -->
         <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqiPS7ZDcxqptaYxoGJW8QAes3tEeuE0A"></script>
 
         <script>
@@ -33,7 +33,13 @@ def rotas():
 
             var mapa = new google.maps.Map(document.getElementById("mapa"), {{
                 zoom: 7,
-                center: {{ lat: -23.55, lng: -46.63 }}
+                center: {{ lat: -23.55, lng: -46.63 }},
+
+                // 🔥 CONTROLES
+                streetViewControl: true,
+                mapTypeControl: true,
+                fullscreenControl: true,
+                zoomControl: true
             }});
 
             var directionsService = new google.maps.DirectionsService();
