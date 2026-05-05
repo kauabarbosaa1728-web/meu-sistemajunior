@@ -29,7 +29,6 @@ def render_dashboard(
     ano = now.year
     cal = calendar.monthcalendar(ano, mes)
 
-    # ================= CALENDÁRIO =================
     html_calendario = f"""
     <div class="box calendario-box">
 
@@ -74,102 +73,8 @@ def render_dashboard(
 
     html_calendario += "</div></div>"
 
-    # ================= HTML =================
     html = f"""
     <style>
-
-    .wrap {{
-        max-width:1400px;
-        margin:auto;
-    }}
-
-    .topo-dashboard {{
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        flex-wrap:wrap;
-        gap:15px;
-        margin-bottom:20px;
-    }}
-
-    .subtitulo {{
-        color:#94a3b8;
-        font-size:13px;
-    }}
-
-    .filtro-data {{
-        display:flex;
-        gap:10px;
-        align-items:end;
-    }}
-
-    .campo label {{
-        font-size:12px;
-        color:#94a3b8;
-    }}
-
-    .cards {{
-        display:grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap:15px;
-        margin-bottom:20px;
-    }}
-
-    .card {{
-        background: linear-gradient(145deg, #020617, #0f172a);
-        border: 1px solid #1e293b;
-        border-radius: 16px;
-        padding: 15px;
-        text-align:center;
-    }}
-
-    .card h1 {{
-        font-size:28px;
-        margin:0;
-        color:#fff;
-    }}
-
-    .card p {{
-        color:#94a3b8;
-        font-size:13px;
-    }}
-
-    .status {{
-        display:inline-block;
-        width:8px;
-        height:8px;
-        border-radius:50%;
-        margin-right:5px;
-    }}
-
-    .on {{ background:#22c55e; }}
-    .off {{ background:#ef4444; }}
-
-    .grid {{
-        display:grid;
-        grid-template-columns: 2fr 1fr;
-        grid-template-rows: 300px 300px;
-        gap:20px;
-        margin-top:20px;
-    }}
-
-    .grid .box:nth-child(1) {{
-        grid-row: span 2;
-    }}
-
-    .box {{
-        background: linear-gradient(145deg, #020617, #0f172a);
-        border: 1px solid #1e293b;
-        border-radius: 16px;
-        padding: 15px;
-    }}
-
-    canvas {{
-        width:100% !important;
-        height:100% !important;
-    }}
-
-    /* CALENDÁRIO */
 
     .calendario-box {{
         margin-top:20px;
@@ -242,13 +147,29 @@ def render_dashboard(
         border:none;
     }}
 
-    @media (max-width:900px){{
-        .cards {{
-            grid-template-columns: repeat(2,1fr);
-        }}
-        .grid {{
-            grid-template-columns:1fr;
-        }}
+    .grid {{
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        grid-template-rows: 300px 300px;
+        gap: 20px;
+        margin-top: 25px;
+    }}
+
+    .grid .box:nth-child(1) {{
+        grid-row: span 2;
+    }}
+
+    .box {{
+        background: linear-gradient(145deg, #020617, #0f172a);
+        border: 1px solid #1e293b;
+        border-radius: 16px;
+        padding: 15px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }}
+
+    canvas {{
+        width: 100% !important;
+        height: 100% !important;
     }}
 
     </style>
@@ -258,33 +179,48 @@ def render_dashboard(
         <div class="topo-dashboard">
             <div>
                 <h2>📊 Dashboard Executivo • {nome_mes} {now.year}</h2>
-                <p class="subtitulo">Dados atualizados em tempo real</p>
+                <p class="subtitulo">Dados atualizados em tempo real • Controle total do seu estoque</p>
             </div>
 
             <form method="get" class="filtro-data">
                 <div class="campo">
                     <label>De</label>
-                    <input type="text" name="inicio">
+                    <input type="text" class="calendario-input" name="inicio" placeholder="Selecionar data">
                 </div>
 
                 <div class="campo">
                     <label>Até</label>
-                    <input type="text" name="fim">
+                    <input type="text" class="calendario-input" name="fim" placeholder="Selecionar data">
                 </div>
 
                 <button>Filtrar</button>
             </form>
         </div>
 
-        {"<div style='color:#ef4444'>⚠️ "+str(len(baixo_nomes))+" produto(s) com estoque baixo</div>" if baixo_nomes else ""}
+        {"<div class='alerta-topo'>⚠️ Atenção: " + str(len(baixo_nomes)) + " produto(s) com estoque baixo</div>" if baixo_nomes else ""}
 
         <div class="cards">
-            <div class="card"><h1>{total_produtos}</h1><p>Total Produtos</p></div>
-            <div class="card"><h1>{total_qtd}</h1><p>Quantidade</p></div>
-            <div class="card"><h1>{total_transferencias}</h1><p>Movimentações</p></div>
             <div class="card">
-                <h1>{usuarios_online}</h1>
-                <p><span class="status {'on' if usuarios_online else 'off'}"></span>Online</p>
+                <h1 class="azul">{total_produtos}</h1>
+                <p>Total Produtos</p>
+            </div>
+
+            <div class="card">
+                <h1 class="azul">{total_qtd}</h1>
+                <p>Quantidade</p>
+            </div>
+
+            <div class="card">
+                <h1 class="azul">{total_transferencias}</h1>
+                <p>Movimentações</p>
+            </div>
+
+            <div class="card">
+                <h1 style="color:#fff">{usuarios_online}</h1>
+                <p>
+                    <span class="status {'on' if usuarios_online > 0 else 'off'}"></span>
+                    {'Online' if usuarios_online > 0 else 'Offline'}
+                </p>
             </div>
         </div>
 
@@ -299,19 +235,37 @@ def render_dashboard(
 
     </div>
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
 
+    flatpickr(".calendario-input", {{
+        dateFormat: "Y-m-d",
+        locale: "pt",
+        defaultDate: "today"
+    }});
+
     const cores = ["#38bdf8","#60a5fa","#818cf8","#a78bfa","#22d3ee"]
 
     const configPadrao = {{
-        responsive:true,
-        maintainAspectRatio:false,
-        plugins:{{ legend:{{ labels:{{ color:"#cbd5e1" }} }} }},
-        scales:{{
-            x:{{ ticks:{{ color:"#94a3b8" }} }},
-            y:{{ ticks:{{ color:"#94a3b8" }} }}
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {{
+            legend: {{ labels: {{ color: "#cbd5e1" }} }}
+        }},
+        scales: {{
+            x: {{
+                ticks: {{ color: "#94a3b8" }},
+                grid: {{ color: "rgba(255,255,255,0.05)" }}
+            }},
+            y: {{
+                ticks: {{ color: "#94a3b8" }},
+                grid: {{ color: "rgba(255,255,255,0.05)" }}
+            }}
         }}
     }}
 
@@ -319,36 +273,63 @@ def render_dashboard(
         type:'doughnut',
         data:{{
             labels:{json.dumps(nomes)},
-            datasets:[{{ data:{json.dumps(valores)}, backgroundColor:cores }}]
+            datasets:[{{
+                data:{json.dumps(valores)},
+                backgroundColor: cores,
+                borderWidth:0
+            }}]
         }},
-        options:{{ cutout:'70%' }}
+        options:{{
+            responsive:true,
+            maintainAspectRatio:false,
+            cutout:'70%',
+            plugins:{{
+                legend:{{ position:'bottom', labels:{{ color:'#cbd5e1' }} }}
+            }}
+        }}
     }});
 
     new Chart(document.getElementById('linha'), {{
         type:'line',
         data:{{
             labels:{json.dumps(dias_labels)},
-            datasets:[{{ data:{json.dumps(dias_valores)}, borderColor:"#38bdf8", fill:true }}]
+            datasets:[{{
+                data:{json.dumps(dias_valores)},
+                borderColor:"#38bdf8",
+                backgroundColor:"rgba(56,189,248,0.2)",
+                fill:true,
+                borderWidth:3,
+                tension:0.4,
+                pointRadius:4
+            }}]
         }},
-        options:configPadrao
+        options: configPadrao
     }});
 
     new Chart(document.getElementById('top'), {{
         type:'bar',
         data:{{
             labels:{json.dumps(top_nomes)},
-            datasets:[{{ data:{json.dumps(top_valores)}, backgroundColor:"#3b82f6" }}]
+            datasets:[{{
+                data:{json.dumps(top_valores)},
+                backgroundColor:"#3b82f6",
+                borderRadius:8
+            }}]
         }},
-        options:configPadrao
+        options: configPadrao
     }});
 
     new Chart(document.getElementById('baixo'), {{
         type:'bar',
         data:{{
             labels:{json.dumps(baixo_nomes)},
-            datasets:[{{ data:{json.dumps(baixo_valores)}, backgroundColor:"#ef4444" }}]
+            datasets:[{{
+                data:{json.dumps(baixo_valores)},
+                backgroundColor:"#ef4444",
+                borderRadius:8
+            }}]
         }},
-        options:configPadrao
+        options: configPadrao
     }});
 
     </script>
