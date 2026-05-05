@@ -123,7 +123,7 @@ def problemas_lista():
                 <a href="/resolver/{d[0]}">✅ Resolver</a><br>
                 <a href="/deletar-problema/{d[0]}" onclick="return confirm('Tem certeza?')">🗑️ Deletar</a><br>
 
-                <!-- 🔥 PDF SEMPRE DISPONÍVEL -->
+                <!-- PDF FUNCIONANDO -->
                 <a href="/baixar-pdf/{d[0]}">📄 Baixar PDF</a>
             </div>
             """
@@ -167,15 +167,9 @@ def resolver(id):
     return redirect("/problemas-lista")
 
 
-# ================= PDF (FINAL + DEBUG) =================
+# ================= PDF FUNCIONANDO =================
 @problemas_bp.route("/baixar-pdf/<int:id>")
 def baixar_pdf(id):
-
-    # 🔥 DEBUG VISUAL (se isso aparecer no PDF, o código novo está rodando)
-    debug_msg = f"PDF NOVO RODANDO | ID={id}"
-
-    if "user" not in session:
-        return redirect("/")
 
     conn = conectar()
     cursor = conn.cursor()
@@ -187,51 +181,36 @@ def baixar_pdf(id):
         """, (id,))
         d = cursor.fetchone()
 
-        # 🔥 se não achar no banco, ainda gera PDF
         if not d:
-            tipo = "NÃO ENCONTRADO"
-            descricao = "Registro não localizado no banco"
-            usuario = "-"
-            data = "-"
-            status = "erro"
-        else:
-            tipo, descricao, usuario, data, status = d
+            return "Registro não encontrado"
+
+        tipo, descricao, usuario, data, status = d
 
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=letter)
 
-        # ===== DEBUG NO PDF =====
-        c.setFont("Helvetica", 8)
-        c.setFillColor(colors.grey)
-        c.drawString(100, 800, debug_msg)
-
-        # ===== TÍTULO =====
+        # TÍTULO
         c.setFont("Helvetica-Bold", 16)
-        c.setFillColor(colors.black)
         c.drawString(100, 760, "RELATÓRIO DE OCORRÊNCIA")
 
-        # ===== LINHA =====
-        c.setStrokeColor(colors.green)
+        # LINHA
+        c.setStrokeColor(colors.blue)
         c.setLineWidth(2)
         c.line(100, 750, 450, 750)
 
-        # ===== DADOS =====
+        # DADOS
         c.setFont("Helvetica", 12)
-
         c.drawString(100, 720, f"Problema: {tipo}")
         c.drawString(100, 700, f"Usuário: {usuario}")
         c.drawString(100, 680, f"Data: {data}")
         c.drawString(100, 660, f"Descrição: {descricao}")
 
-        # ===== STATUS =====
+        # STATUS
         if status == "resolvido":
             c.setFillColor(colors.green)
             c.drawString(100, 630, "✔ RESOLVIDO")
-        elif status == "erro":
-            c.setFillColor(colors.red)
-            c.drawString(100, 630, "❌ REGISTRO NÃO ENCONTRADO")
         else:
-            c.setFillColor(colors.orange)
+            c.setFillColor(colors.red)
             c.drawString(100, 630, "⚠ EM ABERTO")
 
         c.save()
@@ -245,7 +224,7 @@ def baixar_pdf(id):
         )
 
     except Exception as e:
-        return container(f"<pre>ERRO REAL: {str(e)}</pre>")
+        return f"Erro real: {str(e)}"
 
     finally:
         cursor.close()
