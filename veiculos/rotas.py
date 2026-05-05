@@ -16,43 +16,92 @@ def rotas():
     coords = []
     tempo = ""
     distancia = ""
+    mensagem = ""
+
+    def buscar_endereco(endereco):
+        url = "https://nominatim.openstreetmap.org/search"
+
+        headers = {
+            "User-Agent": "KBSISTEMAS-Rotas/1.0"
+        }
+
+        params = {
+            "q": endereco,
+            "format": "json",
+            "limit": 1,
+            "countrycodes": "br"
+        }
+
+        resposta = requests.get(url, params=params, headers=headers, timeout=10)
+        dados = resposta.json()
+
+        if dados:
+            return float(dados[0]["lat"]), float(dados[0]["lon"])
+
+        return None
 
     if origem and destino:
         try:
-            geo_url = "https://nominatim.openstreetmap.org/search"
+            origem_busca = origem
+            destino_busca = destino
 
-            o = requests.get(geo_url, params={"q": origem, "format": "json"}).json()
-            d = requests.get(geo_url, params={"q": destino, "format": "json"}).json()
+            if "sp" not in origem.lower():
+                origem_busca += ", Mauá, SP, Brasil"
 
-            if o and d:
-                lat_o, lon_o = float(o[0]["lat"]), float(o[0]["lon"])
-                lat_d, lon_d = float(d[0]["lat"]), float(d[0]["lon"])
+            if "sp" not in destino.lower():
+                destino_busca += ", Mauá, SP, Brasil"
 
-                rota_url = f"http://router.project-osrm.org/route/v1/driving/{lon_o},{lat_o};{lon_d},{lat_d}?overview=full&geometries=geojson"
+            ponto_origem = buscar_endereco(origem_busca)
+            ponto_destino = buscar_endereco(destino_busca)
 
-                rota = requests.get(rota_url).json()
+            if not ponto_origem:
+                mensagem = "❌ Não encontrei a origem. Tente colocar: rua, número, cidade e estado."
 
-                dados = rota["routes"][0]
-                coords = dados["geometry"]["coordinates"]
+            elif not ponto_destino:
+                mensagem = "❌ Não encontrei o destino. Tente colocar: rua, número, cidade e estado."
 
-                # 🔥 tempo e distância
-                distancia_km = dados["distance"] / 1000
-                tempo_min = dados["duration"] / 60
+            else:
+                lat_o, lon_o = ponto_origem
+                lat_d, lon_d = ponto_destino
 
-                distancia = f"{distancia_km:.1f} km"
-                tempo = f"{tempo_min:.0f} min"
+                rota_url = (
+                    f"https://router.project-osrm.org/route/v1/driving/"
+                    f"{lon_o},{lat_o};{lon_d},{lat_d}"
+                    f"?overview=full&geometries=geojson"
+                )
 
-        except:
-            pass
+                rota = requests.get(rota_url, timeout=10).json()
+
+                if "routes" in rota and len(rota["routes"]) > 0:
+                    dados = rota["routes"][0]
+
+                    coords = dados["geometry"]["coordinates"]
+
+                    distancia_km = dados["distance"] / 1000
+                    tempo_min = dados["duration"] / 60
+
+                    distancia = f"{distancia_km:.1f} km"
+                    tempo = f"{tempo_min:.0f} min"
+                    mensagem = "✅ Rota calculada com sucesso!"
+
+                else:
+                    mensagem = "❌ Não foi possível calcular a rota entre esses endereços."
+
+        except Exception as e:
+            mensagem = f"❌ Erro ao calcular rota: {str(e)}"
 
     return container(f"""
         <h2>🗺️ Rotas Inteligentes</h2>
 
         <form method="POST">
-            <input name="origem" placeholder="📍 Origem" value="{origem}">
-            <input name="destino" placeholder="🏁 Destino" value="{destino}">
+            <input name="origem" placeholder="📍 Origem: Rua, número, cidade, estado" value="{origem}">
+            <input name="destino" placeholder="🏁 Destino: Rua, número, cidade, estado" value="{destino}">
             <button>🚀 Calcular Rota</button>
         </form>
+
+        <div style="margin:15px 0; font-size:17px;">
+            <b>{mensagem}</b>
+        </div>
 
         <div style="margin:15px 0; font-size:18px;">
             ⏱ Tempo: <b>{tempo}</b> &nbsp;&nbsp; | &nbsp;&nbsp;
@@ -65,7 +114,7 @@ def rotas():
         <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
         <script>
-        var map = L.map('mapa').setView([-23.55, -46.63], 7);
+        var map = L.map('mapa').setView([-23.667, -46.461], 13);
 
         L.tileLayer('https://tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
             maxZoom: 19
@@ -77,35 +126,40 @@ def rotas():
 
             var latlngs = coords.map(c => [c[1], c[0]]);
 
-            // 🔥 linha da rota
             var polyline = L.polyline(latlngs, {{
-                color: '#3b82f6',
-                weight: 6
+                color: '#2563eb',
+                weight: 7
             }}).addTo(map);
 
-            // 🔥 marcadores
             var inicio = latlngs[0];
             var fim = latlngs[latlngs.length - 1];
 
-            L.marker(inicio).addTo(map).bindPopup("📍 Origem");
+            L.marker(inicio).addTo(map).bindPopup("📍 Origem").openPopup();
             L.marker(fim).addTo(map).bindPopup("🏁 Destino");
 
-            // 🔥 zoom automático
-            map.fitBounds(polyline.getBounds());
+            map.fitBounds(polyline.getBounds(), {{
+                padding: [40, 40]
+            }});
 
-            // 🔥 animação simples (linha desenhando)
-            var i = 0;
-            var linhaAnimada = L.polyline([], {{color: '#22c55e', weight: 6}}).addTo(map);
+            var carroIcon = L.divIcon({{
+                html: "🚗",
+                className: "",
+                iconSize: [30, 30]
+            }});
 
-            function animar() {{
+            var carro = L.marker(inicio, {{icon: carroIcon}}).addTo(map);
+
+            let i = 0;
+
+            function moverCarro() {{
                 if(i < latlngs.length) {{
-                    linhaAnimada.addLatLng(latlngs[i]);
+                    carro.setLatLng(latlngs[i]);
                     i++;
-                    setTimeout(animar, 5);
+                    setTimeout(moverCarro, 25);
                 }}
             }}
 
-            animar();
+            moverCarro();
         }}
         </script>
     """)
