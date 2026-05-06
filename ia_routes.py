@@ -5,7 +5,7 @@ import difflib
 
 ia_bp = Blueprint("ia_bp", __name__)
 
-# ================= BUSCAR PRODUTO INTELIGENTE =================
+# ================= BUSCAR PRODUTO =================
 def encontrar_produto(pergunta):
     conn = conectar()
     cursor = conn.cursor()
@@ -24,15 +24,26 @@ def encontrar_produto(pergunta):
 
     return None
 
-# ================= IA INTELIGENTE =================
+
+# ================= IA TURBINADA =================
 def resposta_inteligente(pergunta):
     pergunta_lower = pergunta.lower()
 
     conn = conectar()
     cursor = conn.cursor()
 
-    # ===== TOTAL =====
-    if any(p in pergunta_lower for p in ["quantos", "total", "temos", "existem"]):
+    # ===== SAUDAÇÃO =====
+    if any(p in pergunta_lower for p in ["oi", "ola", "eai", "fala", "hello", "hi"]):
+        devolver_conexao(conn)
+        return t("👋 Olá! Posso te ajudar com estoque, financeiro, veículos e relatórios.")
+
+    # ===== AJUDA =====
+    if "ajuda" in pergunta_lower or "help" in pergunta_lower:
+        devolver_conexao(conn)
+        return t("Você pode perguntar sobre estoque, financeiro, produtos, veículos, relatórios ou qualquer informação do sistema.")
+
+    # ===== TOTAL ESTOQUE =====
+    if any(p in pergunta_lower for p in ["quantos", "total", "estoque", "produtos", "itens"]):
         cursor.execute("SELECT COUNT(*) FROM estoque")
         total = cursor.fetchone()[0]
 
@@ -40,7 +51,7 @@ def resposta_inteligente(pergunta):
         qtd = cursor.fetchone()[0]
 
         devolver_conexao(conn)
-        return t(f"📦 Atualmente você tem {total} produtos cadastrados, somando {qtd} itens no estoque.")
+        return t(f"📦 Você tem {total} produtos cadastrados, totalizando {qtd} itens no estoque.")
 
     # ===== BUSCAR PRODUTO =====
     produto = encontrar_produto(pergunta)
@@ -55,10 +66,10 @@ def resposta_inteligente(pergunta):
         devolver_conexao(conn)
 
         if resultado:
-            return t(f"📦 O produto '{resultado[0]}' possui {resultado[1]} unidades no estoque.")
+            return t(f"📦 O produto '{resultado[0]}' possui {resultado[1]} unidades.")
 
-    # ===== LISTAR =====
-    if any(p in pergunta_lower for p in ["listar", "mostrar", "ver", "estoque", "produtos"]):
+    # ===== LISTAR PRODUTOS =====
+    if any(p in pergunta_lower for p in ["listar", "mostrar", "ver produtos"]):
         cursor.execute("SELECT produto, quantidade FROM estoque LIMIT 10")
         dados = cursor.fetchall()
 
@@ -67,30 +78,66 @@ def resposta_inteligente(pergunta):
         if not dados:
             return t("📭 Seu estoque está vazio.")
 
-        texto = t("📋 Aqui estão alguns produtos:") + "\n"
+        texto = t("📋 Produtos encontrados:") + "\n"
         for p, q in dados:
             texto += t(f"- {p}: {q}") + "\n"
 
         return texto
 
-    # ===== MAIOR =====
-    if any(p in pergunta_lower for p in ["mais", "maior", "top"]):
+    # ===== MAIOR PRODUTO =====
+    if any(p in pergunta_lower for p in ["maior", "mais", "top"]):
         cursor.execute("SELECT produto, quantidade FROM estoque ORDER BY quantidade DESC LIMIT 1")
         p = cursor.fetchone()
 
         devolver_conexao(conn)
 
         if p:
-            return t(f"🏆 O produto com maior quantidade é '{p[0]}' com {p[1]} unidades.")
+            return t(f"🏆 Produto com maior estoque: {p[0]} ({p[1]} unidades).")
 
-    # ===== SAUDAÇÃO =====
-    if any(p in pergunta_lower for p in ["oi", "ola", "eai", "fala"]):
+    # ===== FINANCEIRO =====
+    if "financeiro" in pergunta_lower:
+        try:
+            cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='entrada'")
+            entrada = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='saida'")
+            saida = cursor.fetchone()[0]
+
+            saldo = entrada - saida
+
+            devolver_conexao(conn)
+            return t(f"💰 Entradas: R$ {entrada:.2f} | Saídas: R$ {saida:.2f} | Saldo: R$ {saldo:.2f}")
+        except:
+            devolver_conexao(conn)
+            return t("Não foi possível acessar os dados financeiros.")
+
+    # ===== VEÍCULOS =====
+    if "veiculo" in pergunta_lower or "veículos" in pergunta_lower:
+        try:
+            cursor.execute("SELECT COUNT(*) FROM veiculos")
+            total = cursor.fetchone()[0]
+
+            devolver_conexao(conn)
+            return t(f"🚗 Você possui {total} veículos cadastrados no sistema.")
+        except:
+            devolver_conexao(conn)
+            return t("Não foi possível acessar os dados de veículos.")
+
+    # ===== RELATÓRIOS =====
+    if "relatorio" in pergunta_lower or "relatório" in pergunta_lower:
         devolver_conexao(conn)
-        return t("👋 Fala! Pode perguntar qualquer coisa sobre o sistema.")
+        return t("📊 Você pode gerar relatórios completos nas abas de relatórios do sistema.")
 
+    # ===== EXPLICAÇÕES =====
+    if "como funciona" in pergunta_lower:
+        devolver_conexao(conn)
+        return t("O sistema possui módulos de estoque, financeiro, veículos e relatórios. Você pode gerenciar tudo em tempo real.")
+
+    # ===== FALLBACK INTELIGENTE =====
     devolver_conexao(conn)
 
-    return t("🤖 Não entendi muito bem, mas posso te ajudar com estoque, produtos e quantidades.")
+    return t("🤖 Não entendi completamente, mas posso te ajudar com estoque, financeiro, veículos e relatórios. Tente perguntar de outra forma.")
+
 
 # ================= ROTA =================
 @ia_bp.route("/ia", methods=["GET", "POST"])
