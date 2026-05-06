@@ -1,20 +1,17 @@
-from flask import Blueprint, request, session, redirect
+from flask import Blueprint, request, session, redirect, render_template_string
 from banco import conectar, devolver_conexao
 from tradutor import t
 import difflib
 
 ia_bp = Blueprint("ia_bp", __name__)
 
-
 # ================= NORMALIZAR =================
 def normalizar(txt):
     return txt.lower().strip()
 
-
 # ================= SIMILARIDADE =================
 def parecido(pergunta, lista):
     return difflib.get_close_matches(pergunta, lista, n=1, cutoff=0.5)
-
 
 # ================= APRENDIZADO =================
 def buscar_aprendizado(pergunta):
@@ -66,12 +63,10 @@ def salvar_aprendizado(pergunta, resposta):
 
     devolver_conexao(conn)
 
-
-# ================= IA GRATUITA TURBINADA =================
+# ================= IA =================
 def ia_free(pergunta):
     pergunta_lower = normalizar(pergunta)
 
-    # 🔥 aprendizado
     aprendido = buscar_aprendizado(pergunta_lower)
     if aprendido:
         return t(aprendido)
@@ -79,52 +74,29 @@ def ia_free(pergunta):
     conn = conectar()
     cursor = conn.cursor()
 
-    # ===== PALAVRAS CHAVE =====
     estoque_kw = ["estoque", "produto", "produtos", "itens", "quantidade"]
     financeiro_kw = ["financeiro", "saldo", "dinheiro", "lucro", "entrada", "saida"]
-    saudacao_kw = ["oi", "ola", "hello", "hola", "eai", "fala"]
+    saudacao_kw = ["oi", "ola", "hello", "eai", "fala"]
     ajuda_kw = ["ajuda", "menu", "opções", "opcoes"]
 
-    # ===== SAUDAÇÃO =====
     if any(p in pergunta_lower for p in saudacao_kw):
         devolver_conexao(conn)
-        return t("👋 Olá! Posso te ajudar com estoque, financeiro, veículos e relatórios.")
+        return t("👋 Olá! Posso te ajudar com o sistema.")
 
-    # ===== AJUDA =====
     if any(p in pergunta_lower for p in ajuda_kw):
         devolver_conexao(conn)
-        return t("📊 Você pode perguntar sobre estoque, financeiro, produtos ou relatórios.")
+        return t("📊 Pergunte sobre estoque ou financeiro.")
 
-    # ===== ESTOQUE =====
     if any(p in pergunta_lower for p in estoque_kw):
         try:
             cursor.execute("SELECT COUNT(*), COALESCE(SUM(quantidade),0) FROM estoque")
             total, qtd = cursor.fetchone()
-
-            cursor.execute("""
-                SELECT produto, quantidade 
-                FROM estoque 
-                ORDER BY quantidade DESC 
-                LIMIT 3
-            """)
-            top = cursor.fetchall()
-
-            texto = f"📦 Você tem {total} produtos com {qtd} itens.\n"
-
-            if top:
-                texto += "🏆 Top produtos:\n"
-                for p, q in top:
-                    texto += f"- {p}: {q}\n"
-
-            salvar_aprendizado(pergunta_lower, texto)
             devolver_conexao(conn)
-            return t(texto)
-
+            return t(f"📦 Estoque: {total} produtos | {qtd} itens")
         except:
             devolver_conexao(conn)
-            return t("Erro ao consultar estoque.")
+            return t("Erro estoque.")
 
-    # ===== FINANCEIRO =====
     if any(p in pergunta_lower for p in financeiro_kw):
         try:
             cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='entrada'")
@@ -134,147 +106,137 @@ def ia_free(pergunta):
             saida = cursor.fetchone()[0]
 
             saldo = entrada - saida
-
-            texto = f"💰 Entradas: R$ {entrada:.2f}\n"
-            texto += f"💸 Saídas: R$ {saida:.2f}\n"
-            texto += f"📊 Saldo: R$ {saldo:.2f}"
-
-            salvar_aprendizado(pergunta_lower, texto)
             devolver_conexao(conn)
-            return t(texto)
 
+            return t(f"💰 Entrada: {entrada} | Saída: {saida} | Saldo: {saldo}")
         except:
             devolver_conexao(conn)
-            return t("Erro ao consultar financeiro.")
-
-    # ===== SIMILARIDADE =====
-    possiveis = ["estoque", "financeiro", "produtos", "saldo"]
-    match = parecido(pergunta_lower, possiveis)
-
-    if match:
-        return t(f"🤖 Você quis dizer algo sobre {match[0]}?")
+            return t("Erro financeiro.")
 
     devolver_conexao(conn)
 
-    # ===== DEFAULT =====
-    resp = "🤖 Não entendi totalmente, mas posso te ajudar com estoque, financeiro ou produtos."
+    resp = "🤖 Não entendi."
     salvar_aprendizado(pergunta_lower, resp)
-
     return t(resp)
 
+# ================= DASHBOARD NOVO =================
+@ia_bp.route("/dashboard")
+def dashboard():
 
-# ================= IA PRINCIPAL =================
-def resposta_inteligente(pergunta):
-    return ia_free(pergunta)
+    conn = conectar()
+    cursor = conn.cursor()
 
+    try:
+        cursor.execute("SELECT COUNT(*) FROM estoque")
+        total_estoque = cursor.fetchone()[0]
 
-# ================= ROTA =================
-@ia_bp.route("/ia", methods=["GET", "POST"])
-def ia():
-    if "user" not in session:
-        return redirect("/")
+        cursor.execute("SELECT COALESCE(SUM(quantidade),0) FROM estoque")
+        itens_estoque = cursor.fetchone()[0]
 
-    if "chat" not in session:
-        session["chat"] = []
+        cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='entrada'")
+        entrada = cursor.fetchone()[0]
 
-    if request.method == "POST":
-        pergunta = request.form.get("pergunta")
-        resposta = resposta_inteligente(pergunta)
+        cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='saida'")
+        saida = cursor.fetchone()[0]
 
-        session["chat"].append({"role": "user", "content": pergunta})
-        session["chat"].append({"role": "assistant", "content": resposta})
+        saldo = entrada - saida
 
-    # HISTÓRICO
-    historico = ""
-    for msg in session["chat"]:
-        if msg["role"] == "user":
-            historico += f"<div class='msg user'>{msg['content']}</div>"
-        else:
-            historico += f"<div class='msg bot'>{msg['content']}</div>"
+    except:
+        total_estoque = 0
+        itens_estoque = 0
+        entrada = 0
+        saida = 0
+        saldo = 0
 
-    return f"""
+    devolver_conexao(conn)
+
+    html = f"""
     <style>
-        body {{
-            background:#0f0f0f;
-            color:white;
-            font-family: Arial;
-        }}
+    body {{
+        margin:0;
+        font-family:Arial;
+        background:#0a0f1c;
+        color:white;
+    }}
 
-        .container {{
-            max-width:800px;
-            margin:auto;
-            margin-top:20px;
-            display:flex;
-            flex-direction:column;
-            height:90vh;
-        }}
+    .container {{
+        padding:20px;
+    }}
 
-        .chat-box {{
-            flex:1;
-            overflow-y:auto;
-            padding:10px;
-            display:flex;
-            flex-direction:column;
-        }}
+    .title {{
+        font-size:28px;
+        margin-bottom:20px;
+        color:#38bdf8;
+    }}
 
-        .msg {{
-            padding:12px;
-            border-radius:12px;
-            margin:6px 0;
-            max-width:70%;
-            white-space:pre-line;
-        }}
+    .grid {{
+        display:grid;
+        grid-template-columns:repeat(4,1fr);
+        gap:15px;
+    }}
 
-        .user {{
-            background:#2563eb;
-            align-self:flex-end;
-        }}
+    .card {{
+        background:#111827;
+        padding:20px;
+        border-radius:12px;
+        border:1px solid #1f2937;
+        box-shadow:0 0 15px #0ea5e9;
+    }}
 
-        .bot {{
-            background:#1f2937;
-            align-self:flex-start;
-        }}
+    .card h2 {{
+        font-size:18px;
+        color:#94a3b8;
+    }}
 
-        .input-box {{
-            display:flex;
-            padding:10px;
-            border-top:1px solid #333;
-        }}
+    .card p {{
+        font-size:22px;
+        margin-top:10px;
+        color:#38bdf8;
+    }}
 
-        input {{
-            flex:1;
-            padding:15px;
-            border:none;
-            border-radius:10px;
-            background:#2b2b2b;
-            color:white;
-        }}
-
-        button {{
-            padding:15px;
-            margin-left:10px;
-            border:none;
-            border-radius:10px;
-            background:white;
-            cursor:pointer;
-        }}
+    a {{
+        color:white;
+        text-decoration:none;
+    }}
     </style>
 
     <div class="container">
 
-        <div class="chat-box" id="chat">
-            {historico}
+        <div class="title">📊 DASHBOARD SISTEMA</div>
+
+        <div class="grid">
+
+            <div class="card">
+                <h2>📦 Produtos</h2>
+                <p>{total_estoque}</p>
+            </div>
+
+            <div class="card">
+                <h2>📊 Itens Estoque</h2>
+                <p>{itens_estoque}</p>
+            </div>
+
+            <div class="card">
+                <h2>💰 Entradas</h2>
+                <p>R$ {entrada}</p>
+            </div>
+
+            <div class="card">
+                <h2>💸 Saídas</h2>
+                <p>R$ {saida}</p>
+            </div>
+
+            <div class="card">
+                <h2>📈 Saldo</h2>
+                <p>R$ {saldo}</p>
+            </div>
+
         </div>
 
-        <form method="post" class="input-box">
-            <input name="pergunta" placeholder="{t("Pergunte qualquer coisa...")}">
-            <button>{t("Enviar")}</button>
-        </form>
+        <br><br>
+        <a href="/ia">🤖 Ir para IA</a>
 
     </div>
-
-    <script>
-        var chat = document.getElementById("chat");
-        chat.scrollTop = chat.scrollHeight;
-    </script>
     """
+
+    return render_template_string(html)
