@@ -1,9 +1,11 @@
+from tradutor import t
+
 def acesso_negado():
-    return container("""
+    return container(f"""
     <div class="card">
-        <h2 class="erro">⛔ Acesso negado</h2>
-        <p>Você não tem permissão para acessar esta área.</p>
-        <p><a href="/painel">⬅ Voltar para o painel</a></p>
+        <h2 class="erro">⛔ {t("Acesso negado")}</h2>
+        <p>{t("Você não tem permissão para acessar esta área.")}</p>
+        <p><a href="/painel">⬅ {t("Voltar para o painel")}</a></p>
     </div>
     """)
 
