@@ -5,6 +5,10 @@ import difflib
 
 ia_bp = Blueprint("ia_bp", __name__)
 
+# ================= NORMALIZAR TEXTO =================
+def normalizar(txt):
+    return txt.lower().strip()
+
 # ================= BUSCAR PRODUTO =================
 def encontrar_produto(pergunta):
     conn = conectar()
@@ -24,26 +28,30 @@ def encontrar_produto(pergunta):
 
     return None
 
-
-# ================= IA TURBINADA =================
+# ================= IA PRINCIPAL =================
 def resposta_inteligente(pergunta):
-    pergunta_lower = pergunta.lower()
+    pergunta_lower = normalizar(pergunta)
 
     conn = conectar()
     cursor = conn.cursor()
 
     # ===== SAUDAÇÃO =====
-    if any(p in pergunta_lower for p in ["oi", "ola", "eai", "fala", "hello", "hi"]):
+    if any(p in pergunta_lower for p in ["oi", "ola", "hello", "hi", "hola", "eai", "fala"]):
         devolver_conexao(conn)
-        return t("👋 Olá! Posso te ajudar com estoque, financeiro, veículos e relatórios.")
+        return t("👋 Olá! Sou a IA do sistema. Posso te ajudar com estoque, financeiro, veículos e relatórios.")
 
     # ===== AJUDA =====
-    if "ajuda" in pergunta_lower or "help" in pergunta_lower:
+    if any(p in pergunta_lower for p in ["ajuda", "help", "socorro"]):
         devolver_conexao(conn)
-        return t("Você pode perguntar sobre estoque, financeiro, produtos, veículos, relatórios ou qualquer informação do sistema.")
+        return t("Você pode perguntar sobre produtos, estoque, financeiro, veículos ou relatórios.")
 
-    # ===== TOTAL ESTOQUE =====
-    if any(p in pergunta_lower for p in ["quantos", "total", "estoque", "produtos", "itens"]):
+    # ===== SISTEMA =====
+    if "sistema" in pergunta_lower:
+        devolver_conexao(conn)
+        return t("O sistema possui módulos de estoque, financeiro, veículos e relatórios. Tudo integrado.")
+
+    # ===== ESTOQUE TOTAL =====
+    if any(p in pergunta_lower for p in ["quantos", "total", "produtos", "estoque"]):
         cursor.execute("SELECT COUNT(*) FROM estoque")
         total = cursor.fetchone()[0]
 
@@ -51,9 +59,9 @@ def resposta_inteligente(pergunta):
         qtd = cursor.fetchone()[0]
 
         devolver_conexao(conn)
-        return t(f"📦 Você tem {total} produtos cadastrados, totalizando {qtd} itens no estoque.")
+        return t(f"📦 Você tem {total} produtos cadastrados e {qtd} itens no estoque.")
 
-    # ===== BUSCAR PRODUTO =====
+    # ===== PRODUTO ESPECÍFICO =====
     produto = encontrar_produto(pergunta)
 
     if produto:
@@ -69,23 +77,23 @@ def resposta_inteligente(pergunta):
             return t(f"📦 O produto '{resultado[0]}' possui {resultado[1]} unidades.")
 
     # ===== LISTAR PRODUTOS =====
-    if any(p in pergunta_lower for p in ["listar", "mostrar", "ver produtos"]):
+    if any(p in pergunta_lower for p in ["listar", "mostrar", "ver"]):
         cursor.execute("SELECT produto, quantidade FROM estoque LIMIT 10")
         dados = cursor.fetchall()
 
         devolver_conexao(conn)
 
         if not dados:
-            return t("📭 Seu estoque está vazio.")
+            return t("📭 Estoque vazio.")
 
-        texto = t("📋 Produtos encontrados:") + "\n"
+        texto = t("📋 Produtos:") + "\n"
         for p, q in dados:
             texto += t(f"- {p}: {q}") + "\n"
 
         return texto
 
-    # ===== MAIOR PRODUTO =====
-    if any(p in pergunta_lower for p in ["maior", "mais", "top"]):
+    # ===== PRODUTO COM MAIS ESTOQUE =====
+    if any(p in pergunta_lower for p in ["mais", "top", "maior"]):
         cursor.execute("SELECT produto, quantidade FROM estoque ORDER BY quantidade DESC LIMIT 1")
         p = cursor.fetchone()
 
@@ -109,7 +117,7 @@ def resposta_inteligente(pergunta):
             return t(f"💰 Entradas: R$ {entrada:.2f} | Saídas: R$ {saida:.2f} | Saldo: R$ {saldo:.2f}")
         except:
             devolver_conexao(conn)
-            return t("Não foi possível acessar os dados financeiros.")
+            return t("Erro ao acessar financeiro.")
 
     # ===== VEÍCULOS =====
     if "veiculo" in pergunta_lower or "veículos" in pergunta_lower:
@@ -118,25 +126,25 @@ def resposta_inteligente(pergunta):
             total = cursor.fetchone()[0]
 
             devolver_conexao(conn)
-            return t(f"🚗 Você possui {total} veículos cadastrados no sistema.")
+            return t(f"🚗 Você tem {total} veículos cadastrados.")
         except:
             devolver_conexao(conn)
-            return t("Não foi possível acessar os dados de veículos.")
+            return t("Erro ao acessar veículos.")
 
     # ===== RELATÓRIOS =====
-    if "relatorio" in pergunta_lower or "relatório" in pergunta_lower:
+    if "relatorio" in pergunta_lower:
         devolver_conexao(conn)
-        return t("📊 Você pode gerar relatórios completos nas abas de relatórios do sistema.")
+        return t("📊 Vá até a aba de relatórios para gerar dados completos.")
 
-    # ===== EXPLICAÇÕES =====
-    if "como funciona" in pergunta_lower:
+    # ===== SUGESTÕES INTELIGENTES =====
+    if "o que posso fazer" in pergunta_lower:
         devolver_conexao(conn)
-        return t("O sistema possui módulos de estoque, financeiro, veículos e relatórios. Você pode gerenciar tudo em tempo real.")
+        return t("Você pode consultar estoque, ver financeiro, analisar veículos ou gerar relatórios.")
 
-    # ===== FALLBACK INTELIGENTE =====
+    # ===== FALLBACK =====
     devolver_conexao(conn)
 
-    return t("🤖 Não entendi completamente, mas posso te ajudar com estoque, financeiro, veículos e relatórios. Tente perguntar de outra forma.")
+    return t("🤖 Não entendi bem. Tente perguntar sobre estoque, financeiro, veículos ou relatórios.")
 
 
 # ================= ROTA =================
