@@ -7,3 +7,5 @@ reportlab
 openpyxl
 openai
 pytz
+deep-translator
+
