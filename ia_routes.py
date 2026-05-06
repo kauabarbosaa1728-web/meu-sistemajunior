@@ -1,5 +1,6 @@
 from flask import Blueprint, request, session, redirect
 from banco import conectar, devolver_conexao
+from tradutor import t
 import difflib
 
 ia_bp = Blueprint("ia_bp", __name__)
@@ -39,9 +40,9 @@ def resposta_inteligente(pergunta):
         qtd = cursor.fetchone()[0]
 
         devolver_conexao(conn)
-        return f"📦 Atualmente você tem {total} produtos cadastrados, somando {qtd} itens no estoque."
+        return t(f"📦 Atualmente você tem {total} produtos cadastrados, somando {qtd} itens no estoque.")
 
-    # ===== BUSCAR PRODUTO INTELIGENTE =====
+    # ===== BUSCAR PRODUTO =====
     produto = encontrar_produto(pergunta)
 
     if produto:
@@ -54,7 +55,7 @@ def resposta_inteligente(pergunta):
         devolver_conexao(conn)
 
         if resultado:
-            return f"📦 O produto '{resultado[0]}' possui {resultado[1]} unidades no estoque."
+            return t(f"📦 O produto '{resultado[0]}' possui {resultado[1]} unidades no estoque.")
 
     # ===== LISTAR =====
     if any(p in pergunta_lower for p in ["listar", "mostrar", "ver", "estoque", "produtos"]):
@@ -64,11 +65,11 @@ def resposta_inteligente(pergunta):
         devolver_conexao(conn)
 
         if not dados:
-            return "📭 Seu estoque está vazio."
+            return t("📭 Seu estoque está vazio.")
 
-        texto = "📋 Aqui estão alguns produtos:\n"
+        texto = t("📋 Aqui estão alguns produtos:") + "\n"
         for p, q in dados:
-            texto += f"- {p}: {q}\n"
+            texto += t(f"- {p}: {q}") + "\n"
 
         return texto
 
@@ -80,16 +81,16 @@ def resposta_inteligente(pergunta):
         devolver_conexao(conn)
 
         if p:
-            return f"🏆 O produto com maior quantidade é '{p[0]}' com {p[1]} unidades."
+            return t(f"🏆 O produto com maior quantidade é '{p[0]}' com {p[1]} unidades.")
 
     # ===== SAUDAÇÃO =====
     if any(p in pergunta_lower for p in ["oi", "ola", "eai", "fala"]):
         devolver_conexao(conn)
-        return "👋 Fala! Pode perguntar qualquer coisa sobre o sistema."
+        return t("👋 Fala! Pode perguntar qualquer coisa sobre o sistema.")
 
     devolver_conexao(conn)
 
-    return "🤖 Não entendi muito bem, mas posso te ajudar com estoque, produtos e quantidades."
+    return t("🤖 Não entendi muito bem, mas posso te ajudar com estoque, produtos e quantidades.")
 
 # ================= ROTA =================
 @ia_bp.route("/ia", methods=["GET", "POST"])
@@ -128,11 +129,11 @@ def ia():
     </style>
 
     <div class="container">
-        <h2>💬 IA KBSISTEMAS</h2>
+        <h2>💬 {t("IA KBSISTEMAS")}</h2>
         {historico}
         <form method="post" class="input-box">
-            <input name="pergunta" placeholder="Pergunte qualquer coisa...">
-            <button>Enviar</button>
+            <input name="pergunta" placeholder="{t("Pergunte qualquer coisa...")}">
+            <button>{t("Enviar")}</button>
         </form>
     </div>
     """
