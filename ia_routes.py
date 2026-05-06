@@ -2,14 +2,6 @@ from flask import Blueprint, request, session, redirect
 from banco import conectar, devolver_conexao
 from tradutor import t
 import difflib
-import os
-
-# (opcional premium)
-try:
-    import openai
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-except:
-    openai = None
 
 ia_bp = Blueprint("ia_bp", __name__)
 
@@ -17,6 +9,11 @@ ia_bp = Blueprint("ia_bp", __name__)
 # ================= NORMALIZAR =================
 def normalizar(txt):
     return txt.lower().strip()
+
+
+# ================= SIMILARIDADE =================
+def parecido(pergunta, lista):
+    return difflib.get_close_matches(pergunta, lista, n=1, cutoff=0.5)
 
 
 # ================= APRENDIZADO =================
@@ -34,7 +31,7 @@ def buscar_aprendizado(pergunta):
     devolver_conexao(conn)
 
     perguntas = [p[0] for p in dados]
-    match = difflib.get_close_matches(pergunta, perguntas, n=1, cutoff=0.7)
+    match = difflib.get_close_matches(pergunta, perguntas, n=1, cutoff=0.6)
 
     if match:
         for p, r in dados:
@@ -57,10 +54,11 @@ def salvar_aprendizado(pergunta, resposta):
         )
         """)
 
-        cursor.execute(
-            "INSERT INTO ia_aprendizado (pergunta, resposta) VALUES (%s, %s)",
-            (pergunta, resposta)
-        )
+        if len(pergunta) > 5:
+            cursor.execute(
+                "INSERT INTO ia_aprendizado (pergunta, resposta) VALUES (%s, %s)",
+                (pergunta, resposta)
+            )
 
         conn.commit()
     except:
@@ -69,7 +67,7 @@ def salvar_aprendizado(pergunta, resposta):
     devolver_conexao(conn)
 
 
-# ================= IA FREE =================
+# ================= IA GRATUITA TURBINADA =================
 def ia_free(pergunta):
     pergunta_lower = normalizar(pergunta)
 
@@ -81,68 +79,92 @@ def ia_free(pergunta):
     conn = conectar()
     cursor = conn.cursor()
 
-    # SAUDAÇÃO
-    if any(p in pergunta_lower for p in ["oi", "ola", "hello", "hola"]):
+    # ===== PALAVRAS CHAVE =====
+    estoque_kw = ["estoque", "produto", "produtos", "itens", "quantidade"]
+    financeiro_kw = ["financeiro", "saldo", "dinheiro", "lucro", "entrada", "saida"]
+    saudacao_kw = ["oi", "ola", "hello", "hola", "eai", "fala"]
+    ajuda_kw = ["ajuda", "menu", "opções", "opcoes"]
+
+    # ===== SAUDAÇÃO =====
+    if any(p in pergunta_lower for p in saudacao_kw):
         devolver_conexao(conn)
-        return t("Olá! Posso te ajudar com estoque, financeiro e veículos.")
+        return t("👋 Olá! Posso te ajudar com estoque, financeiro, veículos e relatórios.")
 
-    # ESTOQUE
-    if "estoque" in pergunta_lower:
-        cursor.execute("SELECT COUNT(*), COALESCE(SUM(quantidade),0) FROM estoque")
-        total, qtd = cursor.fetchone()
+    # ===== AJUDA =====
+    if any(p in pergunta_lower for p in ajuda_kw):
         devolver_conexao(conn)
+        return t("📊 Você pode perguntar sobre estoque, financeiro, produtos ou relatórios.")
 
-        resp = f"Você tem {total} produtos e {qtd} itens no estoque."
-        salvar_aprendizado(pergunta_lower, resp)
-        return t(resp)
+    # ===== ESTOQUE =====
+    if any(p in pergunta_lower for p in estoque_kw):
+        try:
+            cursor.execute("SELECT COUNT(*), COALESCE(SUM(quantidade),0) FROM estoque")
+            total, qtd = cursor.fetchone()
 
-    # FINANCEIRO
-    if "financeiro" in pergunta_lower:
-        cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='entrada'")
-        entrada = cursor.fetchone()[0]
+            cursor.execute("""
+                SELECT produto, quantidade 
+                FROM estoque 
+                ORDER BY quantidade DESC 
+                LIMIT 3
+            """)
+            top = cursor.fetchall()
 
-        cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='saida'")
-        saida = cursor.fetchone()[0]
+            texto = f"📦 Você tem {total} produtos com {qtd} itens.\n"
 
-        saldo = entrada - saida
-        devolver_conexao(conn)
+            if top:
+                texto += "🏆 Top produtos:\n"
+                for p, q in top:
+                    texto += f"- {p}: {q}\n"
 
-        resp = f"Seu saldo atual é R$ {saldo:.2f}"
-        salvar_aprendizado(pergunta_lower, resp)
-        return t(resp)
+            salvar_aprendizado(pergunta_lower, texto)
+            devolver_conexao(conn)
+            return t(texto)
+
+        except:
+            devolver_conexao(conn)
+            return t("Erro ao consultar estoque.")
+
+    # ===== FINANCEIRO =====
+    if any(p in pergunta_lower for p in financeiro_kw):
+        try:
+            cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='entrada'")
+            entrada = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='saida'")
+            saida = cursor.fetchone()[0]
+
+            saldo = entrada - saida
+
+            texto = f"💰 Entradas: R$ {entrada:.2f}\n"
+            texto += f"💸 Saídas: R$ {saida:.2f}\n"
+            texto += f"📊 Saldo: R$ {saldo:.2f}"
+
+            salvar_aprendizado(pergunta_lower, texto)
+            devolver_conexao(conn)
+            return t(texto)
+
+        except:
+            devolver_conexao(conn)
+            return t("Erro ao consultar financeiro.")
+
+    # ===== SIMILARIDADE =====
+    possiveis = ["estoque", "financeiro", "produtos", "saldo"]
+    match = parecido(pergunta_lower, possiveis)
+
+    if match:
+        return t(f"🤖 Você quis dizer algo sobre {match[0]}?")
 
     devolver_conexao(conn)
 
-    resp = "Ainda estou aprendendo 😄"
+    # ===== DEFAULT =====
+    resp = "🤖 Não entendi totalmente, mas posso te ajudar com estoque, financeiro ou produtos."
     salvar_aprendizado(pergunta_lower, resp)
+
     return t(resp)
-
-
-# ================= IA PREMIUM =================
-def ia_premium(pergunta):
-    if not openai:
-        return ia_free(pergunta)
-
-    try:
-        resposta = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "Você é um assistente de sistema ERP."},
-                {"role": "user", "content": pergunta}
-            ]
-        )
-        return resposta.choices[0].message.content
-    except:
-        return ia_free(pergunta)
 
 
 # ================= IA PRINCIPAL =================
 def resposta_inteligente(pergunta):
-    plano = session.get("plano", "free")
-
-    if plano == "premium":
-        return ia_premium(pergunta)
-
     return ia_free(pergunta)
 
 
@@ -162,7 +184,7 @@ def ia():
         session["chat"].append({"role": "user", "content": pergunta})
         session["chat"].append({"role": "assistant", "content": resposta})
 
-    # 🔥 HISTÓRICO
+    # HISTÓRICO
     historico = ""
     for msg in session["chat"]:
         if msg["role"] == "user":
@@ -200,7 +222,7 @@ def ia():
             border-radius:12px;
             margin:6px 0;
             max-width:70%;
-            word-wrap:break-word;
+            white-space:pre-line;
         }}
 
         .user {{
