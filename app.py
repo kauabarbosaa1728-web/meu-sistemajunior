@@ -48,6 +48,7 @@ try:
 except Exception as e:
     print("Erro ao iniciar banco:", e)
 
+
 # ================= PING =================
 @app.route("/ping")
 def ping():
@@ -99,6 +100,63 @@ def configuracoes():
         </form>
 
         <p>{msg}</p>
+    </div>
+    """)
+
+
+# ================= NOVAS ROTAS =================
+@app.route("/idioma", methods=["GET", "POST"])
+def idioma():
+    if "user" not in session:
+        return redirect("/")
+
+    if request.method == "POST":
+        session["idioma"] = request.form.get("idioma")
+        return redirect("/configuracoes")
+
+    idioma_atual = session.get("idioma", "pt")
+
+    return container(f"""
+    <div class="card">
+        <h2>🌍 Idioma</h2>
+
+        <form method="POST">
+            <select name="idioma">
+                <option value="pt" {"selected" if idioma_atual == "pt" else ""}>Português</option>
+                <option value="en" {"selected" if idioma_atual == "en" else ""}>English</option>
+                <option value="es" {"selected" if idioma_atual == "es" else ""}>Español</option>
+            </select>
+
+            <button>Salvar</button>
+        </form>
+    </div>
+    """)
+
+
+@app.route("/datahora", methods=["GET", "POST"])
+def datahora():
+    if "user" not in session:
+        return redirect("/")
+
+    if request.method == "POST":
+        session["fuso"] = request.form.get("fuso")
+        return redirect("/configuracoes")
+
+    fuso = session.get("fuso", "America/Sao_Paulo")
+
+    return container(f"""
+    <div class="card">
+        <h2>🕒 Data / Hora</h2>
+
+        <form method="POST">
+            <select name="fuso">
+                <option value="America/Sao_Paulo" {"selected" if fuso == "America/Sao_Paulo" else ""}>Brasil</option>
+                <option value="America/New_York" {"selected" if fuso == "America/New_York" else ""}>EUA</option>
+                <option value="Europe/Madrid" {"selected" if fuso == "Europe/Madrid" else ""}>Espanha</option>
+            </select>
+
+            <button>Salvar</button>
+        </form>
     </div>
     """)
 
