@@ -6,3 +6,4 @@ gunicorn
 reportlab
 openpyxl
 openai
+pytz
