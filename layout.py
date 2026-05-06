@@ -1,5 +1,6 @@
 from tradutor import t
 
+
 def acesso_negado():
     return container(f"""
     <div class="card">
@@ -11,7 +12,7 @@ def acesso_negado():
 
 
 def topo():
-    return """
+    return f"""
     <div class="navbar">
 
         <div class="logo-area">
@@ -21,86 +22,85 @@ def topo():
 
         <ul class="menu">
 
-            <li><a href="/painel">📊 Painel</a></li>
+            <li><a href="/painel">📊 {t("Painel")}</a></li>
 
             <!-- 🔥 ESTOQUE COMPLETO -->
             <li class="has-submenu">
-                <span class="menu-toggle">📦 Estoque</span>
+                <span class="menu-toggle">📦 {t("Estoque")}</span>
                 <ul class="submenu">
 
-                    <li><a href="/estoque">📋 Ver Estoque</a></li>
-                    <li><a href="/transferencia">🔄 Transferência</a></li>
-                    <li><a href="/entrada">➕ Entrada</a></li>
-                    <li><a href="/historico">📜 Histórico</a></li>
+                    <li><a href="/estoque">📋 {t("Ver Estoque")}</a></li>
+                    <li><a href="/transferencia">🔄 {t("Transferência")}</a></li>
+                    <li><a href="/entrada">➕ {t("Entrada")}</a></li>
+                    <li><a href="/historico">📜 {t("Histórico")}</a></li>
 
                     <li style="margin:6px 0;opacity:0.4;">────────</li>
 
-                    <li><a href="/categorias">🏷️ Categorias</a></li>
-                    <li><a href="/fornecedores">🚚 Fornecedores</a></li>
+                    <li><a href="/categorias">🏷️ {t("Categorias")}</a></li>
+                    <li><a href="/fornecedores">🚚 {t("Fornecedores")}</a></li>
                     <li><a href="/ncm">🔢 NCM</a></li>
 
                     <li style="margin:6px 0;opacity:0.4;">────────</li>
 
-                    <li><a href="/exportar_estoque">📥 Exportar Excel</a></li>
-                    <li><a href="/exportar_pdf">📄 Exportar PDF</a></li>
+                    <li><a href="/exportar_estoque">📥 {t("Exportar Excel")}</a></li>
+                    <li><a href="/exportar_pdf">📄 {t("Exportar PDF")}</a></li>
 
                 </ul>
             </li>
 
             <!-- FINANCEIRO -->
             <li class="has-submenu">
-                <span class="menu-toggle">💰 Financeiro</span>
+                <span class="menu-toggle">💰 {t("Financeiro")}</span>
                 <ul class="submenu">
-                    <li><a href="/financeiro">💰 Ver Financeiro</a></li>
-                    <li><a href="/relatorio-financeiro">📊 Relatório</a></li>
-                    <li><a href="/entrada-financeiro">➕ Entradas</a></li>
-                    <li><a href="/saida-financeiro">➖ Saídas</a></li>
-                    <li><a href="/resumo-financeiro">📈 Resumo Geral</a></li>
+                    <li><a href="/financeiro">💰 {t("Ver Financeiro")}</a></li>
+                    <li><a href="/relatorio-financeiro">📊 {t("Relatório")}</a></li>
+                    <li><a href="/entrada-financeiro">➕ {t("Entradas")}</a></li>
+                    <li><a href="/saida-financeiro">➖ {t("Saídas")}</a></li>
+                    <li><a href="/resumo-financeiro">📈 {t("Resumo Geral")}</a></li>
                 </ul>
             </li>
 
             <!-- RELATÓRIOS -->
             <li class="has-submenu">
-                <span class="menu-toggle">📄 Relatórios</span>
+                <span class="menu-toggle">📄 {t("Relatórios")}</span>
                 <ul class="submenu">
-                    <li><a href="/historico">📜 Histórico</a></li>
-                    <li><a href="/relatorio-geral">📊 Geral</a></li>
-                    <li><a href="/historico_estoque">📦 Estoque</a></li>
-                    <li><a href="/relatorio-veiculos">🚗 Veículos</a></li>
-                    <li><a href="/relatorio-financeiro">💸 Financeiro</a></li>
-                    <li><a href="/relatorio-problemas">🚨 Problemas</a></li>
+                    <li><a href="/historico">📜 {t("Histórico")}</a></li>
+                    <li><a href="/relatorio-geral">📊 {t("Geral")}</a></li>
+                    <li><a href="/historico_estoque">📦 {t("Estoque")}</a></li>
+                    <li><a href="/relatorio-veiculos">🚗 {t("Veículos")}</a></li>
+                    <li><a href="/relatorio-financeiro">💸 {t("Financeiro")}</a></li>
+                    <li><a href="/relatorio-problemas">🚨 {t("Problemas")}</a></li>
                 </ul>
             </li>
 
             <!-- VEÍCULOS -->
             <li class="has-submenu">
-                <span class="menu-toggle">🚗 Veículos</span>
+                <span class="menu-toggle">🚗 {t("Veículos")}</span>
                 <ul class="submenu">
-                    <li><a href="/veiculos">📋 Ver Veículos</a></li>
-                    <li><a href="/manutencoes">🔧 Manutenções</a></li>
-                    <li><a href="/dashboard-veiculos">📊 Dashboard</a></li>
-                    <li><a href="/rotas">🗺️ Rotas (GPS)</a></li>
+                    <li><a href="/veiculos">📋 {t("Ver Veículos")}</a></li>
+                    <li><a href="/manutencoes">🔧 {t("Manutenções")}</a></li>
+                    <li><a href="/dashboard-veiculos">📊 {t("Dashboard")}</a></li>
+                    <li><a href="/rotas">🗺️ {t("Rotas (GPS)")}</a></li>
                 </ul>
             </li>
 
             <!-- SISTEMA -->
             <li class="has-submenu">
-                <span class="menu-toggle">⚙️ Sistema</span>
+                <span class="menu-toggle">⚙️ {t("Sistema")}</span>
                 <ul class="submenu">
-                    <li><a href="/usuarios">Usuários</a></li>
-                    <li><a href="/logs">Logs</a></li>
+                    <li><a href="/usuarios">{t("Usuários")}</a></li>
+                    <li><a href="/logs">{t("Logs")}</a></li>
                     <li><a href="/ia">IA</a></li>
 
                     <li style="margin:6px 0;opacity:0.4;">────────</li>
 
-                    <!-- NOVAS OPÇÕES -->
-                    <li><a href="/configuracoes">⚙️ Configurações</a></li>
-                    <li><a href="/idioma">🌍 Idioma</a></li>
-                    <li><a href="/datahora">🕒 Data / Hora</a></li>
+                    <li><a href="/configuracoes">⚙️ {t("Configurações")}</a></li>
+                    <li><a href="/idioma">🌍 {t("Idioma")}</a></li>
+                    <li><a href="/datahora">🕒 {t("Data / Hora")}</a></li>
                 </ul>
             </li>
 
-            <li><a href="/logout" class="logout">🚪 Sair</a></li>
+            <li><a href="/logout" class="logout">🚪 {t("Sair")}</a></li>
 
         </ul>
     </div>
