@@ -1,17 +1,28 @@
-from flask import Blueprint, request, session, redirect, render_template_string
+from flask import Blueprint, request, session, redirect
 from banco import conectar, devolver_conexao
 from tradutor import t
 import difflib
+import os
+
+# (opcional premium)
+try:
+    import openai
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+except:
+    openai = None
 
 ia_bp = Blueprint("ia_bp", __name__)
+
 
 # ================= NORMALIZAR =================
 def normalizar(txt):
     return txt.lower().strip()
 
+
 # ================= SIMILARIDADE =================
 def parecido(pergunta, lista):
-    return difflib.get_close_matches(pergunta, lista, n=1, cutoff=0.5)
+    return difflib.get_close_matches(pergunta, lista, n=1, cutoff=0.6)
+
 
 # ================= APRENDIZADO =================
 def buscar_aprendizado(pergunta):
@@ -28,7 +39,7 @@ def buscar_aprendizado(pergunta):
     devolver_conexao(conn)
 
     perguntas = [p[0] for p in dados]
-    match = difflib.get_close_matches(pergunta, perguntas, n=1, cutoff=0.6)
+    match = difflib.get_close_matches(pergunta, perguntas, n=1, cutoff=0.7)
 
     if match:
         for p, r in dados:
@@ -51,11 +62,10 @@ def salvar_aprendizado(pergunta, resposta):
         )
         """)
 
-        if len(pergunta) > 5:
-            cursor.execute(
-                "INSERT INTO ia_aprendizado (pergunta, resposta) VALUES (%s, %s)",
-                (pergunta, resposta)
-            )
+        cursor.execute(
+            "INSERT INTO ia_aprendizado (pergunta, resposta) VALUES (%s, %s)",
+            (pergunta, resposta)
+        )
 
         conn.commit()
     except:
@@ -63,7 +73,8 @@ def salvar_aprendizado(pergunta, resposta):
 
     devolver_conexao(conn)
 
-# ================= IA =================
+
+# ================= IA FREE =================
 def ia_free(pergunta):
     pergunta_lower = normalizar(pergunta)
 
@@ -74,29 +85,52 @@ def ia_free(pergunta):
     conn = conectar()
     cursor = conn.cursor()
 
+    saudacao_kw = ["oi", "ola", "hello", "hola", "eai", "fala"]
+    ajuda_kw = ["ajuda", "menu", "opções", "opcoes"]
     estoque_kw = ["estoque", "produto", "produtos", "itens", "quantidade"]
     financeiro_kw = ["financeiro", "saldo", "dinheiro", "lucro", "entrada", "saida"]
-    saudacao_kw = ["oi", "ola", "hello", "eai", "fala"]
-    ajuda_kw = ["ajuda", "menu", "opções", "opcoes"]
 
+    # ================= SAUDAÇÃO =================
     if any(p in pergunta_lower for p in saudacao_kw):
         devolver_conexao(conn)
-        return t("👋 Olá! Posso te ajudar com o sistema.")
+        return t("👋 Olá! Sistema ativo. Posso ajudar você.")
 
+    # ================= AJUDA =================
     if any(p in pergunta_lower for p in ajuda_kw):
         devolver_conexao(conn)
-        return t("📊 Pergunte sobre estoque ou financeiro.")
+        return t("📡 Comandos: estoque, financeiro, produtos")
 
+    # ================= ESTOQUE =================
     if any(p in pergunta_lower for p in estoque_kw):
         try:
             cursor.execute("SELECT COUNT(*), COALESCE(SUM(quantidade),0) FROM estoque")
             total, qtd = cursor.fetchone()
+
+            cursor.execute("""
+                SELECT produto, quantidade 
+                FROM estoque 
+                ORDER BY quantidade DESC 
+                LIMIT 3
+            """)
+            top = cursor.fetchall()
+
+            texto = f"📦 SISTEMA ESTOQUE ONLINE\n"
+            texto += f"TOTAL PRODUTOS: {total}\nITENS: {qtd}\n\n"
+
+            if top:
+                texto += "TOP PRODUTOS:\n"
+                for p, q in top:
+                    texto += f"> {p} => {q}\n"
+
+            salvar_aprendizado(pergunta_lower, texto)
             devolver_conexao(conn)
-            return t(f"📦 Estoque: {total} produtos | {qtd} itens")
+            return t(texto)
+
         except:
             devolver_conexao(conn)
-            return t("Erro estoque.")
+            return t("ERRO NO SISTEMA DE ESTOQUE")
 
+    # ================= FINANCEIRO =================
     if any(p in pergunta_lower for p in financeiro_kw):
         try:
             cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='entrada'")
@@ -106,137 +140,171 @@ def ia_free(pergunta):
             saida = cursor.fetchone()[0]
 
             saldo = entrada - saida
-            devolver_conexao(conn)
 
-            return t(f"💰 Entrada: {entrada} | Saída: {saida} | Saldo: {saldo}")
+            texto = "💰 SISTEMA FINANCEIRO\n"
+            texto += f"ENTRADA: R$ {entrada:.2f}\n"
+            texto += f"SAÍDA: R$ {saida:.2f}\n"
+            texto += f"SALDO: R$ {saldo:.2f}"
+
+            salvar_aprendizado(pergunta_lower, texto)
+            devolver_conexao(conn)
+            return t(texto)
+
         except:
             devolver_conexao(conn)
-            return t("Erro financeiro.")
+            return t("ERRO NO FINANCEIRO")
 
     devolver_conexao(conn)
 
-    resp = "🤖 Não entendi."
+    resp = "🤖 SISTEMA EM APRENDIZADO..."
     salvar_aprendizado(pergunta_lower, resp)
     return t(resp)
 
-# ================= DASHBOARD NOVO =================
-@ia_bp.route("/dashboard")
-def dashboard():
 
-    conn = conectar()
-    cursor = conn.cursor()
+# ================= IA PREMIUM =================
+def ia_premium(pergunta):
+    if not openai:
+        return ia_free(pergunta)
 
     try:
-        cursor.execute("SELECT COUNT(*) FROM estoque")
-        total_estoque = cursor.fetchone()[0]
-
-        cursor.execute("SELECT COALESCE(SUM(quantidade),0) FROM estoque")
-        itens_estoque = cursor.fetchone()[0]
-
-        cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='entrada'")
-        entrada = cursor.fetchone()[0]
-
-        cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='saida'")
-        saida = cursor.fetchone()[0]
-
-        saldo = entrada - saida
-
+        resposta = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Você é um assistente de sistema ERP hacker style."},
+                {"role": "user", "content": pergunta}
+            ]
+        )
+        return resposta.choices[0].message.content
     except:
-        total_estoque = 0
-        itens_estoque = 0
-        entrada = 0
-        saida = 0
-        saldo = 0
+        return ia_free(pergunta)
 
-    devolver_conexao(conn)
 
-    html = f"""
+# ================= IA PRINCIPAL =================
+def resposta_inteligente(pergunta):
+    if session.get("plano") == "premium":
+        return ia_premium(pergunta)
+
+    return ia_free(pergunta)
+
+
+# ================= ROTA =================
+@ia_bp.route("/ia", methods=["GET", "POST"])
+def ia():
+    if "user" not in session:
+        return redirect("/")
+
+    if "chat" not in session:
+        session["chat"] = []
+
+    if request.method == "POST":
+        pergunta = request.form.get("pergunta")
+        resposta = resposta_inteligente(pergunta)
+
+        session["chat"].append({"role": "user", "content": pergunta})
+        session["chat"].append({"role": "assistant", "content": resposta})
+
+    historico = ""
+    for msg in session["chat"]:
+        if msg["role"] == "user":
+            historico += f"<div class='msg user'>{msg['content']}</div>"
+        else:
+            historico += f"<div class='msg bot'>{msg['content']}</div>"
+
+    return f"""
     <style>
-    body {{
-        margin:0;
-        font-family:Arial;
-        background:#0a0f1c;
-        color:white;
-    }}
+        body {{
+            background: radial-gradient(circle at top, #001a0f, #000000);
+            color:#00ff88;
+            font-family: 'Courier New', monospace;
+        }}
 
-    .container {{
-        padding:20px;
-    }}
+        .container {{
+            max-width:800px;
+            margin:auto;
+            margin-top:20px;
+            display:flex;
+            flex-direction:column;
+            height:90vh;
+            border:1px solid #00ff88;
+            box-shadow: 0 0 20px #00ff88;
+            border-radius:12px;
+        }}
 
-    .title {{
-        font-size:28px;
-        margin-bottom:20px;
-        color:#38bdf8;
-    }}
+        .chat-box {{
+            flex:1;
+            overflow-y:auto;
+            padding:15px;
+            display:flex;
+            flex-direction:column;
+        }}
 
-    .grid {{
-        display:grid;
-        grid-template-columns:repeat(4,1fr);
-        gap:15px;
-    }}
+        .msg {{
+            padding:10px;
+            border-radius:8px;
+            margin:6px 0;
+            max-width:75%;
+            white-space:pre-line;
+            border:1px solid #00ff88;
+        }}
 
-    .card {{
-        background:#111827;
-        padding:20px;
-        border-radius:12px;
-        border:1px solid #1f2937;
-        box-shadow:0 0 15px #0ea5e9;
-    }}
+        .user {{
+            background:#003322;
+            align-self:flex-end;
+            box-shadow:0 0 10px #00ff88;
+        }}
 
-    .card h2 {{
-        font-size:18px;
-        color:#94a3b8;
-    }}
+        .bot {{
+            background:#001a10;
+            align-self:flex-start;
+        }}
 
-    .card p {{
-        font-size:22px;
-        margin-top:10px;
-        color:#38bdf8;
-    }}
+        .input-box {{
+            display:flex;
+            padding:10px;
+            border-top:1px solid #00ff88;
+        }}
 
-    a {{
-        color:white;
-        text-decoration:none;
-    }}
+        input {{
+            flex:1;
+            padding:15px;
+            border:none;
+            border-radius:10px;
+            background:#001a10;
+            color:#00ff88;
+            outline:none;
+            border:1px solid #00ff88;
+        }}
+
+        button {{
+            padding:15px;
+            margin-left:10px;
+            border:none;
+            border-radius:10px;
+            background:#00ff88;
+            color:black;
+            font-weight:bold;
+            cursor:pointer;
+            box-shadow:0 0 10px #00ff88;
+        }}
+
+        button:hover {{
+            background:#00cc66;
+        }}
     </style>
 
     <div class="container">
-
-        <div class="title">📊 DASHBOARD SISTEMA</div>
-
-        <div class="grid">
-
-            <div class="card">
-                <h2>📦 Produtos</h2>
-                <p>{total_estoque}</p>
-            </div>
-
-            <div class="card">
-                <h2>📊 Itens Estoque</h2>
-                <p>{itens_estoque}</p>
-            </div>
-
-            <div class="card">
-                <h2>💰 Entradas</h2>
-                <p>R$ {entrada}</p>
-            </div>
-
-            <div class="card">
-                <h2>💸 Saídas</h2>
-                <p>R$ {saida}</p>
-            </div>
-
-            <div class="card">
-                <h2>📈 Saldo</h2>
-                <p>R$ {saldo}</p>
-            </div>
-
+        <div class="chat-box" id="chat">
+            {historico}
         </div>
 
-        <br><br>
-        <a href="/ia">🤖 Ir para IA</a>
-
+        <form method="post" class="input-box">
+            <input name="pergunta" placeholder="{t("Digite comando...")}">
+            <button>{t("EXECUTAR")}</button>
+        </form>
     </div>
-    """
 
-    return render_template_string(html)
+    <script>
+        var chat = document.getElementById("chat");
+        chat.scrollTop = chat.scrollHeight;
+    </script>
+    """
