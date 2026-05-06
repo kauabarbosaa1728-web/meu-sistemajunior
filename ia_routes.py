@@ -114,8 +114,8 @@ def ia_free(pergunta):
             """)
             top = cursor.fetchall()
 
-            texto = f"📦 SISTEMA ESTOQUE ONLINE\n"
-            texto += f"TOTAL PRODUTOS: {total}\nITENS: {qtd}\n\n"
+            texto = "📦 SISTEMA ESTOQUE ONLINE\n"
+            texto += f"TOTAL: {total}\nITENS: {qtd}\n\n"
 
             if top:
                 texto += "TOP PRODUTOS:\n"
@@ -128,7 +128,7 @@ def ia_free(pergunta):
 
         except:
             devolver_conexao(conn)
-            return t("ERRO NO SISTEMA DE ESTOQUE")
+            return t("ERRO NO ESTOQUE")
 
     # ================= FINANCEIRO =================
     if any(p in pergunta_lower for p in financeiro_kw):
@@ -152,7 +152,7 @@ def ia_free(pergunta):
 
         except:
             devolver_conexao(conn)
-            return t("ERRO NO FINANCEIRO")
+            return t("ERRO FINANCEIRO")
 
     devolver_conexao(conn)
 
@@ -170,7 +170,7 @@ def ia_premium(pergunta):
         resposta = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "Você é um assistente de sistema ERP hacker style."},
+                {"role": "system", "content": "Você é um assistente de sistema ERP cyber azul."},
                 {"role": "user", "content": pergunta}
             ]
         )
@@ -183,7 +183,6 @@ def ia_premium(pergunta):
 def resposta_inteligente(pergunta):
     if session.get("plano") == "premium":
         return ia_premium(pergunta)
-
     return ia_free(pergunta)
 
 
@@ -213,8 +212,8 @@ def ia():
     return f"""
     <style>
         body {{
-            background: radial-gradient(circle at top, #001a0f, #000000);
-            color:#00ff88;
+            background: radial-gradient(circle at top, #001a33, #000000);
+            color:#00c8ff;
             font-family: 'Courier New', monospace;
         }}
 
@@ -225,8 +224,8 @@ def ia():
             display:flex;
             flex-direction:column;
             height:90vh;
-            border:1px solid #00ff88;
-            box-shadow: 0 0 20px #00ff88;
+            border:1px solid #00c8ff;
+            box-shadow: 0 0 20px #00c8ff;
             border-radius:12px;
         }}
 
@@ -244,24 +243,24 @@ def ia():
             margin:6px 0;
             max-width:75%;
             white-space:pre-line;
-            border:1px solid #00ff88;
+            border:1px solid #00c8ff;
         }}
 
         .user {{
-            background:#003322;
+            background:#003355;
             align-self:flex-end;
-            box-shadow:0 0 10px #00ff88;
+            box-shadow:0 0 10px #00c8ff;
         }}
 
         .bot {{
-            background:#001a10;
+            background:#00111f;
             align-self:flex-start;
         }}
 
         .input-box {{
             display:flex;
             padding:10px;
-            border-top:1px solid #00ff88;
+            border-top:1px solid #00c8ff;
         }}
 
         input {{
@@ -269,10 +268,10 @@ def ia():
             padding:15px;
             border:none;
             border-radius:10px;
-            background:#001a10;
-            color:#00ff88;
+            background:#00111f;
+            color:#00c8ff;
             outline:none;
-            border:1px solid #00ff88;
+            border:1px solid #00c8ff;
         }}
 
         button {{
@@ -280,15 +279,15 @@ def ia():
             margin-left:10px;
             border:none;
             border-radius:10px;
-            background:#00ff88;
+            background:#00c8ff;
             color:black;
             font-weight:bold;
             cursor:pointer;
-            box-shadow:0 0 10px #00ff88;
+            box-shadow:0 0 10px #00c8ff;
         }}
 
         button:hover {{
-            background:#00cc66;
+            background:#0099cc;
         }}
     </style>
 
