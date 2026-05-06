@@ -2,149 +2,148 @@ from flask import Blueprint, request, session, redirect
 from banco import conectar, devolver_conexao
 from tradutor import t
 import difflib
+import os
+
+# (opcional premium)
+try:
+    import openai
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+except:
+    openai = None
 
 ia_bp = Blueprint("ia_bp", __name__)
 
-# ================= NORMALIZAR TEXTO =================
+
+# ================= NORMALIZAR =================
 def normalizar(txt):
     return txt.lower().strip()
 
-# ================= BUSCAR PRODUTO =================
-def encontrar_produto(pergunta):
+
+# ================= APRENDIZADO =================
+def buscar_aprendizado(pergunta):
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT produto FROM estoque")
-    produtos = [p[0].lower() for p in cursor.fetchall()]
+    try:
+        cursor.execute("SELECT pergunta, resposta FROM ia_aprendizado")
+        dados = cursor.fetchall()
+    except:
+        devolver_conexao(conn)
+        return None
 
     devolver_conexao(conn)
 
-    palavras = pergunta.lower().split()
+    perguntas = [p[0] for p in dados]
+    match = difflib.get_close_matches(pergunta, perguntas, n=1, cutoff=0.7)
 
-    for palavra in palavras:
-        resultado = difflib.get_close_matches(palavra, produtos, n=1, cutoff=0.6)
-        if resultado:
-            return resultado[0]
+    if match:
+        for p, r in dados:
+            if p == match[0]:
+                return r
 
     return None
 
-# ================= IA PRINCIPAL =================
-def resposta_inteligente(pergunta):
+
+def salvar_aprendizado(pergunta, resposta):
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ia_aprendizado (
+            id SERIAL PRIMARY KEY,
+            pergunta TEXT,
+            resposta TEXT
+        )
+        """)
+
+        cursor.execute(
+            "INSERT INTO ia_aprendizado (pergunta, resposta) VALUES (%s, %s)",
+            (pergunta, resposta)
+        )
+
+        conn.commit()
+    except:
+        pass
+
+    devolver_conexao(conn)
+
+
+# ================= IA FREE =================
+def ia_free(pergunta):
     pergunta_lower = normalizar(pergunta)
+
+    # 🔥 aprendizado
+    aprendido = buscar_aprendizado(pergunta_lower)
+    if aprendido:
+        return t(aprendido)
 
     conn = conectar()
     cursor = conn.cursor()
 
-    # ===== SAUDAÇÃO =====
-    if any(p in pergunta_lower for p in ["oi", "ola", "hello", "hi", "hola", "eai", "fala"]):
+    # SAUDAÇÃO
+    if any(p in pergunta_lower for p in ["oi", "ola", "hello", "hola"]):
         devolver_conexao(conn)
-        return t("👋 Olá! Sou a IA do sistema. Posso te ajudar com estoque, financeiro, veículos e relatórios.")
+        return t("Olá! Posso te ajudar com estoque, financeiro e veículos.")
 
-    # ===== AJUDA =====
-    if any(p in pergunta_lower for p in ["ajuda", "help", "socorro"]):
-        devolver_conexao(conn)
-        return t("Você pode perguntar sobre produtos, estoque, financeiro, veículos ou relatórios.")
-
-    # ===== SISTEMA =====
-    if "sistema" in pergunta_lower:
-        devolver_conexao(conn)
-        return t("O sistema possui módulos de estoque, financeiro, veículos e relatórios. Tudo integrado.")
-
-    # ===== ESTOQUE TOTAL =====
-    if any(p in pergunta_lower for p in ["quantos", "total", "produtos", "estoque"]):
-        cursor.execute("SELECT COUNT(*) FROM estoque")
-        total = cursor.fetchone()[0]
-
-        cursor.execute("SELECT COALESCE(SUM(quantidade),0) FROM estoque")
-        qtd = cursor.fetchone()[0]
-
-        devolver_conexao(conn)
-        return t(f"📦 Você tem {total} produtos cadastrados e {qtd} itens no estoque.")
-
-    # ===== PRODUTO ESPECÍFICO =====
-    produto = encontrar_produto(pergunta)
-
-    if produto:
-        cursor.execute(
-            "SELECT produto, quantidade FROM estoque WHERE LOWER(produto)=%s",
-            (produto,)
-        )
-        resultado = cursor.fetchone()
-
+    # ESTOQUE
+    if "estoque" in pergunta_lower:
+        cursor.execute("SELECT COUNT(*), COALESCE(SUM(quantidade),0) FROM estoque")
+        total, qtd = cursor.fetchone()
         devolver_conexao(conn)
 
-        if resultado:
-            return t(f"📦 O produto '{resultado[0]}' possui {resultado[1]} unidades.")
+        resp = f"Você tem {total} produtos e {qtd} itens no estoque."
+        salvar_aprendizado(pergunta_lower, resp)
+        return t(resp)
 
-    # ===== LISTAR PRODUTOS =====
-    if any(p in pergunta_lower for p in ["listar", "mostrar", "ver"]):
-        cursor.execute("SELECT produto, quantidade FROM estoque LIMIT 10")
-        dados = cursor.fetchall()
-
-        devolver_conexao(conn)
-
-        if not dados:
-            return t("📭 Estoque vazio.")
-
-        texto = t("📋 Produtos:") + "\n"
-        for p, q in dados:
-            texto += t(f"- {p}: {q}") + "\n"
-
-        return texto
-
-    # ===== PRODUTO COM MAIS ESTOQUE =====
-    if any(p in pergunta_lower for p in ["mais", "top", "maior"]):
-        cursor.execute("SELECT produto, quantidade FROM estoque ORDER BY quantidade DESC LIMIT 1")
-        p = cursor.fetchone()
-
-        devolver_conexao(conn)
-
-        if p:
-            return t(f"🏆 Produto com maior estoque: {p[0]} ({p[1]} unidades).")
-
-    # ===== FINANCEIRO =====
+    # FINANCEIRO
     if "financeiro" in pergunta_lower:
-        try:
-            cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='entrada'")
-            entrada = cursor.fetchone()[0]
+        cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='entrada'")
+        entrada = cursor.fetchone()[0]
 
-            cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='saida'")
-            saida = cursor.fetchone()[0]
+        cursor.execute("SELECT COALESCE(SUM(valor),0) FROM financeiro WHERE tipo='saida'")
+        saida = cursor.fetchone()[0]
 
-            saldo = entrada - saida
-
-            devolver_conexao(conn)
-            return t(f"💰 Entradas: R$ {entrada:.2f} | Saídas: R$ {saida:.2f} | Saldo: R$ {saldo:.2f}")
-        except:
-            devolver_conexao(conn)
-            return t("Erro ao acessar financeiro.")
-
-    # ===== VEÍCULOS =====
-    if "veiculo" in pergunta_lower or "veículos" in pergunta_lower:
-        try:
-            cursor.execute("SELECT COUNT(*) FROM veiculos")
-            total = cursor.fetchone()[0]
-
-            devolver_conexao(conn)
-            return t(f"🚗 Você tem {total} veículos cadastrados.")
-        except:
-            devolver_conexao(conn)
-            return t("Erro ao acessar veículos.")
-
-    # ===== RELATÓRIOS =====
-    if "relatorio" in pergunta_lower:
+        saldo = entrada - saida
         devolver_conexao(conn)
-        return t("📊 Vá até a aba de relatórios para gerar dados completos.")
 
-    # ===== SUGESTÕES INTELIGENTES =====
-    if "o que posso fazer" in pergunta_lower:
-        devolver_conexao(conn)
-        return t("Você pode consultar estoque, ver financeiro, analisar veículos ou gerar relatórios.")
+        resp = f"Seu saldo atual é R$ {saldo:.2f}"
+        salvar_aprendizado(pergunta_lower, resp)
+        return t(resp)
 
-    # ===== FALLBACK =====
     devolver_conexao(conn)
 
-    return t("🤖 Não entendi bem. Tente perguntar sobre estoque, financeiro, veículos ou relatórios.")
+    resp = "Ainda estou aprendendo 😄"
+    salvar_aprendizado(pergunta_lower, resp)
+    return t(resp)
+
+
+# ================= IA PREMIUM =================
+def ia_premium(pergunta):
+    if not openai:
+        return ia_free(pergunta)
+
+    try:
+        resposta = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Você é um assistente de sistema ERP."},
+                {"role": "user", "content": pergunta}
+            ]
+        )
+        return resposta.choices[0].message.content
+    except:
+        return ia_free(pergunta)
+
+
+# ================= IA PRINCIPAL =================
+def resposta_inteligente(pergunta):
+    plano = session.get("plano", "free")
+
+    if plano == "premium":
+        return ia_premium(pergunta)
+
+    return ia_free(pergunta)
 
 
 # ================= ROTA =================
@@ -158,12 +157,12 @@ def ia():
 
     if request.method == "POST":
         pergunta = request.form.get("pergunta")
-
         resposta = resposta_inteligente(pergunta)
 
         session["chat"].append({"role": "user", "content": pergunta})
         session["chat"].append({"role": "assistant", "content": resposta})
 
+    # 🔥 HISTÓRICO
     historico = ""
     for msg in session["chat"]:
         if msg["role"] == "user":
@@ -173,22 +172,87 @@ def ia():
 
     return f"""
     <style>
-        body {{ background:#0f0f0f; font-family: Arial; color:white; }}
-        .container {{ width:90%; max-width:800px; margin:auto; margin-top:40px; }}
-        .msg {{ padding:12px; border-radius:10px; margin:10px 0; max-width:70%; }}
-        .user {{ background:#2b2b2b; margin-left:auto; }}
-        .bot {{ background:#1a1a1a; margin-right:auto; }}
-        .input-box {{ display:flex; margin-top:20px; }}
-        input {{ flex:1; padding:15px; border-radius:10px; border:none; background:#2b2b2b; color:white; }}
-        button {{ padding:15px; margin-left:10px; border:none; border-radius:10px; background:white; cursor:pointer; }}
+        body {{
+            background:#0f0f0f;
+            color:white;
+            font-family: Arial;
+        }}
+
+        .container {{
+            max-width:800px;
+            margin:auto;
+            margin-top:20px;
+            display:flex;
+            flex-direction:column;
+            height:90vh;
+        }}
+
+        .chat-box {{
+            flex:1;
+            overflow-y:auto;
+            padding:10px;
+            display:flex;
+            flex-direction:column;
+        }}
+
+        .msg {{
+            padding:12px;
+            border-radius:12px;
+            margin:6px 0;
+            max-width:70%;
+            word-wrap:break-word;
+        }}
+
+        .user {{
+            background:#2563eb;
+            align-self:flex-end;
+        }}
+
+        .bot {{
+            background:#1f2937;
+            align-self:flex-start;
+        }}
+
+        .input-box {{
+            display:flex;
+            padding:10px;
+            border-top:1px solid #333;
+        }}
+
+        input {{
+            flex:1;
+            padding:15px;
+            border:none;
+            border-radius:10px;
+            background:#2b2b2b;
+            color:white;
+        }}
+
+        button {{
+            padding:15px;
+            margin-left:10px;
+            border:none;
+            border-radius:10px;
+            background:white;
+            cursor:pointer;
+        }}
     </style>
 
     <div class="container">
-        <h2>💬 {t("IA KBSISTEMAS")}</h2>
-        {historico}
+
+        <div class="chat-box" id="chat">
+            {historico}
+        </div>
+
         <form method="post" class="input-box">
             <input name="pergunta" placeholder="{t("Pergunte qualquer coisa...")}">
             <button>{t("Enviar")}</button>
         </form>
+
     </div>
+
+    <script>
+        var chat = document.getElementById("chat");
+        chat.scrollTop = chat.scrollHeight;
+    </script>
     """
