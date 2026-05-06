@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>IA SYSTEM</title>
+
+<style>
+body {
+    margin: 0;
+    background: radial-gradient(circle at top, #0f172a, #000);
+    font-family: Arial;
+    color: white;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.header {
+    text-align: center;
+    font-size: 22px;
+    color: #38bdf8;
+    margin-bottom: 10px;
+}
+
+.chat-box {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    border-radius: 15px;
+    background: rgba(15,23,42,0.85);
+    box-shadow: 0 0 25px #0ea5e9;
+}
+
+.msg {
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 12px;
+    max-width: 75%;
+    white-space: pre-line;
+}
+
+.user {
+    background: #2563eb;
+    margin-left: auto;
+}
+
+.bot {
+    background: #111827;
+    border: 1px solid #334155;
+}
+
+.input-box {
+    display: flex;
+    margin-top: 10px;
+}
+
+input {
+    flex: 1;
+    padding: 15px;
+    border-radius: 10px;
+    border: none;
+    background: #111827;
+    color: white;
+}
+
+button {
+    margin-left: 10px;
+    padding: 15px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #38bdf8;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0ea5e9;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">🤖 IA SYSTEM</div>
+
+    <div class="chat-box" id="chat">
+        {% for msg in historico %}
+            {% if msg.role == 'user' %}
+                <div class="msg user">{{ msg.content }}</div>
+            {% else %}
+                <div class="msg bot">{{ msg.content }}</div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <form method="post" class="input-box">
+        <input name="pergunta" placeholder="{{ t('Digite sua pergunta...') }}">
+        <button>Enviar</button>
+    </form>
+
+</div>
+
+<script>
+let chat = document.getElementById("chat");
+chat.scrollTop = chat.scrollHeight;
+</script>
+
+</body>
+</html>
