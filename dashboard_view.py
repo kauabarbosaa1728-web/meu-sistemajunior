@@ -1137,7 +1137,7 @@ def render_dashboard(
 
 
             const info =
-                calendario[data] || {};
+              calendario[data] || {{}};
 
 
             const entrada =
