@@ -3,12 +3,14 @@ from banco import conectar, devolver_conexao
 from layout import container
 from dashboard_view import render_dashboard
 
+
 dashboard_bp = Blueprint("dashboard_bp", __name__)
 
 
 # ============================================================
-# FUNÇÃO QUE BUSCA OS DADOS DO DASHBOARD
+# BUSCAR DADOS DO DASHBOARD
 # ============================================================
+
 def obter_dados_dashboard(data_inicio=None, data_fim=None):
 
     conn = conectar()
@@ -20,179 +22,167 @@ def obter_dados_dashboard(data_inicio=None, data_fim=None):
 
     try:
 
+        # ====================================================
+        # FILTRO DE DATA
+        # ====================================================
+
         filtro = ""
         valores_filtro = ()
 
         if data_inicio and data_fim:
+
             filtro = "WHERE DATE(data) BETWEEN %s AND %s"
-            valores_filtro = (data_inicio, data_fim)
+            valores_filtro = (
+                data_inicio,
+                data_fim
+            )
 
         # ====================================================
-        # KPI
+        # TOTAL DE PRODUTOS
         # ====================================================
 
-        cursor.execute("SELECT COUNT(*) FROM estoque")
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM estoque
+        """)
+
         total_produtos = cursor.fetchone()[0]
+
+        # ====================================================
+        # QUANTIDADE TOTAL
+        # ====================================================
 
         cursor.execute("""
             SELECT COALESCE(SUM(quantidade), 0)
             FROM estoque
         """)
+
         total_qtd = cursor.fetchone()[0]
 
+        # ====================================================
+        # TOTAL DE TRANSFERÊNCIAS
+        # ====================================================
+
         cursor.execute(
-            f"SELECT COUNT(*) FROM transferencias {filtro}",
+            f"""
+            SELECT COUNT(*)
+            FROM transferencias
+            {filtro}
+            """,
             valores_filtro
         )
+
         total_transferencias = cursor.fetchone()[0]
+
+        # ====================================================
+        # USUÁRIOS ONLINE
+        # ====================================================
 
         cursor.execute("""
             SELECT COUNT(*)
             FROM usuarios
-            WHERE online=1
+            WHERE online = 1
         """)
+
         usuarios_online = cursor.fetchone()[0]
 
         # ====================================================
-        # CATEGORIAS
+        # PRODUTOS DO GRÁFICO INTELIGENTE
+        #
+        # Mostra os 10 produtos com maior quantidade
+        # diretamente da tabela estoque.
         # ====================================================
 
         cursor.execute("""
             SELECT
-                COALESCE(categoria, 'Sem categoria'),
-                SUM(quantidade)
-            FROM estoque
-            GROUP BY categoria
-        """)
-
-        categorias = cursor.fetchall()
-
-        nomes = [c[0] for c in categorias]
-        valores = [c[1] for c in categorias]
-
-        # ====================================================
-        # TOP PRODUTOS
-        # ====================================================
-
-        cursor.execute(
-            f"""
-            SELECT
                 COALESCE(produto, 'Sem nome'),
-                SUM(quantidade)
-            FROM transferencias
-            {filtro}
+                COALESCE(SUM(quantidade), 0)
+            FROM estoque
             GROUP BY produto
             ORDER BY SUM(quantidade) DESC
-            LIMIT 5
-            """,
-            valores_filtro
-        )
+            LIMIT 10
+        """)
 
-        top = cursor.fetchall()
+        produtos_grafico = cursor.fetchall()
 
-        top_nomes = [t[0] for t in top]
-        top_valores = [t[1] for t in top]
+        grafico_labels = [
+            str(item[0])
+            for item in produtos_grafico
+        ]
 
-        # ====================================================
-        # GRÁFICO DE DIAS
-        # ====================================================
-
-        cursor.execute(
-            f"""
-            SELECT
-                DATE(data),
-                COUNT(*)
-            FROM transferencias
-            {filtro}
-            GROUP BY DATE(data)
-            ORDER BY DATE(data)
-            """,
-            valores_filtro
-        )
-
-        dias = cursor.fetchall()
-
-        dias_labels = [str(d[0]) for d in dias]
-        dias_valores = [d[1] for d in dias]
+        grafico_valores = [
+            item[1]
+            for item in produtos_grafico
+        ]
 
         # ====================================================
         # ESTOQUE BAIXO
         # ====================================================
 
         cursor.execute("""
-            SELECT produto, quantidade
+            SELECT COUNT(*)
+            FROM estoque
+            WHERE quantidade < 10
+        """)
+
+        quantidade_baixo_estoque = cursor.fetchone()[0]
+
+        # ====================================================
+        # PRODUTOS COM ESTOQUE BAIXO
+        # ====================================================
+
+        cursor.execute("""
+            SELECT
+                COALESCE(produto, 'Sem nome'),
+                quantidade
             FROM estoque
             WHERE quantidade < 10
             ORDER BY quantidade ASC
-            LIMIT 5
+            LIMIT 10
         """)
 
         baixo = cursor.fetchall()
 
-        baixo_nomes = [b[0] for b in baixo]
-        baixo_valores = [b[1] for b in baixo]
-
-        # ====================================================
-        # CALENDÁRIO
-        # ====================================================
-
-        cursor.execute(
-            f"""
-            SELECT
-                DATE(data),
-                COUNT(*)
-            FROM transferencias
-            {filtro}
-            GROUP BY DATE(data)
-            ORDER BY DATE(data)
-            """,
-            valores_filtro
-        )
-
-        dados_cal = cursor.fetchall()
-
-        calendario = {}
-
-        for data, total in dados_cal:
-
-            calendario[str(data)] = {
-                "entrada": total,
-                "saida": 0,
-                "transf": 0,
-                "total": total
+        baixo_produtos = [
+            {
+                "produto": str(item[0]),
+                "quantidade": item[1]
             }
+            for item in baixo
+        ]
 
         # ====================================================
         # RETORNO
         # ====================================================
 
         return {
+
             "total_produtos": total_produtos,
+
             "total_qtd": total_qtd,
+
             "total_transferencias": total_transferencias,
+
             "usuarios_online": usuarios_online,
 
-            "nomes": nomes,
-            "valores": valores,
+            "grafico_labels": grafico_labels,
 
-            "top_nomes": top_nomes,
-            "top_valores": top_valores,
+            "grafico_valores": grafico_valores,
 
-            "dias_labels": dias_labels,
-            "dias_valores": dias_valores,
+            "quantidade_baixo_estoque":
+                quantidade_baixo_estoque,
 
-            "baixo_nomes": baixo_nomes,
-            "baixo_valores": baixo_valores,
-
-            "calendario": calendario
+            "baixo_produtos":
+                baixo_produtos
         }
 
     finally:
+
         devolver_conexao(conn)
 
 
 # ============================================================
-# DASHBOARD NORMAL
+# DASHBOARD
 # ============================================================
 
 @dashboard_bp.route("/painel")
@@ -217,27 +207,16 @@ def painel():
         dados["total_qtd"],
         dados["total_transferencias"],
         dados["usuarios_online"],
-
-        dados["nomes"],
-        dados["valores"],
-
-        dados["top_nomes"],
-        dados["top_valores"],
-
-        dados["dias_labels"],
-        dados["dias_valores"],
-
-        dados["baixo_nomes"],
-        dados["baixo_valores"],
-
-        dados["calendario"]
+        dados["grafico_labels"],
+        dados["grafico_valores"],
+        dados["quantidade_baixo_estoque"],
+        dados["baixo_produtos"]
     )
 
     return container(html)
 
 
 # ============================================================
-# 🔥 NOVA ROTA
 # DADOS DO DASHBOARD EM TEMPO REAL
 # ============================================================
 
@@ -245,6 +224,7 @@ def painel():
 def painel_dados():
 
     if "user" not in session:
+
         return jsonify({
             "erro": "não autenticado"
         }), 401
@@ -258,6 +238,7 @@ def painel_dados():
     )
 
     if dados is None:
+
         return jsonify({
             "erro": "erro de conexão"
         }), 500
