@@ -1,5 +1,4 @@
 import json
-import calendar
 from datetime import datetime
 
 
@@ -8,18 +7,13 @@ def render_dashboard(
     total_qtd,
     total_transferencias,
     usuarios_online,
-    nomes,
-    valores,
-    top_nomes,
-    top_valores,
-    dias_labels,
-    dias_valores,
-    baixo_nomes,
-    baixo_valores,
-    calendario
+    grafico_labels,
+    grafico_valores,
+    quantidade_baixo_estoque,
+    baixo_produtos
 ):
 
-    now = datetime.now()
+    agora = datetime.now()
 
     nome_mes = [
         "",
@@ -35,123 +29,42 @@ def render_dashboard(
         "Outubro",
         "Novembro",
         "Dezembro"
-    ][now.month]
-
-    mes = now.month
-    ano = now.year
-
-    cal = calendar.monthcalendar(ano, mes)
+    ][agora.month]
 
     # ========================================================
-    # CALENDÁRIO
+    # PREPARA DADOS
     # ========================================================
 
-    html_calendario = f"""
-    <div class="box calendario-box" id="calendarioDashboard">
+    labels_json = json.dumps(
+        grafico_labels,
+        ensure_ascii=False
+    )
 
-        <div class="topo-cal">
-            <span>
-                📅 Calendário •
-                <span id="nomeMesDashboard">{nome_mes}</span>
-                <span id="anoDashboard">{ano}</span>
-            </span>
-        </div>
+    valores_json = json.dumps(
+        grafico_valores
+    )
 
-        <div class="cal-grid" id="calGridDashboard">
-    """
+    # ========================================================
+    # ALERTA
+    # ========================================================
 
-    dias_semana = [
-        "Dom",
-        "Seg",
-        "Ter",
-        "Qua",
-        "Qui",
-        "Sex",
-        "Sab"
-    ]
+    if quantidade_baixo_estoque > 0:
 
-    for d in dias_semana:
-        html_calendario += f"""
-        <div class="dia-semana">
-            {d}
-        </div>
-        """
+        alerta_display = "flex"
 
-    for semana in cal:
+        alerta_texto = (
+            f"⚠️ Atenção: "
+            f"{quantidade_baixo_estoque} "
+            f"produto(s) com estoque abaixo de 10 unidades."
+        )
 
-        for dia in semana:
+    else:
 
-            if dia == 0:
+        alerta_display = "none"
 
-                html_calendario += """
-                <div class="dia vazio"></div>
-                """
-
-            else:
-
-                data_str = f"{ano}-{mes:02d}-{dia:02d}"
-
-                info = calendario.get(
-                    data_str,
-                    {}
-                )
-
-                entrada = info.get(
-                    "entrada",
-                    0
-                )
-
-                saida = info.get(
-                    "saida",
-                    0
-                )
-
-                transf = info.get(
-                    "transf",
-                    0
-                )
-
-                total = info.get(
-                    "total",
-                    0
-                )
-
-                hoje_classe = (
-                    "hoje"
-                    if dia == now.day
-                    else ""
-                )
-
-                html_calendario += f"""
-                <div class="dia {hoje_classe}">
-
-                    <div class="num">
-                        {dia}
-                    </div>
-
-                    <div class="linha verde">
-                        Entrada: {entrada}
-                    </div>
-
-                    <div class="linha vermelho">
-                        Saída: {saida}
-                    </div>
-
-                    <div class="linha azul">
-                        Transf: {transf}
-                    </div>
-
-                    <div class="total">
-                        Total: {total}
-                    </div>
-
-                </div>
-                """
-
-    html_calendario += """
-        </div>
-    </div>
-    """
+        alerta_texto = (
+            "✓ Estoque saudável"
+        )
 
     # ========================================================
     # HTML
@@ -159,1062 +72,1485 @@ def render_dashboard(
 
     html = f"""
 
-    <style>
+<style>
 
-    .calendario-box {{
-        margin-top:20px;
-    }}
+/* ==========================================================
+   DASHBOARD PRINCIPAL
+   ========================================================== */
 
-    .topo-cal {{
-        color:#94a3b8;
-        margin-bottom:10px;
-        font-weight:bold;
-    }}
+.dashboard-novo {{
 
-    .cal-grid {{
-        display:grid;
-        grid-template-columns:repeat(7, 1fr);
-        gap:8px;
-    }}
+    width:100%;
 
-    .dia-semana {{
-        text-align:center;
-        font-size:12px;
-        color:#64748b;
-    }}
+    padding:10px 0 30px 0;
 
-    .dia {{
-        background:linear-gradient(
+    color:#e2e8f0;
+
+    box-sizing:border-box;
+}}
+
+
+/* ==========================================================
+   CABEÇALHO
+   ========================================================== */
+
+.dashboard-cabecalho {{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:20px;
+
+    margin-bottom:22px;
+
+    flex-wrap:wrap;
+}}
+
+
+.dashboard-titulo h2 {{
+
+    margin:0;
+
+    font-size:25px;
+
+    color:#ffffff;
+
+    font-weight:700;
+}}
+
+
+.dashboard-subtitulo {{
+
+    margin-top:7px;
+
+    color:#64748b;
+
+    font-size:13px;
+}}
+
+
+.dashboard-live {{
+
+    display:inline-flex;
+
+    align-items:center;
+
+    gap:6px;
+
+    margin-left:8px;
+
+    padding:5px 10px;
+
+    border-radius:20px;
+
+    background:rgba(34,197,94,0.10);
+
+    border:1px solid rgba(34,197,94,0.25);
+
+    color:#22c55e;
+
+    font-size:11px;
+
+    font-weight:700;
+}}
+
+
+/* ==========================================================
+   FILTRO
+   ========================================================== */
+
+.dashboard-filtro {{
+
+    display:flex;
+
+    align-items:end;
+
+    gap:10px;
+
+    flex-wrap:wrap;
+}}
+
+
+.dashboard-campo {{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:5px;
+}}
+
+
+.dashboard-campo label {{
+
+    color:#64748b;
+
+    font-size:11px;
+
+    font-weight:600;
+}}
+
+
+.dashboard-campo input {{
+
+    width:130px;
+
+    padding:10px 12px;
+
+    border-radius:8px;
+
+    border:1px solid #1e293b;
+
+    background:#020617;
+
+    color:#ffffff;
+
+    outline:none;
+
+    box-sizing:border-box;
+}}
+
+
+.dashboard-campo input:focus {{
+
+    border-color:#38bdf8;
+}}
+
+
+.dashboard-filtro button {{
+
+    padding:10px 18px;
+
+    border:none;
+
+    border-radius:8px;
+
+    background:#2563eb;
+
+    color:#ffffff;
+
+    font-weight:700;
+
+    cursor:pointer;
+
+    transition:0.2s;
+}}
+
+
+.dashboard-filtro button:hover {{
+
+    transform:translateY(-1px);
+
+    background:#3b82f6;
+}}
+
+
+/* ==========================================================
+   CARDS
+   ========================================================== */
+
+.dashboard-cards {{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap:15px;
+
+    margin-bottom:18px;
+}}
+
+
+.dashboard-card {{
+
+    background:
+        linear-gradient(
             145deg,
             #020617,
             #0f172a
         );
 
-        border:1px solid #1e293b;
+    border:1px solid #1e293b;
 
-        border-radius:12px;
+    border-radius:14px;
 
-        padding:10px;
+    padding:20px;
 
-        min-height:110px;
+    box-shadow:
+        0 10px 25px
+        rgba(0,0,0,0.25);
 
-        position:relative;
+    transition:0.2s;
+}}
 
-        transition:0.2s;
-    }}
 
-    .dia:hover {{
-        transform:scale(1.05);
+.dashboard-card:hover {{
 
-        box-shadow:
-            0 0 15px
-            rgba(59,130,246,0.3);
-    }}
+    transform:translateY(-2px);
 
-    .dia.hoje {{
-        border:2px solid #3b82f6;
+    border-color:#334155;
+}}
 
-        box-shadow:
-            0 0 10px #3b82f6;
-    }}
 
-    .num {{
-        font-weight:bold;
-        color:#fff;
-        margin-bottom:5px;
-    }}
+.dashboard-card-topo {{
 
-    .linha {{
-        font-size:11px;
-        margin:2px 0;
-    }}
+    display:flex;
 
-    .verde {{
-        color:#22c55e;
-    }}
+    justify-content:space-between;
 
-    .vermelho {{
-        color:#ef4444;
-    }}
+    align-items:center;
 
-    .azul {{
-        color:#38bdf8;
-    }}
+    margin-bottom:10px;
+}}
 
-    .total {{
-        position:absolute;
-        bottom:6px;
-        right:10px;
 
-        font-size:12px;
+.dashboard-card-icone {{
 
-        color:#fff;
+    width:34px;
 
-        font-weight:bold;
-    }}
+    height:34px;
 
-    .vazio {{
-        background:transparent;
-        border:none;
-    }}
+    display:flex;
 
-    .grid {{
-        display:grid;
+    align-items:center;
+
+    justify-content:center;
+
+    border-radius:9px;
+
+    background:rgba(56,189,248,0.10);
+
+    font-size:16px;
+}}
+
+
+.dashboard-card h3 {{
+
+    margin:0;
+
+    color:#ffffff;
+
+    font-size:27px;
+
+    font-weight:700;
+}}
+
+
+.dashboard-card p {{
+
+    margin:5px 0 0 0;
+
+    color:#64748b;
+
+    font-size:12px;
+}}
+
+
+/* ==========================================================
+   ALERTA
+   ========================================================== */
+
+.dashboard-alerta {{
+
+    display:{alerta_display};
+
+    align-items:center;
+
+    gap:10px;
+
+    margin-bottom:18px;
+
+    padding:13px 16px;
+
+    border-radius:10px;
+
+    background:rgba(239,68,68,0.08);
+
+    border:1px solid rgba(239,68,68,0.25);
+
+    color:#fca5a5;
+
+    font-size:13px;
+
+    font-weight:600;
+}}
+
+
+/* ==========================================================
+   GRÁFICO INTELIGENTE
+   ========================================================== */
+
+.dashboard-grafico-box {{
+
+    background:
+        linear-gradient(
+            145deg,
+            #020617,
+            #0f172a
+        );
+
+    border:1px solid #1e293b;
+
+    border-radius:16px;
+
+    padding:20px;
+
+    box-shadow:
+        0 10px 30px
+        rgba(0,0,0,0.30);
+
+    min-height:430px;
+}}
+
+
+.dashboard-grafico-cabecalho {{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:flex-start;
+
+    gap:15px;
+
+    margin-bottom:18px;
+}}
+
+
+.dashboard-grafico-titulo h3 {{
+
+    margin:0;
+
+    color:#ffffff;
+
+    font-size:17px;
+}}
+
+
+.dashboard-grafico-titulo p {{
+
+    margin:5px 0 0 0;
+
+    color:#64748b;
+
+    font-size:12px;
+}}
+
+
+.dashboard-indicador {{
+
+    padding:7px 11px;
+
+    border-radius:8px;
+
+    background:rgba(56,189,248,0.08);
+
+    border:1px solid rgba(56,189,248,0.18);
+
+    color:#38bdf8;
+
+    font-size:11px;
+
+    white-space:nowrap;
+}}
+
+
+.dashboard-grafico-area {{
+
+    position:relative;
+
+    height:340px;
+
+    width:100%;
+}}
+
+
+.dashboard-grafico-area canvas {{
+
+    width:100% !important;
+
+    height:100% !important;
+}}
+
+
+/* ==========================================================
+   RESUMO ESTOQUE BAIXO
+   ========================================================== */
+
+.dashboard-resumo {{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap:12px;
+
+    margin-top:15px;
+}}
+
+
+.dashboard-produto-baixo {{
+
+    padding:12px;
+
+    border-radius:10px;
+
+    background:#020617;
+
+    border:1px solid #1e293b;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:10px;
+}}
+
+
+.dashboard-produto-nome {{
+
+    color:#cbd5e1;
+
+    font-size:12px;
+
+    overflow:hidden;
+
+    text-overflow:ellipsis;
+
+    white-space:nowrap;
+}}
+
+
+.dashboard-produto-qtd {{
+
+    color:#ef4444;
+
+    font-weight:700;
+
+    font-size:12px;
+}}
+
+
+/* ==========================================================
+   RESPONSIVO
+   ========================================================== */
+
+@media(max-width:900px) {{
+
+    .dashboard-cards {{
 
         grid-template-columns:
-            2fr 1fr;
+            repeat(2, 1fr);
 
-        grid-template-rows:
-            300px 300px;
-
-        gap:20px;
-
-        margin-top:25px;
     }}
 
-    .grid .box:nth-child(1) {{
-        grid-row:span 2;
+    .dashboard-resumo {{
+
+        grid-template-columns:
+            repeat(2, 1fr);
+
     }}
 
-    .box {{
-        background:
-            linear-gradient(
-                145deg,
-                #020617,
-                #0f172a
-            );
+}}
 
-        border:1px solid #1e293b;
 
-        border-radius:16px;
+@media(max-width:600px) {{
 
-        padding:15px;
+    .dashboard-cards {{
 
-        box-shadow:
-            0 0 20px
-            rgba(0,0,0,0.5);
+        grid-template-columns:
+            1fr;
+
     }}
 
-    canvas {{
-        width:100% !important;
-        height:100% !important;
+    .dashboard-resumo {{
+
+        grid-template-columns:
+            1fr;
+
     }}
 
-    </style>
+    .dashboard-cabecalho {{
+
+        align-items:stretch;
+
+    }}
+
+    .dashboard-filtro {{
+
+        width:100%;
+
+    }}
+
+    .dashboard-campo input {{
+
+        width:100%;
+
+    }}
+
+}}
 
 
-    <div class="wrap">
+</style>
 
-        <div class="topo-dashboard">
 
-            <div>
+<div class="dashboard-novo">
 
-                <h2>
-                    📊 Dashboard Executivo •
-                    {nome_mes} {now.year}
 
-                    <span
-                        class="status-live"
-                        id="statusDashboard"
-                    >
-                        ● AO VIVO
-                    </span>
+    <!-- =====================================================
+         CABEÇALHO
+         ===================================================== -->
 
-                </h2>
+    <div class="dashboard-cabecalho">
 
-                <p class="subtitulo">
-                    Dados atualizados em tempo real •
-                    Controle total do seu estoque
-                </p>
+        <div class="dashboard-titulo">
+
+            <h2>
+
+                📊 Dashboard Executivo
+
+                <span
+                    class="dashboard-live"
+                    id="statusDashboard"
+                >
+                    ● AO VIVO
+                </span>
+
+            </h2>
+
+            <div class="dashboard-subtitulo">
+
+                Visão inteligente do estoque •
+                {nome_mes} {agora.year}
 
             </div>
-
-
-            <form
-                method="get"
-                class="filtro-data"
-            >
-
-                <div class="campo">
-
-                    <label>
-                        De
-                    </label>
-
-                    <input
-                        type="text"
-                        class="calendario-input"
-                        name="inicio"
-                        placeholder="Selecionar data"
-                    >
-
-                </div>
-
-
-                <div class="campo">
-
-                    <label>
-                        Até
-                    </label>
-
-                    <input
-                        type="text"
-                        class="calendario-input"
-                        name="fim"
-                        placeholder="Selecionar data"
-                    >
-
-                </div>
-
-
-                <button>
-                    Filtrar
-                </button>
-
-            </form>
 
         </div>
 
 
-        <div
-            id="alertaDashboard"
-            class="alerta-topo"
-            style="display:{'block' if baixo_nomes else 'none'};"
+        <form
+            method="get"
+            class="dashboard-filtro"
         >
-            ⚠️ Atenção:
-            <span id="quantidadeBaixoEstoque">
-                {len(baixo_nomes)}
-            </span>
-            produto(s) com estoque baixo
-        </div>
 
+            <div class="dashboard-campo">
 
-        <!-- KPIs -->
+                <label>
+                    De
+                </label>
 
-        <div class="cards">
-
-            <div class="card">
-
-                <h1
-                    class="azul"
-                    id="kpiTotalProdutos"
+                <input
+                    type="text"
+                    class="calendario-input"
+                    name="inicio"
+                    placeholder="Selecionar"
                 >
-                    {total_produtos}
-                </h1>
-
-                <p>
-                    Total Produtos
-                </p>
 
             </div>
 
 
-            <div class="card">
+            <div class="dashboard-campo">
 
-                <h1
-                    class="azul"
-                    id="kpiTotalQtd"
+                <label>
+                    Até
+                </label>
+
+                <input
+                    type="text"
+                    class="calendario-input"
+                    name="fim"
+                    placeholder="Selecionar"
                 >
-                    {total_qtd}
-                </h1>
-
-                <p>
-                    Quantidade
-                </p>
 
             </div>
 
 
-            <div class="card">
+            <button type="submit">
+                Filtrar
+            </button>
 
-                <h1
-                    class="azul"
-                    id="kpiTotalTransferencias"
-                >
-                    {total_transferencias}
-                </h1>
-
-                <p>
-                    Movimentações
-                </p>
-
-            </div>
-
-
-            <div class="card">
-
-                <h1
-                    style="color:#fff"
-                    id="kpiUsuariosOnline"
-                >
-                    {usuarios_online}
-                </h1>
-
-                <p>
-
-                    <span
-                        class="status {'on' if usuarios_online > 0 else 'off'}"
-                        id="statusUsuarios"
-                    ></span>
-
-                    <span id="textoUsuarios">
-                        {'Online' if usuarios_online > 0 else 'Offline'}
-                    </span>
-
-                </p>
-
-            </div>
-
-        </div>
-
-
-        {html_calendario}
-
-
-        <!-- GRÁFICOS -->
-
-        <div class="grid">
-
-            <div class="box">
-                <canvas id="linha"></canvas>
-            </div>
-
-            <div class="box">
-                <canvas id="pizza"></canvas>
-            </div>
-
-            <div class="box">
-                <canvas id="top"></canvas>
-            </div>
-
-            <div class="box">
-                <canvas id="baixo"></canvas>
-            </div>
-
-        </div>
+        </form>
 
     </div>
 
 
-    <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+    <!-- =====================================================
+         CARDS
+         ===================================================== -->
+
+    <div class="dashboard-cards">
+
+
+        <!-- PRODUTOS -->
+
+        <div class="dashboard-card">
+
+            <div class="dashboard-card-topo">
+
+                <div>
+
+                    <h3 id="kpiTotalProdutos">
+                        {total_produtos}
+                    </h3>
+
+                    <p>
+                        Produtos cadastrados
+                    </p>
+
+                </div>
+
+                <div class="dashboard-card-icone">
+                    📦
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- QUANTIDADE -->
+
+        <div class="dashboard-card">
+
+            <div class="dashboard-card-topo">
+
+                <div>
+
+                    <h3 id="kpiTotalQtd">
+                        {total_qtd}
+                    </h3>
+
+                    <p>
+                        Quantidade em estoque
+                    </p>
+
+                </div>
+
+                <div class="dashboard-card-icone">
+                    📊
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- MOVIMENTAÇÕES -->
+
+        <div class="dashboard-card">
+
+            <div class="dashboard-card-topo">
+
+                <div>
+
+                    <h3 id="kpiTotalTransferencias">
+                        {total_transferencias}
+                    </h3>
+
+                    <p>
+                        Movimentações
+                    </p>
+
+                </div>
+
+                <div class="dashboard-card-icone">
+                    🔄
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- USUÁRIOS -->
+
+        <div class="dashboard-card">
+
+            <div class="dashboard-card-topo">
+
+                <div>
+
+                    <h3 id="kpiUsuariosOnline">
+                        {usuarios_online}
+                    </h3>
+
+                    <p>
+
+                        <span
+                            id="statusUsuarios"
+                        >
+                            ●
+                        </span>
+
+                        <span id="textoUsuarios">
+
+                            {'Online' if usuarios_online > 0 else 'Offline'}
+
+                        </span>
+
+                    </p>
+
+                </div>
+
+                <div class="dashboard-card-icone">
+                    👥
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         ALERTA
+         ===================================================== -->
+
+    <div
+        class="dashboard-alerta"
+        id="alertaDashboard"
     >
 
-    <script
-        src="https://cdn.jsdelivr.net/npm/flatpickr"
-    ></script>
+        <span id="textoAlertaDashboard">
+            {alerta_texto}
+        </span>
 
-    <script
-        src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"
-    ></script>
-
-    <script
-        src="https://cdn.jsdelivr.net/npm/chart.js"
-    ></script>
+    </div>
 
 
-    <script>
+    <!-- =====================================================
+         GRÁFICO INTELIGENTE
+         ===================================================== -->
 
-    // ======================================================
-    // FLATPICKR
-    // ======================================================
+    <div class="dashboard-grafico-box">
 
-    flatpickr(
-        ".calendario-input",
-        {{
-            dateFormat:"Y-m-d",
-            locale:"pt"
-        }}
+
+        <div class="dashboard-grafico-cabecalho">
+
+            <div class="dashboard-grafico-titulo">
+
+                <h3>
+                    🧠 Visão Inteligente do Estoque
+                </h3>
+
+                <p>
+                    Produtos com maior quantidade em estoque.
+                    A linha indica o limite de alerta de 10 unidades.
+                </p>
+
+            </div>
+
+
+            <div
+                class="dashboard-indicador"
+                id="indicadorEstoque"
+            >
+
+                Limite: 10 unidades
+
+            </div>
+
+        </div>
+
+
+        <div class="dashboard-grafico-area">
+
+            <canvas
+                id="graficoInteligente"
+            ></canvas>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         PRODUTOS COM ESTOQUE BAIXO
+         ===================================================== -->
+
+    <div
+        class="dashboard-resumo"
+        id="resumoEstoqueBaixo"
+    >
+
+"""
+
+    # ========================================================
+    # PRODUTOS COM ESTOQUE BAIXO
+    # ========================================================
+
+    for produto in baixo_produtos:
+
+        html += f"""
+
+        <div class="dashboard-produto-baixo">
+
+            <span class="dashboard-produto-nome">
+
+                {produto["produto"]}
+
+            </span>
+
+            <span class="dashboard-produto-qtd">
+
+                {produto["quantidade"]} un.
+
+            </span>
+
+        </div>
+
+        """
+
+    html += """
+
+    </div>
+
+
+</div>
+
+
+<!-- ==========================================================
+     FLATPICKR
+     ========================================================== -->
+
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/flatpickr"
+></script>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"
+></script>
+
+
+<!-- ==========================================================
+     CHART.JS
+     ========================================================== -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/chart.js"
+></script>
+
+
+<script>
+
+
+// ==========================================================
+// FLATPICKR
+// ==========================================================
+
+flatpickr(
+    ".calendario-input",
+    {
+
+        dateFormat: "Y-m-d",
+
+        locale: "pt"
+
+    }
+);
+
+
+// ==========================================================
+// DADOS INICIAIS DO GRÁFICO
+// ==========================================================
+
+const labelsInicial = """ + labels_json + """;
+
+const valoresIniciais = """ + valores_json + """;
+
+
+// ==========================================================
+// FUNÇÃO PARA DEFINIR CORES INTELIGENTES
+// ==========================================================
+
+function gerarCores(valores) {
+
+    return valores.map(function(valor) {
+
+        if (Number(valor) < 10) {
+
+            return "#ef4444";
+
+        }
+
+        if (Number(valor) < 20) {
+
+            return "#f59e0b";
+
+        }
+
+        return "#38bdf8";
+
+    });
+
+}
+
+
+// ==========================================================
+// GRÁFICO INTELIGENTE
+// ==========================================================
+
+const elementoGrafico =
+    document.getElementById(
+        "graficoInteligente"
     );
 
 
-    // ======================================================
-    // CONFIGURAÇÃO DOS GRÁFICOS
-    // ======================================================
-
-    const cores = [
-        "#38bdf8",
-        "#60a5fa",
-        "#818cf8",
-        "#a78bfa",
-        "#22d3ee"
-    ];
+let graficoInteligente = null;
 
 
-    const configPadrao = {{
+if (elementoGrafico) {
 
-        responsive:true,
+    graficoInteligente = new Chart(
+        elementoGrafico,
+        {
 
-        maintainAspectRatio:false,
+            data: {
 
-        plugins:{{
-            legend:{{
-                labels:{{
-                    color:"#cbd5e1"
-                }}
-            }}
-        }},
+                labels: labelsInicial,
 
-        scales:{{
+                datasets: [
 
-            x:{{
+                    {
 
-                ticks:{{
-                    color:"#94a3b8"
-                }},
+                        type: "bar",
 
-                grid:{{
-                    color:
-                        "rgba(255,255,255,0.05)"
-                }}
+                        label: "Quantidade em estoque",
 
-            }},
+                        data: valoresIniciais,
 
-            y:{{
+                        backgroundColor:
+                            gerarCores(valoresIniciais),
 
-                ticks:{{
-                    color:"#94a3b8"
-                }},
+                        borderRadius: 8,
 
-                grid:{{
-                    color:
-                        "rgba(255,255,255,0.05)"
-                }}
+                        borderSkipped: false
 
-            }}
+                    },
 
-        }}
+                    {
 
-    }};
+                        type: "line",
 
+                        label: "Limite de alerta",
 
-    // ======================================================
-    // CRIA OS GRÁFICOS
-    // ======================================================
+                        data: labelsInicial.map(
+                            function() {
+                                return 10;
+                            }
+                        ),
 
-    let graficoPizza = new Chart(
-        document.getElementById("pizza"),
-        {{
+                        borderColor: "#ef4444",
 
-            type:"doughnut",
+                        backgroundColor:
+                            "rgba(239,68,68,0.08)",
 
-            data:{{
+                        borderWidth: 2,
 
-                labels:{json.dumps(nomes)},
+                        borderDash: [6, 6],
 
-                datasets:[{{
+                        pointRadius: 0,
 
-                    data:{json.dumps(valores)},
+                        fill: false,
 
-                    backgroundColor:cores,
+                        tension: 0
 
-                    borderWidth:0
+                    }
 
-                }}]
+                ]
 
-            }},
+            },
 
-            options:{{
+            options: {
 
-                responsive:true,
+                responsive: true,
 
-                maintainAspectRatio:false,
+                maintainAspectRatio: false,
 
-                cutout:"70%",
+                interaction: {
 
-                plugins:{{
+                    mode: "index",
 
-                    legend:{{
+                    intersect: false
 
-                        position:"bottom",
+                },
 
-                        labels:{{
+                plugins: {
 
-                            color:"#cbd5e1"
+                    legend: {
 
-                        }}
+                        position: "top",
 
-                    }}
+                        labels: {
 
-                }}
+                            color: "#cbd5e1",
 
-            }}
+                            usePointStyle: true,
 
-        }}
+                            padding: 18
+
+                        }
+
+                    },
+
+                    tooltip: {
+
+                        backgroundColor: "#020617",
+
+                        borderColor: "#1e293b",
+
+                        borderWidth: 1,
+
+                        titleColor: "#ffffff",
+
+                        bodyColor: "#cbd5e1",
+
+                        padding: 12
+
+                    }
+
+                },
+
+                scales: {
+
+                    x: {
+
+                        ticks: {
+
+                            color: "#94a3b8",
+
+                            maxRotation: 35,
+
+                            minRotation: 0
+
+                        },
+
+                        grid: {
+
+                            color:
+                                "rgba(255,255,255,0.04)"
+
+                        }
+
+                    },
+
+                    y: {
+
+                        beginAtZero: true,
+
+                        ticks: {
+
+                            color: "#94a3b8"
+
+                        },
+
+                        grid: {
+
+                            color:
+                                "rgba(255,255,255,0.05)"
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
     );
 
-
-    let graficoLinha = new Chart(
-        document.getElementById("linha"),
-        {{
-
-            type:"line",
-
-            data:{{
-
-                labels:{json.dumps(dias_labels)},
-
-                datasets:[{{
-
-                    data:{json.dumps(dias_valores)},
-
-                    borderColor:"#38bdf8",
-
-                    backgroundColor:
-                        "rgba(56,189,248,0.2)",
-
-                    fill:true,
-
-                    borderWidth:3,
-
-                    tension:0.4,
-
-                    pointRadius:4
-
-                }}]
-
-            }},
-
-            options:configPadrao
-
-        }}
-    );
+}
 
 
-    let graficoTop = new Chart(
-        document.getElementById("top"),
-        {{
+// ==========================================================
+// ATUALIZAÇÃO AUTOMÁTICA
+// ==========================================================
 
-            type:"bar",
+async function atualizarDashboard() {
 
-            data:{{
+    try {
 
-                labels:{json.dumps(top_nomes)},
-
-                datasets:[{{
-
-                    data:{json.dumps(top_valores)},
-
-                    backgroundColor:"#3b82f6",
-
-                    borderRadius:8
-
-                }}]
-
-            }},
-
-            options:configPadrao
-
-        }}
-    );
+        const parametros =
+            new URLSearchParams();
 
 
-    let graficoBaixo = new Chart(
-        document.getElementById("baixo"),
-        {{
-
-            type:"bar",
-
-            data:{{
-
-                labels:{json.dumps(baixo_nomes)},
-
-                datasets:[{{
-
-                    data:{json.dumps(baixo_valores)},
-
-                    backgroundColor:"#ef4444",
-
-                    borderRadius:8
-
-                }}]
-
-            }},
-
-            options:configPadrao
-
-        }}
-    );
-
-
-    // ======================================================
-    // 🔥 ATUALIZAÇÃO AUTOMÁTICA
-    // ======================================================
-
-    async function atualizarDashboard() {{
-
-        try {{
-
-            const parametros = new URLSearchParams();
-
-
-            const campoInicio =
-                document.querySelector(
-                    'input[name="inicio"]'
-                );
-
-            const campoFim =
-                document.querySelector(
-                    'input[name="fim"]'
-                );
-
-
-            if (
-                campoInicio &&
-                campoInicio.value &&
-                campoFim &&
-                campoFim.value
-            ) {{
-
-                parametros.set(
-                    "inicio",
-                    campoInicio.value
-                );
-
-                parametros.set(
-                    "fim",
-                    campoFim.value
-                );
-
-            }}
-
-
-            const resposta = await fetch(
-                "/painel/dados?" +
-                parametros.toString(),
-                {{
-                    cache:"no-store"
-                }}
+        const campoInicio =
+            document.querySelector(
+                'input[name="inicio"]'
             );
 
 
-            if (!resposta.ok) {{
-                return;
-            }}
+        const campoFim =
+            document.querySelector(
+                'input[name="fim"]'
+            );
 
 
-            const dados =
-                await resposta.json();
+        if (
+            campoInicio &&
+            campoInicio.value &&
+            campoFim &&
+            campoFim.value
+        ) {
+
+            parametros.set(
+                "inicio",
+                campoInicio.value
+            );
+
+            parametros.set(
+                "fim",
+                campoFim.value
+            );
+
+        }
 
 
-            // ==============================================
-            // KPIs
-            // ==============================================
-
-            const totalProdutos =
-                document.getElementById(
-                    "kpiTotalProdutos"
-                );
-
-            const totalQtd =
-                document.getElementById(
-                    "kpiTotalQtd"
-                );
-
-            const totalTransferencias =
-                document.getElementById(
-                    "kpiTotalTransferencias"
-                );
-
-            const usuariosOnline =
-                document.getElementById(
-                    "kpiUsuariosOnline"
-                );
+        const resposta =
+            await fetch(
+                "/painel/dados?" +
+                parametros.toString(),
+                {
+                    cache: "no-store"
+                }
+            );
 
 
-            if (totalProdutos) {{
+        if (!resposta.ok) {
 
-                totalProdutos.textContent =
-                    dados.total_produtos;
+            console.log(
+                "Dashboard retornou:",
+                resposta.status
+            );
 
-            }}
+            return;
 
-
-            if (totalQtd) {{
-
-                totalQtd.textContent =
-                    dados.total_qtd;
-
-            }}
+        }
 
 
-            if (totalTransferencias) {{
-
-                totalTransferencias.textContent =
-                    dados.total_transferencias;
-
-            }}
+        const dados =
+            await resposta.json();
 
 
-            if (usuariosOnline) {{
+        // ==================================================
+        // KPI PRODUTOS
+        // ==================================================
 
-                usuariosOnline.textContent =
-                    dados.usuarios_online;
-
-            }}
-
-
-            // ==============================================
-            // USUÁRIOS ONLINE
-            // ==============================================
-
-            const statusUsuarios =
-                document.getElementById(
-                    "statusUsuarios"
-                );
-
-            const textoUsuarios =
-                document.getElementById(
-                    "textoUsuarios"
-                );
+        const totalProdutos =
+            document.getElementById(
+                "kpiTotalProdutos"
+            );
 
 
-            if (statusUsuarios) {{
+        if (totalProdutos) {
 
-                statusUsuarios.className =
-                    "status " +
-                    (
-                        dados.usuarios_online > 0
-                        ? "on"
-                        : "off"
-                    );
+            totalProdutos.textContent =
+                dados.total_produtos;
 
-            }}
+        }
 
 
-            if (textoUsuarios) {{
+        // ==================================================
+        // KPI QUANTIDADE
+        // ==================================================
 
-                textoUsuarios.textContent =
-                    dados.usuarios_online > 0
+        const totalQtd =
+            document.getElementById(
+                "kpiTotalQtd"
+            );
+
+
+        if (totalQtd) {
+
+            totalQtd.textContent =
+                dados.total_qtd;
+
+        }
+
+
+        // ==================================================
+        // KPI TRANSFERÊNCIAS
+        // ==================================================
+
+        const totalTransferencias =
+            document.getElementById(
+                "kpiTotalTransferencias"
+            );
+
+
+        if (totalTransferencias) {
+
+            totalTransferencias.textContent =
+                dados.total_transferencias;
+
+        }
+
+
+        // ==================================================
+        // KPI USUÁRIOS
+        // ==================================================
+
+        const usuariosOnline =
+            document.getElementById(
+                "kpiUsuariosOnline"
+            );
+
+
+        if (usuariosOnline) {
+
+            usuariosOnline.textContent =
+                dados.usuarios_online;
+
+        }
+
+
+        // ==================================================
+        // STATUS USUÁRIOS
+        // ==================================================
+
+        const textoUsuarios =
+            document.getElementById(
+                "textoUsuarios"
+            );
+
+
+        if (textoUsuarios) {
+
+            textoUsuarios.textContent =
+                dados.usuarios_online > 0
                     ? "Online"
                     : "Offline";
 
-            }}
+        }
 
 
-            // ==============================================
-            // GRÁFICO PIZZA
-            // ==============================================
-
-            graficoPizza.data.labels =
-                dados.nomes;
-
-            graficoPizza.data.datasets[0].data =
-                dados.valores;
-
-            graficoPizza.update();
-
-
-            // ==============================================
-            // GRÁFICO LINHA
-            // ==============================================
-
-            graficoLinha.data.labels =
-                dados.dias_labels;
-
-            graficoLinha.data.datasets[0].data =
-                dados.dias_valores;
-
-            graficoLinha.update();
-
-
-            // ==============================================
-            // TOP PRODUTOS
-            // ==============================================
-
-            graficoTop.data.labels =
-                dados.top_nomes;
-
-            graficoTop.data.datasets[0].data =
-                dados.top_valores;
-
-            graficoTop.update();
-
-
-            // ==============================================
-            // BAIXO ESTOQUE
-            // ==============================================
-
-            graficoBaixo.data.labels =
-                dados.baixo_nomes;
-
-            graficoBaixo.data.datasets[0].data =
-                dados.baixo_valores;
-
-            graficoBaixo.update();
-
-
-            // ==============================================
-            // ALERTA DE ESTOQUE BAIXO
-            // ==============================================
-
-            const alerta =
-                document.getElementById(
-                    "alertaDashboard"
-                );
-
-            const quantidadeBaixo =
-                document.getElementById(
-                    "quantidadeBaixoEstoque"
-                );
-
-
-            if (dados.baixo_nomes.length > 0) {{
-
-                if (alerta) {{
-                    alerta.style.display = "block";
-                }}
-
-                if (quantidadeBaixo) {{
-
-                    quantidadeBaixo.textContent =
-                        dados.baixo_nomes.length;
-
-                }}
-
-            }} else {{
-
-                if (alerta) {{
-                    alerta.style.display = "none";
-                }}
-
-            }}
-
-
-            // ==============================================
-            // ATUALIZA CALENDÁRIO
-            // ==============================================
-
-            atualizarCalendario(
-                dados.calendario
+        const statusUsuarios =
+            document.getElementById(
+                "statusUsuarios"
             );
 
 
-            // ==============================================
-            // INDICA QUE ESTÁ AO VIVO
-            // ==============================================
+        if (statusUsuarios) {
 
-            const status =
-                document.getElementById(
-                    "statusDashboard"
+            statusUsuarios.style.color =
+                dados.usuarios_online > 0
+                    ? "#22c55e"
+                    : "#ef4444";
+
+        }
+
+
+        // ==================================================
+        // ATUALIZA GRÁFICO
+        // ==================================================
+
+        if (graficoInteligente) {
+
+            graficoInteligente.data.labels =
+                dados.grafico_labels;
+
+
+            graficoInteligente.data.datasets[0].data =
+                dados.grafico_valores;
+
+
+            graficoInteligente.data.datasets[0]
+                .backgroundColor =
+                gerarCores(
+                    dados.grafico_valores
                 );
 
-            if (status) {{
 
-                status.textContent =
-                    "● ATUALIZADO";
+            graficoInteligente.data.datasets[1].data =
+                dados.grafico_labels.map(
+                    function() {
+                        return 10;
+                    }
+                );
 
-                setTimeout(() => {{
+
+            graficoInteligente.update();
+
+        }
+
+
+        // ==================================================
+        // ALERTA DE ESTOQUE
+        // ==================================================
+
+        const alerta =
+            document.getElementById(
+                "alertaDashboard"
+            );
+
+
+        const textoAlerta =
+            document.getElementById(
+                "textoAlertaDashboard"
+            );
+
+
+        if (
+            dados.quantidade_baixo_estoque > 0
+        ) {
+
+            if (alerta) {
+
+                alerta.style.display =
+                    "flex";
+
+            }
+
+
+            if (textoAlerta) {
+
+                textoAlerta.textContent =
+                    "⚠️ Atenção: " +
+                    dados.quantidade_baixo_estoque +
+                    " produto(s) com estoque abaixo de 10 unidades.";
+
+            }
+
+        } else {
+
+            if (alerta) {
+
+                alerta.style.display =
+                    "none";
+
+            }
+
+        }
+
+
+        // ==================================================
+        // ATUALIZA LISTA DE ESTOQUE BAIXO
+        // ==================================================
+
+        const resumo =
+            document.getElementById(
+                "resumoEstoqueBaixo"
+            );
+
+
+        if (resumo) {
+
+            resumo.innerHTML = "";
+
+
+            dados.baixo_produtos.forEach(
+                function(produto) {
+
+                    const item =
+                        document.createElement(
+                            "div"
+                        );
+
+
+                    item.className =
+                        "dashboard-produto-baixo";
+
+
+                    item.innerHTML =
+
+                        '<span class="dashboard-produto-nome">' +
+
+                        produto.produto +
+
+                        '</span>' +
+
+                        '<span class="dashboard-produto-qtd">' +
+
+                        produto.quantidade +
+
+                        ' un.</span>';
+
+
+                    resumo.appendChild(item);
+
+                }
+            );
+
+        }
+
+
+        // ==================================================
+        // STATUS AO VIVO
+        // ==================================================
+
+        const status =
+            document.getElementById(
+                "statusDashboard"
+            );
+
+
+        if (status) {
+
+            status.textContent =
+                "● ATUALIZADO";
+
+
+            setTimeout(
+                function() {
 
                     status.textContent =
                         "● AO VIVO";
 
-                }}, 1200);
-
-            }}
-
-        }} catch (erro) {{
-
-            console.log(
-                "Erro ao atualizar Dashboard:",
-                erro
+                },
+                1000
             );
 
-        }}
+        }
 
-    }}
+    }
 
+    catch (erro) {
 
-    // ======================================================
-    // ATUALIZA O CALENDÁRIO SEM RECARREGAR A PÁGINA
-    // ======================================================
-
-    function atualizarCalendario(calendario) {{
-
-        const grid =
-            document.getElementById(
-                "calGridDashboard"
-            );
-
-
-        if (!grid) {{
-            return;
-        }}
-
-
-        const agora = new Date();
-
-        const anoAtual =
-            agora.getFullYear();
-
-        const mesAtual =
-            agora.getMonth();
-
-
-        const primeiroDia =
-            new Date(
-                anoAtual,
-                mesAtual,
-                1
-            ).getDay();
-
-
-        const ultimoDia =
-            new Date(
-                anoAtual,
-                mesAtual + 1,
-                0
-            ).getDate();
-
-
-        let html = "";
-
-
-        const diasSemana = [
-            "Dom",
-            "Seg",
-            "Ter",
-            "Qua",
-            "Qui",
-            "Sex",
-            "Sab"
-        ];
-
-
-        diasSemana.forEach(
-            function(dia) {{
-
-                html +=
-                    '<div class="dia-semana">' +
-                    dia +
-                    '</div>';
-
-            }}
+        console.log(
+            "Erro ao atualizar Dashboard:",
+            erro
         );
 
+    }
 
-        for (
-            let i = 0;
-            i < primeiroDia;
-            i++
-        ) {{
-
-            html +=
-                '<div class="dia vazio"></div>';
-
-        }}
+}
 
 
-        for (
-            let dia = 1;
-            dia <= ultimoDia;
-            dia++
-        ) {{
+// ==========================================================
+// PRIMEIRA ATUALIZAÇÃO
+// ==========================================================
 
-            const mesNumero =
-                String(
-                    mesAtual + 1
-                ).padStart(
-                    2,
-                    "0"
-                );
+atualizarDashboard();
 
 
-            const diaNumero =
-                String(dia).padStart(
-                    2,
-                    "0"
-                );
+// ==========================================================
+// ATUALIZA A CADA 3 SEGUNDOS
+// ==========================================================
+
+setInterval(
+    atualizarDashboard,
+    3000
+);
 
 
-            const data =
-                anoAtual +
-                "-" +
-                mesNumero +
-                "-" +
-                diaNumero;
+</script>
 
-
-            const info =
-              calendario[data] || {{}};
-
-
-            const entrada =
-                info.entrada || 0;
-
-            const saida =
-                info.saida || 0;
-
-            const transf =
-                info.transf || 0;
-
-            const total =
-                info.total || 0;
-
-
-            const hoje =
-                dia === agora.getDate();
-
-
-            html += `
-
-                <div class="dia ${{
-                    hoje
-                    ? "hoje"
-                    : ""
-                }}">
-
-                    <div class="num">
-                        ${{dia}}
-                    </div>
-
-                    <div class="linha verde">
-                        Entrada: ${{entrada}}
-                    </div>
-
-                    <div class="linha vermelho">
-                        Saída: ${{saida}}
-                    </div>
-
-                    <div class="linha azul">
-                        Transf: ${{transf}}
-                    </div>
-
-                    <div class="total">
-                        Total: ${{total}}
-                    </div>
-
-                </div>
-
-            `;
-
-        }}
-
-
-        grid.innerHTML =
-            html;
-
-    }}
-
-
-    // ======================================================
-    // PRIMEIRA ATUALIZAÇÃO
-    // ======================================================
-
-    atualizarDashboard();
-
-
-    // ======================================================
-    // 🔥 ATUALIZA A CADA 3 SEGUNDOS
-    // ======================================================
-
-    setInterval(
-        atualizarDashboard,
-        3000
-    );
-
-    </script>
-    """
+"""
 
     return html
