@@ -1,9 +1,8 @@
-from flask import Blueprint, request, redirect, session
+from flask import Blueprint, request, redirect, session, url_for
 from werkzeug.security import generate_password_hash
 from banco import conectar, devolver_conexao, registrar_log
 from layout import container, acesso_negado
 from html import escape
-from urllib.parse import quote
 
 
 usuarios_bp = Blueprint("usuarios_bp", __name__)
@@ -37,7 +36,7 @@ def usuario_eh_admin():
 
 
 # ============================================================
-# PEGAR PERMISSÕES DO FORMULÁRIO
+# PEGAR PERMISSÕES
 # ============================================================
 
 def pegar_permissoes_formulario():
@@ -54,13 +53,12 @@ def pegar_permissoes_formulario():
 
 
 # ============================================================
-# ADMIN = TODAS AS PERMISSÕES
+# ADMIN = ACESSO TOTAL
 # ============================================================
 
 def permissoes_admin():
 
     return {
-
         "pode_estoque": 1,
         "pode_transferencia": 1,
         "pode_historico": 1,
@@ -68,7 +66,6 @@ def permissoes_admin():
         "pode_logs": 1,
         "pode_editar_estoque": 1,
         "pode_excluir_estoque": 1
-
     }
 
 
@@ -143,19 +140,16 @@ def usuarios():
                 # --------------------------------------------
 
                 if not user:
-
                     raise ValueError(
                         "Informe o nome do usuário."
                     )
 
                 if not senha:
-
                     raise ValueError(
                         "Informe uma senha."
                     )
 
                 if len(senha) < 4:
-
                     raise ValueError(
                         "A senha deve ter pelo menos 4 caracteres."
                     )
@@ -164,7 +158,6 @@ def usuarios():
                     "admin",
                     "operador"
                 ]:
-
                     cargo = "operador"
 
                 if plano not in [
@@ -172,11 +165,10 @@ def usuarios():
                     "profissional",
                     "premium"
                 ]:
-
                     plano = "basico"
 
                 # --------------------------------------------
-                # VERIFICAR SE USUÁRIO JÁ EXISTE
+                # VERIFICAR USUÁRIO
                 # --------------------------------------------
 
                 cursor.execute(
@@ -191,7 +183,6 @@ def usuarios():
                 existe = cursor.fetchone()[0]
 
                 if existe > 0:
-
                     raise ValueError(
                         "Esse usuário já existe."
                     )
@@ -211,7 +202,7 @@ def usuarios():
                     )
 
                 # --------------------------------------------
-                # CRIAR USUÁRIO
+                # INSERIR
                 # --------------------------------------------
 
                 cursor.execute(
@@ -224,7 +215,6 @@ def usuarios():
                         email,
                         plano,
                         nome_empresa,
-
                         pode_estoque,
                         pode_transferencia,
                         pode_historico,
@@ -233,91 +223,39 @@ def usuarios():
                         pode_editar_estoque,
                         pode_excluir_estoque
                     )
-
                     VALUES (
-                        %s,
-                        %s,
-                        %s,
-                        1,
-                        %s,
-                        %s,
-                        %s,
-
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s
+                        %s,%s,%s,1,%s,%s,%s,
+                        %s,%s,%s,%s,%s,%s,%s
                     )
                     """,
                     (
-
                         user,
-
-                        generate_password_hash(
-                            senha
-                        ),
-
+                        generate_password_hash(senha),
                         cargo,
-
                         email,
-
                         plano,
-
                         nome_empresa,
-
-                        permissoes[
-                            "pode_estoque"
-                        ],
-
-                        permissoes[
-                            "pode_transferencia"
-                        ],
-
-                        permissoes[
-                            "pode_historico"
-                        ],
-
-                        permissoes[
-                            "pode_usuarios"
-                        ],
-
-                        permissoes[
-                            "pode_logs"
-                        ],
-
-                        permissoes[
-                            "pode_editar_estoque"
-                        ],
-
-                        permissoes[
-                            "pode_excluir_estoque"
-                        ]
-
+                        permissoes["pode_estoque"],
+                        permissoes["pode_transferencia"],
+                        permissoes["pode_historico"],
+                        permissoes["pode_usuarios"],
+                        permissoes["pode_logs"],
+                        permissoes["pode_editar_estoque"],
+                        permissoes["pode_excluir_estoque"]
                     )
                 )
 
                 conn.commit()
 
                 try:
-
                     registrar_log(
-                        session.get(
-                            "user",
-                            "admin"
-                        ),
+                        session.get("user", "admin"),
                         f"Criou o usuário {user}"
                     )
-
                 except Exception:
                     pass
 
-                mensagem = (
-                    "Usuário criado com sucesso!"
-                )
-
+                mensagem = "Usuário criado com sucesso!"
                 tipo_mensagem = "sucesso"
 
             except Exception as e:
@@ -325,9 +263,7 @@ def usuarios():
                 conn.rollback()
 
                 mensagem = str(e)
-
                 tipo_mensagem = "erro"
-
 
         # ====================================================
         # LISTAR USUÁRIOS
@@ -343,7 +279,6 @@ def usuarios():
                 email,
                 plano,
                 nome_empresa,
-
                 pode_estoque,
                 pode_transferencia,
                 pode_historico,
@@ -351,9 +286,7 @@ def usuarios():
                 pode_logs,
                 pode_editar_estoque,
                 pode_excluir_estoque
-
             FROM usuarios
-
             ORDER BY
                 CASE
                     WHEN usuario = 'admin'
@@ -376,7 +309,6 @@ def usuarios():
             email,
             plano,
             nome_empresa,
-
             pode_estoque,
             pode_transferencia,
             pode_historico,
@@ -384,34 +316,13 @@ def usuarios():
             pode_logs,
             pode_editar_estoque,
             pode_excluir_estoque
-
         ) in dados:
 
-            usuario_html = escape(
-                str(usuario)
-            )
-
-            usuario_url = quote(
-                str(usuario),
-                safe=""
-            )
-
-            cargo_html = escape(
-                str(cargo or "-")
-            )
-
-            email_html = escape(
-                str(email or "-")
-            )
-
-            empresa_html = escape(
-                str(nome_empresa or "-")
-            )
-
-            plano_html = escape(
-                str(plano or "basico")
-            )
-
+            usuario_html = escape(str(usuario))
+            cargo_html = escape(str(cargo or "-"))
+            email_html = escape(str(email or "-"))
+            empresa_html = escape(str(nome_empresa or "-"))
+            plano_html = escape(str(plano or "basico"))
 
             # =================================================
             # STATUS ONLINE
@@ -433,7 +344,6 @@ def usuarios():
                 </span>
                 """
 
-
             # =================================================
             # STATUS DA CONTA
             # =================================================
@@ -453,7 +363,6 @@ def usuarios():
                     Inativo
                 </span>
                 """
-
 
             # =================================================
             # CARGO
@@ -475,38 +384,9 @@ def usuarios():
                 </span>
                 """
 
-
             # =================================================
-            # RESUMO DAS PERMISSÕES
+            # PERMISSÕES RESUMIDAS
             # =================================================
-
-            permissoes_usuario = []
-
-            mapa_permissoes = {
-
-                "pode_estoque":
-                    ("📦", pode_estoque),
-
-                "pode_transferencia":
-                    ("🔄", pode_transferencia),
-
-                "pode_historico":
-                    ("📋", pode_historico),
-
-                "pode_usuarios":
-                    ("👥", pode_usuarios),
-
-                "pode_logs":
-                    ("📝", pode_logs),
-
-                "pode_editar_estoque":
-                    ("✏️", pode_editar_estoque),
-
-                "pode_excluir_estoque":
-                    ("🗑️", pode_excluir_estoque)
-
-            }
-
 
             if cargo == "admin":
 
@@ -518,30 +398,35 @@ def usuarios():
 
             else:
 
-                for (
-                    _chave,
-                    dados_perm
-                ) in mapa_permissoes.items():
+                icones = []
 
-                    icone, permitido = dados_perm
+                if pode_estoque:
+                    icones.append("📦")
 
-                    if permitido:
+                if pode_transferencia:
+                    icones.append("🔄")
 
-                        permissoes_usuario.append(
-                            icone
-                        )
+                if pode_historico:
+                    icones.append("📋")
 
+                if pode_usuarios:
+                    icones.append("👥")
 
-                if permissoes_usuario:
+                if pode_logs:
+                    icones.append("📝")
+
+                if pode_editar_estoque:
+                    icones.append("✏️")
+
+                if pode_excluir_estoque:
+                    icones.append("🗑️")
+
+                if icones:
 
                     permissao_html = (
                         '<span class="permissao-resumo">'
-                        +
-                        " ".join(
-                            permissoes_usuario
-                        )
-                        +
-                        "</span>"
+                        + " ".join(icones)
+                        + "</span>"
                     )
 
                 else:
@@ -552,9 +437,8 @@ def usuarios():
                     </span>
                     """
 
-
             # =================================================
-            # AÇÕES
+            # ADMIN PROTEGIDO
             # =================================================
 
             if usuario == "admin":
@@ -567,29 +451,60 @@ def usuarios():
 
             else:
 
-                classe_status = (
-                    "verde"
-                    if not ativo
-                    else
-                    "vermelho"
+                # =================================================
+                # URLS GERADAS PELO FLASK
+                # =================================================
+
+                url_senha = url_for(
+                    "usuarios_bp.alterar_senha",
+                    usuario=usuario
                 )
 
-                texto_status = (
-                    "🟢 Ativar usuário"
-                    if not ativo
-                    else
-                    "🔴 Desativar usuário"
+                url_plano = url_for(
+                    "usuarios_bp.mudar_plano",
+                    usuario=usuario
                 )
 
+                url_alternar = url_for(
+                    "usuarios_bp.alternar_usuario",
+                    usuario=usuario
+                )
+
+                url_permissoes = url_for(
+                    "usuarios_bp.alterar_permissoes",
+                    usuario=usuario
+                )
+
+                url_excluir = url_for(
+                    "usuarios_bp.excluir_usuario",
+                    usuario=usuario
+                )
+
+                if ativo:
+
+                    classe_status = "vermelho"
+
+                    texto_status = (
+                        "🔴 Desativar usuário"
+                    )
+
+                else:
+
+                    classe_status = "verde"
+
+                    texto_status = (
+                        "🟢 Ativar usuário"
+                    )
+
+                # =================================================
+                # AÇÕES
+                # =================================================
 
                 acoes_html = f"""
 
                 <div class="acoes">
 
-
-                    <!-- ====================================
-                         GERENCIAR
-                         ==================================== -->
+                    <!-- GERENCIAR -->
 
                     <details class="menu">
 
@@ -597,14 +512,10 @@ def usuarios():
                             ⚙️ Gerenciar
                         </summary>
 
-
                         <div class="menu-conteudo">
 
-
-                            <!-- ALTERAR SENHA -->
-
                             <form
-                                action="/usuarios/alterar_senha/{usuario_url}"
+                                action="{url_senha}"
                                 method="POST"
                             >
 
@@ -630,10 +541,8 @@ def usuarios():
                             </form>
 
 
-                            <!-- ALTERAR PLANO -->
-
                             <form
-                                action="/usuarios/mudar_plano/{usuario_url}"
+                                action="{url_plano}"
                                 method="POST"
                             >
 
@@ -666,7 +575,6 @@ def usuarios():
 
                                 </select>
 
-
                                 <button
                                     class="btn azul"
                                     type="submit"
@@ -677,10 +585,8 @@ def usuarios():
                             </form>
 
 
-                            <!-- ATIVAR / DESATIVAR -->
-
                             <form
-                                action="/usuarios/alternar/{usuario_url}"
+                                action="{url_alternar}"
                                 method="POST"
                             >
 
@@ -694,10 +600,8 @@ def usuarios():
                             </form>
 
 
-                            <!-- EXCLUIR -->
-
                             <form
-                                action="/usuarios/excluir_usuario/{usuario_url}"
+                                action="{url_excluir}"
                                 method="POST"
                                 onsubmit="return confirm('Tem certeza que deseja excluir este usuário?');"
                             >
@@ -711,15 +615,12 @@ def usuarios():
 
                             </form>
 
-
                         </div>
 
                     </details>
 
 
-                    <!-- ====================================
-                         PERMISSÕES
-                         ==================================== -->
+                    <!-- PERMISSÕES -->
 
                     <details class="menu">
 
@@ -727,13 +628,11 @@ def usuarios():
                             🔐 Permissões
                         </summary>
 
-
                         <form
-                            action="/usuarios/permissoes/{usuario_url}"
+                            action="{url_permissoes}"
                             method="POST"
                             class="permissoes-edicao"
                         >
-
 
                             <label>
 
@@ -833,16 +732,12 @@ def usuarios():
                                 💾 Salvar permissões
                             </button>
 
-
                         </form>
 
                     </details>
 
-
                 </div>
-
                 """
-
 
             # =================================================
             # LINHA DA TABELA
@@ -851,7 +746,6 @@ def usuarios():
             tabela += f"""
 
             <tr>
-
 
                 <td>
 
@@ -906,79 +800,42 @@ def usuarios():
                     {acoes_html}
                 </td>
 
-
             </tr>
 
             """
-
-
-        # ====================================================
-        # DEVOLVE CONEXÃO
-        # ====================================================
-
-        devolver_conexao(conn)
-
 
         # ====================================================
         # HTML
         # ====================================================
 
-        return container(f"""
+        html = f"""
 
 <style>
-
-
-/* ==========================================================
-   PÁGINA
-   ========================================================== */
 
 .usuarios-page {{
 
     width:100%;
-
     max-width:1450px;
-
     margin:auto;
-
     padding:5px 0 30px;
 
 }}
 
-
-/* ==========================================================
-   TÍTULO
-   ========================================================== */
-
 .usuarios-titulo {{
-
     margin-bottom:18px;
-
 }}
 
 .usuarios-titulo h2 {{
-
     margin:0;
-
     color:#fff;
-
     font-size:25px;
-
 }}
 
 .usuarios-titulo p {{
-
     margin:5px 0 0;
-
     color:#64748b;
-
     font-size:13px;
-
 }}
-
-
-/* ==========================================================
-   BOX
-   ========================================================== */
 
 .usuarios-box {{
 
@@ -990,11 +847,8 @@ def usuarios():
         );
 
     border:1px solid #292929;
-
     border-radius:14px;
-
     padding:20px;
-
     margin-bottom:20px;
 
     box-shadow:
@@ -1006,28 +860,17 @@ def usuarios():
 .usuarios-box h3 {{
 
     margin:0 0 18px;
-
     color:#fff;
-
     font-size:16px;
 
 }}
 
-
-/* ==========================================================
-   MENSAGEM
-   ========================================================== */
-
 .mensagem {{
 
     margin-top:15px;
-
     padding:11px 14px;
-
     border-radius:8px;
-
     font-size:13px;
-
     font-weight:600;
 
 }}
@@ -1035,41 +878,26 @@ def usuarios():
 .mensagem.sucesso {{
 
     color:#86efac;
-
-    background:
-        rgba(34,197,94,.08);
-
-    border:
-        1px solid
-        rgba(34,197,94,.20);
+    background:rgba(34,197,94,.08);
+    border:1px solid rgba(34,197,94,.20);
 
 }}
 
 .mensagem.erro {{
 
     color:#fca5a5;
-
-    background:
-        rgba(239,68,68,.08);
-
-    border:
-        1px solid
-        rgba(239,68,68,.20);
+    background:rgba(239,68,68,.08);
+    border:1px solid rgba(239,68,68,.20);
 
 }}
 
 
-/* ==========================================================
-   FORMULÁRIO
-   ========================================================== */
+/* CRIAÇÃO */
 
 .criar-grid {{
 
     display:grid;
-
-    grid-template-columns:
-        repeat(2,1fr);
-
+    grid-template-columns:repeat(2,1fr);
     gap:12px;
 
 }}
@@ -1077,9 +905,7 @@ def usuarios():
 .campo {{
 
     display:flex;
-
     flex-direction:column;
-
     gap:6px;
 
 }}
@@ -1087,9 +913,7 @@ def usuarios():
 .campo label {{
 
     color:#94a3b8;
-
     font-size:11px;
-
     font-weight:600;
 
 }}
@@ -1098,17 +922,14 @@ def usuarios():
 .campo select {{
 
     width:100%;
-
     box-sizing:border-box;
 
     padding:11px 12px;
 
     border-radius:8px;
-
     border:1px solid #303030;
 
     background:#0b0b0b;
-
     color:#fff;
 
     outline:none;
@@ -1123,21 +944,17 @@ def usuarios():
 }}
 
 
-/* ==========================================================
-   PERMISSÕES NOVO USUÁRIO
-   ========================================================== */
+/* PERMISSÕES */
 
 .permissoes-box {{
 
-    grid-column:
-        span 2;
+    grid-column:span 2;
 
     padding:15px;
 
     border-radius:10px;
 
     background:#080808;
-
     border:1px solid #252525;
 
 }}
@@ -1145,11 +962,8 @@ def usuarios():
 .permissoes-titulo {{
 
     color:#fff;
-
     font-size:13px;
-
     font-weight:700;
-
     margin-bottom:12px;
 
 }}
@@ -1157,10 +971,7 @@ def usuarios():
 .permissoes-grid {{
 
     display:grid;
-
-    grid-template-columns:
-        repeat(4,1fr);
-
+    grid-template-columns:repeat(4,1fr);
     gap:8px;
 
 }}
@@ -1168,7 +979,6 @@ def usuarios():
 .permissao-item {{
 
     display:flex;
-
     align-items:center;
 
     gap:7px;
@@ -1178,13 +988,11 @@ def usuarios():
     border-radius:7px;
 
     background:#111;
-
     border:1px solid #242424;
 
     color:#cbd5e1;
 
     font-size:12px;
-
     cursor:pointer;
 
 }}
@@ -1203,27 +1011,21 @@ def usuarios():
 }}
 
 
-/* ==========================================================
-   BOTÃO CRIAR
-   ========================================================== */
+/* BOTÃO CRIAR */
 
 .botao-criar {{
 
-    grid-column:
-        span 2;
+    grid-column:span 2;
 
     padding:12px;
 
     border:none;
-
     border-radius:8px;
 
     background:#2563eb;
-
     color:#fff;
 
     font-weight:700;
-
     cursor:pointer;
 
 }}
@@ -1235,14 +1037,11 @@ def usuarios():
 }}
 
 
-/* ==========================================================
-   TABELA
-   ========================================================== */
+/* TABELA */
 
 .tabela-container {{
 
     width:100%;
-
     overflow-x:auto;
 
 }}
@@ -1250,7 +1049,6 @@ def usuarios():
 .tabela-usuarios {{
 
     width:100%;
-
     border-collapse:collapse;
 
     min-width:1200px;
@@ -1260,7 +1058,6 @@ def usuarios():
 .tabela-usuarios th {{
 
     padding:12px;
-
     text-align:left;
 
     background:#111;
@@ -1273,8 +1070,7 @@ def usuarios():
 
     letter-spacing:.5px;
 
-    border-bottom:
-        1px solid #292929;
+    border-bottom:1px solid #292929;
 
 }}
 
@@ -1284,8 +1080,7 @@ def usuarios():
 
     color:#cbd5e1;
 
-    border-bottom:
-        1px solid #202020;
+    border-bottom:1px solid #202020;
 
     vertical-align:middle;
 
@@ -1295,22 +1090,17 @@ def usuarios():
 
 .tabela-usuarios tr:hover td {{
 
-    background:
-        rgba(255,255,255,.015);
+    background:rgba(255,255,255,.015);
 
 }}
 
 
-/* ==========================================================
-   USUÁRIO
-   ========================================================== */
+/* USUÁRIO */
 
 .usuario-nome {{
 
     display:flex;
-
     flex-direction:column;
-
     gap:5px;
 
 }}
@@ -1318,15 +1108,12 @@ def usuarios():
 .usuario-nome strong {{
 
     color:#fff;
-
     font-size:13px;
 
 }}
 
 
-/* ==========================================================
-   BADGES
-   ========================================================== */
+/* BADGES */
 
 .status,
 .conta,
@@ -1342,7 +1129,6 @@ def usuarios():
     border-radius:6px;
 
     font-size:10px;
-
     font-weight:700;
 
     white-space:nowrap;
@@ -1352,7 +1138,6 @@ def usuarios():
 .status.online {{
 
     background:#16a34a;
-
     color:#fff;
 
 }}
@@ -1360,7 +1145,6 @@ def usuarios():
 .status.offline {{
 
     background:#ef4444;
-
     color:#fff;
 
 }}
@@ -1368,36 +1152,28 @@ def usuarios():
 .conta.ativa {{
 
     color:#86efac;
-
-    background:
-        rgba(34,197,94,.08);
+    background:rgba(34,197,94,.08);
 
 }}
 
 .conta.inativa {{
 
     color:#fca5a5;
-
-    background:
-        rgba(239,68,68,.08);
+    background:rgba(239,68,68,.08);
 
 }}
 
 .cargo.admin {{
 
     color:#facc15;
-
-    background:
-        rgba(250,204,21,.08);
+    background:rgba(250,204,21,.08);
 
 }}
 
 .cargo.operador {{
 
     color:#93c5fd;
-
-    background:
-        rgba(59,130,246,.08);
+    background:rgba(59,130,246,.08);
 
 }}
 
@@ -1420,14 +1196,11 @@ def usuarios():
 }}
 
 
-/* ==========================================================
-   PERMISSÕES
-   ========================================================== */
+/* PERMISSÕES */
 
 .permissao-total {{
 
     color:#22c55e;
-
     font-weight:700;
 
 }}
@@ -1435,7 +1208,6 @@ def usuarios():
 .permissao-resumo {{
 
     font-size:16px;
-
     letter-spacing:2px;
 
 }}
@@ -1447,14 +1219,11 @@ def usuarios():
 }}
 
 
-/* ==========================================================
-   AÇÕES
-   ========================================================== */
+/* AÇÕES */
 
 .acoes {{
 
     display:flex;
-
     flex-direction:column;
 
     gap:7px;
@@ -1480,7 +1249,6 @@ def usuarios():
     color:#cbd5e1;
 
     font-size:11px;
-
     font-weight:700;
 
 }}
@@ -1488,7 +1256,6 @@ def usuarios():
 .menu summary:hover {{
 
     border-color:#3b82f6;
-
     color:#fff;
 
 }}
@@ -1535,7 +1302,6 @@ def usuarios():
     color:#94a3b8;
 
     font-size:10px;
-
     font-weight:600;
 
 }}
@@ -1586,9 +1352,7 @@ def usuarios():
 }}
 
 
-/* ==========================================================
-   BOTÕES
-   ========================================================== */
+/* BOTÕES */
 
 .btn {{
 
@@ -1634,59 +1398,38 @@ def usuarios():
 
 }}
 
-
-/* ==========================================================
-   PROTEGIDO
-   ========================================================== */
-
 .protegido {{
 
     color:#64748b;
-
     font-size:11px;
-
     white-space:nowrap;
 
 }}
 
 
-/* ==========================================================
-   RESPONSIVO
-   ========================================================== */
+/* RESPONSIVO */
 
 @media(max-width:900px) {{
 
     .criar-grid {{
-
         grid-template-columns:1fr;
-
     }}
 
     .permissoes-box,
     .botao-criar {{
-
-        grid-column:
-            span 1;
-
+        grid-column:span 1;
     }}
 
     .permissoes-grid {{
-
-        grid-template-columns:
-            repeat(2,1fr);
-
+        grid-template-columns:repeat(2,1fr);
     }}
 
 }}
 
-
 @media(max-width:600px) {{
 
     .permissoes-grid {{
-
-        grid-template-columns:
-            1fr;
-
+        grid-template-columns:1fr;
     }}
 
 }}
@@ -1695,11 +1438,6 @@ def usuarios():
 
 
 <div class="usuarios-page">
-
-
-    <!-- ====================================================
-         TÍTULO
-         ==================================================== -->
 
     <div class="usuarios-titulo">
 
@@ -1724,14 +1462,10 @@ def usuarios():
             ➕ Criar novo usuário
         </h3>
 
-
         <form
             method="POST"
             class="criar-grid"
         >
-
-
-            <!-- USUÁRIO -->
 
             <div class="campo">
 
@@ -1750,8 +1484,6 @@ def usuarios():
             </div>
 
 
-            <!-- SENHA -->
-
             <div class="campo">
 
                 <label>
@@ -1769,8 +1501,6 @@ def usuarios():
             </div>
 
 
-            <!-- EMAIL -->
-
             <div class="campo">
 
                 <label>
@@ -1786,8 +1516,6 @@ def usuarios():
             </div>
 
 
-            <!-- EMPRESA -->
-
             <div class="campo">
 
                 <label>
@@ -1802,8 +1530,6 @@ def usuarios():
 
             </div>
 
-
-            <!-- CARGO -->
 
             <div class="campo">
 
@@ -1825,8 +1551,6 @@ def usuarios():
 
             </div>
 
-
-            <!-- PLANO -->
 
             <div class="campo">
 
@@ -1853,10 +1577,6 @@ def usuarios():
             </div>
 
 
-            <!-- =================================================
-                 PERMISSÕES
-                 ================================================= -->
-
             <div class="permissoes-box">
 
                 <div class="permissoes-titulo">
@@ -1876,7 +1596,6 @@ def usuarios():
 
 
                 <div class="permissoes-grid">
-
 
                     <label class="permissao-item">
 
@@ -1961,13 +1680,10 @@ def usuarios():
 
                     </label>
 
-
                 </div>
 
             </div>
 
-
-            <!-- BOTÃO -->
 
             <button
                 type="submit"
@@ -1975,7 +1691,6 @@ def usuarios():
             >
                 ➕ Criar usuário
             </button>
-
 
         </form>
 
@@ -1985,7 +1700,6 @@ def usuarios():
             if mensagem
             else ''
         }
-
 
     </div>
 
@@ -2058,24 +1772,27 @@ def usuarios():
 
     </div>
 
-
 </div>
 
-""")
+"""
 
+        return container(html)
 
     except Exception as e:
 
         try:
-
             devolver_conexao(conn)
-
         except Exception:
             pass
 
-        return (
-            f"Erro ao carregar usuários: {e}"
-        )
+        return f"Erro ao carregar usuários: {e}"
+
+    finally:
+
+        try:
+            devolver_conexao(conn)
+        except Exception:
+            pass
 
 
 # ============================================================
@@ -2091,29 +1808,26 @@ def alterar_senha(usuario):
     if not usuario_eh_admin():
         return acesso_negado()
 
+    if usuario == "admin":
+        return redirect(
+            url_for("usuarios_bp.usuarios")
+        )
+
     senha = request.form.get(
         "senha",
         ""
     ).strip()
 
     if not senha or len(senha) < 4:
-
         return redirect(
-            "/usuarios"
-        )
-
-    if usuario == "admin":
-
-        return redirect(
-            "/usuarios"
+            url_for("usuarios_bp.usuarios")
         )
 
     conn = conectar()
 
     if conn is None:
-
         return redirect(
-            "/usuarios"
+            url_for("usuarios_bp.usuarios")
         )
 
     cursor = conn.cursor()
@@ -2123,15 +1837,11 @@ def alterar_senha(usuario):
         cursor.execute(
             """
             UPDATE usuarios
-
             SET senha = %s
-
             WHERE usuario = %s
             """,
             (
-                generate_password_hash(
-                    senha
-                ),
+                generate_password_hash(senha),
                 usuario
             )
         )
@@ -2139,15 +1849,10 @@ def alterar_senha(usuario):
         conn.commit()
 
         try:
-
             registrar_log(
-                session.get(
-                    "user",
-                    "admin"
-                ),
+                session.get("user", "admin"),
                 f"Alterou a senha do usuário {usuario}"
             )
-
         except Exception:
             pass
 
@@ -2160,7 +1865,7 @@ def alterar_senha(usuario):
         devolver_conexao(conn)
 
     return redirect(
-        "/usuarios"
+        url_for("usuarios_bp.usuarios")
     )
 
 
@@ -2178,9 +1883,8 @@ def mudar_plano(usuario):
         return acesso_negado()
 
     if usuario == "admin":
-
         return redirect(
-            "/usuarios"
+            url_for("usuarios_bp.usuarios")
         )
 
     plano = request.form.get(
@@ -2193,15 +1897,13 @@ def mudar_plano(usuario):
         "profissional",
         "premium"
     ]:
-
         plano = "basico"
 
     conn = conectar()
 
     if conn is None:
-
         return redirect(
-            "/usuarios"
+            url_for("usuarios_bp.usuarios")
         )
 
     cursor = conn.cursor()
@@ -2211,9 +1913,7 @@ def mudar_plano(usuario):
         cursor.execute(
             """
             UPDATE usuarios
-
             SET plano = %s
-
             WHERE usuario = %s
             """,
             (
@@ -2233,12 +1933,12 @@ def mudar_plano(usuario):
         devolver_conexao(conn)
 
     return redirect(
-        "/usuarios"
+        url_for("usuarios_bp.usuarios")
     )
 
 
 # ============================================================
-# ATIVAR / DESATIVAR USUÁRIO
+# ATIVAR / DESATIVAR
 # ============================================================
 
 @usuarios_bp.route(
@@ -2248,21 +1948,18 @@ def mudar_plano(usuario):
 def alternar_usuario(usuario):
 
     if not usuario_eh_admin():
-
         return acesso_negado()
 
     if usuario == "admin":
-
         return redirect(
-            "/usuarios"
+            url_for("usuarios_bp.usuarios")
         )
 
     conn = conectar()
 
     if conn is None:
-
         return redirect(
-            "/usuarios"
+            url_for("usuarios_bp.usuarios")
         )
 
     cursor = conn.cursor()
@@ -2272,9 +1969,7 @@ def alternar_usuario(usuario):
         cursor.execute(
             """
             SELECT ativo
-
             FROM usuarios
-
             WHERE usuario = %s
             """,
             (usuario,)
@@ -2289,16 +1984,13 @@ def alternar_usuario(usuario):
             novo_status = (
                 0
                 if ativo_atual
-                else
-                1
+                else 1
             )
 
             cursor.execute(
                 """
                 UPDATE usuarios
-
                 SET ativo = %s
-
                 WHERE usuario = %s
                 """,
                 (
@@ -2309,6 +2001,14 @@ def alternar_usuario(usuario):
 
             conn.commit()
 
+            try:
+                registrar_log(
+                    session.get("user", "admin"),
+                    f"Alterou status do usuário {usuario}"
+                )
+            except Exception:
+                pass
+
     except Exception:
 
         conn.rollback()
@@ -2318,7 +2018,7 @@ def alternar_usuario(usuario):
         devolver_conexao(conn)
 
     return redirect(
-        "/usuarios"
+        url_for("usuarios_bp.usuarios")
     )
 
 
@@ -2333,25 +2033,20 @@ def alternar_usuario(usuario):
 def alterar_permissoes(usuario):
 
     if not usuario_eh_admin():
-
         return acesso_negado()
 
     if usuario == "admin":
-
         return redirect(
-            "/usuarios"
+            url_for("usuarios_bp.usuarios")
         )
 
-    permissoes = (
-        pegar_permissoes_formulario()
-    )
+    permissoes = pegar_permissoes_formulario()
 
     conn = conectar()
 
     if conn is None:
-
         return redirect(
-            "/usuarios"
+            url_for("usuarios_bp.usuarios")
         )
 
     cursor = conn.cursor()
@@ -2361,72 +2056,35 @@ def alterar_permissoes(usuario):
         cursor.execute(
             """
             UPDATE usuarios
-
             SET
-
                 pode_estoque = %s,
-
                 pode_transferencia = %s,
-
                 pode_historico = %s,
-
                 pode_usuarios = %s,
-
                 pode_logs = %s,
-
                 pode_editar_estoque = %s,
-
                 pode_excluir_estoque = %s
-
             WHERE usuario = %s
             """,
             (
-
-                permissoes[
-                    "pode_estoque"
-                ],
-
-                permissoes[
-                    "pode_transferencia"
-                ],
-
-                permissoes[
-                    "pode_historico"
-                ],
-
-                permissoes[
-                    "pode_usuarios"
-                ],
-
-                permissoes[
-                    "pode_logs"
-                ],
-
-                permissoes[
-                    "pode_editar_estoque"
-                ],
-
-                permissoes[
-                    "pode_excluir_estoque"
-                ],
-
+                permissoes["pode_estoque"],
+                permissoes["pode_transferencia"],
+                permissoes["pode_historico"],
+                permissoes["pode_usuarios"],
+                permissoes["pode_logs"],
+                permissoes["pode_editar_estoque"],
+                permissoes["pode_excluir_estoque"],
                 usuario
-
             )
         )
 
         conn.commit()
 
         try:
-
             registrar_log(
-                session.get(
-                    "user",
-                    "admin"
-                ),
+                session.get("user", "admin"),
                 f"Alterou permissões do usuário {usuario}"
             )
-
         except Exception:
             pass
 
@@ -2439,7 +2097,7 @@ def alterar_permissoes(usuario):
         devolver_conexao(conn)
 
     return redirect(
-        "/usuarios"
+        url_for("usuarios_bp.usuarios")
     )
 
 
@@ -2454,21 +2112,18 @@ def alterar_permissoes(usuario):
 def excluir_usuario(usuario):
 
     if not usuario_eh_admin():
-
         return acesso_negado()
 
     if usuario == "admin":
-
         return redirect(
-            "/usuarios"
+            url_for("usuarios_bp.usuarios")
         )
 
     conn = conectar()
 
     if conn is None:
-
         return redirect(
-            "/usuarios"
+            url_for("usuarios_bp.usuarios")
         )
 
     cursor = conn.cursor()
@@ -2478,7 +2133,6 @@ def excluir_usuario(usuario):
         cursor.execute(
             """
             DELETE FROM usuarios
-
             WHERE usuario = %s
             """,
             (usuario,)
@@ -2487,15 +2141,10 @@ def excluir_usuario(usuario):
         conn.commit()
 
         try:
-
             registrar_log(
-                session.get(
-                    "user",
-                    "admin"
-                ),
+                session.get("user", "admin"),
                 f"Excluiu o usuário {usuario}"
             )
-
         except Exception:
             pass
 
@@ -2508,5 +2157,5 @@ def excluir_usuario(usuario):
         devolver_conexao(conn)
 
     return redirect(
-        "/usuarios"
+        url_for("usuarios_bp.usuarios")
     )
