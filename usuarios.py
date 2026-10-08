@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash
 from banco import conectar, devolver_conexao, registrar_log
 from layout import container, acesso_negado
 from html import escape
+from urllib.parse import quote
 
 
 usuarios_bp = Blueprint("usuarios_bp", __name__)
@@ -43,7 +44,7 @@ def pegar_permissoes_formulario():
 
     permissoes = {}
 
-    for campo, nome in PERMISSOES:
+    for campo, _nome in PERMISSOES:
 
         permissoes[campo] = (
             1 if request.form.get(campo) else 0
@@ -53,7 +54,7 @@ def pegar_permissoes_formulario():
 
 
 # ============================================================
-# APLICAR TODAS AS PERMISSÕES AO ADMIN
+# ADMIN = TODAS AS PERMISSÕES
 # ============================================================
 
 def permissoes_admin():
@@ -75,7 +76,10 @@ def permissoes_admin():
 # PÁGINA DE USUÁRIOS
 # ============================================================
 
-@usuarios_bp.route("/usuarios", methods=["GET", "POST"])
+@usuarios_bp.route(
+    "/usuarios",
+    methods=["GET", "POST"]
+)
 def usuarios():
 
     if "user" not in session:
@@ -172,7 +176,7 @@ def usuarios():
                     plano = "basico"
 
                 # --------------------------------------------
-                # VERIFICA SE USUÁRIO JÁ EXISTE
+                # VERIFICAR SE USUÁRIO JÁ EXISTE
                 # --------------------------------------------
 
                 cursor.execute(
@@ -207,10 +211,7 @@ def usuarios():
                     )
 
                 # --------------------------------------------
-                # CRIA USUÁRIO
-                #
-                # ativo = 1
-                # O usuário já poderá entrar no sistema.
+                # CRIAR USUÁRIO
                 # --------------------------------------------
 
                 cursor.execute(
@@ -252,6 +253,7 @@ def usuarios():
                     )
                     """,
                     (
+
                         user,
 
                         generate_password_hash(
@@ -293,6 +295,7 @@ def usuarios():
                         permissoes[
                             "pode_excluir_estoque"
                         ]
+
                     )
                 )
 
@@ -312,7 +315,7 @@ def usuarios():
                     pass
 
                 mensagem = (
-                    "✅ Usuário criado com sucesso!"
+                    "Usuário criado com sucesso!"
                 )
 
                 tipo_mensagem = "sucesso"
@@ -321,11 +324,10 @@ def usuarios():
 
                 conn.rollback()
 
-                mensagem = (
-                    f"❌ {str(e)}"
-                )
+                mensagem = str(e)
 
                 tipo_mensagem = "erro"
+
 
         # ====================================================
         # LISTAR USUÁRIOS
@@ -389,6 +391,11 @@ def usuarios():
                 str(usuario)
             )
 
+            usuario_url = quote(
+                str(usuario),
+                safe=""
+            )
+
             cargo_html = escape(
                 str(cargo or "-")
             )
@@ -405,9 +412,10 @@ def usuarios():
                 str(plano or "basico")
             )
 
-            # --------------------------------------------
+
+            # =================================================
             # STATUS ONLINE
-            # --------------------------------------------
+            # =================================================
 
             if online:
 
@@ -425,9 +433,10 @@ def usuarios():
                 </span>
                 """
 
-            # --------------------------------------------
+
+            # =================================================
             # STATUS DA CONTA
-            # --------------------------------------------
+            # =================================================
 
             if ativo:
 
@@ -437,8 +446,6 @@ def usuarios():
                 </span>
                 """
 
-                texto_ativar = "Desativar"
-
             else:
 
                 status_conta = """
@@ -447,11 +454,10 @@ def usuarios():
                 </span>
                 """
 
-                texto_ativar = "Ativar"
 
-            # --------------------------------------------
+            # =================================================
             # CARGO
-            # --------------------------------------------
+            # =================================================
 
             if cargo == "admin":
 
@@ -469,9 +475,10 @@ def usuarios():
                 </span>
                 """
 
-            # --------------------------------------------
-            # PERMISSÕES RESUMIDAS
-            # --------------------------------------------
+
+            # =================================================
+            # RESUMO DAS PERMISSÕES
+            # =================================================
 
             permissoes_usuario = []
 
@@ -500,6 +507,7 @@ def usuarios():
 
             }
 
+
             if cargo == "admin":
 
                 permissao_html = """
@@ -510,7 +518,10 @@ def usuarios():
 
             else:
 
-                for chave, dados_perm in mapa_permissoes:
+                for (
+                    _chave,
+                    dados_perm
+                ) in mapa_permissoes.items():
 
                     icone, permitido = dados_perm
 
@@ -519,6 +530,7 @@ def usuarios():
                         permissoes_usuario.append(
                             icone
                         )
+
 
                 if permissoes_usuario:
 
@@ -540,39 +552,65 @@ def usuarios():
                     </span>
                     """
 
-            # --------------------------------------------
+
+            # =================================================
             # AÇÕES
-            # --------------------------------------------
+            # =================================================
 
             if usuario == "admin":
 
                 acoes_html = """
-                <span class="protegido">
-                    🔒 Conta protegida
-                </span>
+                <div class="protegido">
+                    🔒 Conta administrativa protegida
+                </div>
                 """
 
             else:
 
+                classe_status = (
+                    "verde"
+                    if not ativo
+                    else
+                    "vermelho"
+                )
+
+                texto_status = (
+                    "🟢 Ativar usuário"
+                    if not ativo
+                    else
+                    "🔴 Desativar usuário"
+                )
+
+
                 acoes_html = f"""
 
-                <div class="acoes-principais">
+                <div class="acoes">
 
-                    <details class="menu-acoes">
+
+                    <!-- ====================================
+                         GERENCIAR
+                         ==================================== -->
+
+                    <details class="menu">
 
                         <summary>
                             ⚙️ Gerenciar
                         </summary>
 
-                        <div class="painel-acoes">
+
+                        <div class="menu-conteudo">
+
 
                             <!-- ALTERAR SENHA -->
 
                             <form
-                                action="/usuarios/alterar_senha/{usuario_html}"
+                                action="/usuarios/alterar_senha/{usuario_url}"
                                 method="POST"
-                                class="acao-form"
                             >
+
+                                <label>
+                                    Nova senha
+                                </label>
 
                                 <input
                                     type="password"
@@ -583,8 +621,8 @@ def usuarios():
                                 >
 
                                 <button
+                                    class="btn azul"
                                     type="submit"
-                                    class="btn salvar"
                                 >
                                     🔑 Alterar senha
                                 </button>
@@ -595,10 +633,13 @@ def usuarios():
                             <!-- ALTERAR PLANO -->
 
                             <form
-                                action="/usuarios/mudar_plano/{usuario_html}"
+                                action="/usuarios/mudar_plano/{usuario_url}"
                                 method="POST"
-                                class="acao-form"
                             >
+
+                                <label>
+                                    Plano
+                                </label>
 
                                 <select name="plano">
 
@@ -625,11 +666,12 @@ def usuarios():
 
                                 </select>
 
+
                                 <button
+                                    class="btn azul"
                                     type="submit"
-                                    class="btn salvar"
                                 >
-                                    💎 Alterar plano
+                                    💎 Salvar plano
                                 </button>
 
                             </form>
@@ -638,25 +680,15 @@ def usuarios():
                             <!-- ATIVAR / DESATIVAR -->
 
                             <form
-                                action="/usuarios/alternar/{usuario_html}"
+                                action="/usuarios/alternar/{usuario_url}"
                                 method="POST"
-                                class="acao-form"
                             >
 
                                 <button
+                                    class="btn {classe_status}"
                                     type="submit"
-                                    class="btn {
-                                        'ativar'
-                                        if not ativo
-                                        else 'desativar'
-                                    }"
                                 >
-                                    {
-                                        '🟢 Ativar usuário'
-                                        if not ativo
-                                        else
-                                        '🔴 Desativar usuário'
-                                    }
+                                    {texto_status}
                                 </button>
 
                             </form>
@@ -665,127 +697,161 @@ def usuarios():
                             <!-- EXCLUIR -->
 
                             <form
-                                action="/usuarios/excluir_usuario/{usuario_html}"
+                                action="/usuarios/excluir_usuario/{usuario_url}"
                                 method="POST"
-                                class="acao-form"
-                                onsubmit="return confirm(
-                                    'Tem certeza que deseja excluir este usuário?'
-                                );"
+                                onsubmit="return confirm('Tem certeza que deseja excluir este usuário?');"
                             >
 
                                 <button
+                                    class="btn vermelho"
                                     type="submit"
-                                    class="btn excluir"
                                 >
                                     🗑️ Excluir usuário
                                 </button>
 
                             </form>
 
+
                         </div>
 
                     </details>
 
 
-                    <!-- PERMISSÕES -->
+                    <!-- ====================================
+                         PERMISSÕES
+                         ==================================== -->
 
-                    <details class="menu-acoes">
+                    <details class="menu">
 
                         <summary>
                             🔐 Permissões
                         </summary>
 
+
                         <form
-                            action="/usuarios/permissoes/{usuario_html}"
+                            action="/usuarios/permissoes/{usuario_url}"
                             method="POST"
                             class="permissoes-edicao"
                         >
 
+
                             <label>
+
                                 <input
                                     type="checkbox"
                                     name="pode_estoque"
                                     {"checked" if pode_estoque else ""}
                                 >
+
                                 📦 Estoque
+
                             </label>
 
+
                             <label>
+
                                 <input
                                     type="checkbox"
                                     name="pode_transferencia"
                                     {"checked" if pode_transferencia else ""}
                                 >
+
                                 🔄 Transferências
+
                             </label>
 
+
                             <label>
+
                                 <input
                                     type="checkbox"
                                     name="pode_historico"
                                     {"checked" if pode_historico else ""}
                                 >
+
                                 📋 Histórico
+
                             </label>
 
+
                             <label>
+
                                 <input
                                     type="checkbox"
                                     name="pode_usuarios"
                                     {"checked" if pode_usuarios else ""}
                                 >
+
                                 👥 Usuários
+
                             </label>
 
+
                             <label>
+
                                 <input
                                     type="checkbox"
                                     name="pode_logs"
                                     {"checked" if pode_logs else ""}
                                 >
+
                                 📝 Logs
+
                             </label>
 
+
                             <label>
+
                                 <input
                                     type="checkbox"
                                     name="pode_editar_estoque"
                                     {"checked" if pode_editar_estoque else ""}
                                 >
+
                                 ✏️ Editar estoque
+
                             </label>
 
+
                             <label>
+
                                 <input
                                     type="checkbox"
                                     name="pode_excluir_estoque"
                                     {"checked" if pode_excluir_estoque else ""}
                                 >
+
                                 🗑️ Excluir estoque
+
                             </label>
 
+
                             <button
+                                class="btn azul"
                                 type="submit"
-                                class="btn salvar"
                             >
                                 💾 Salvar permissões
                             </button>
+
 
                         </form>
 
                     </details>
 
+
                 </div>
 
                 """
 
-            # --------------------------------------------
+
+            # =================================================
             # LINHA DA TABELA
-            # --------------------------------------------
+            # =================================================
 
             tabela += f"""
 
             <tr>
+
 
                 <td>
 
@@ -795,9 +861,7 @@ def usuarios():
                             {usuario_html}
                         </strong>
 
-                        <small>
-                            {status_conta}
-                        </small>
+                        {status_conta}
 
                     </div>
 
@@ -834,25 +898,19 @@ def usuarios():
 
 
                 <td>
-
-                    <div class="permissoes-coluna">
-
-                        {permissao_html}
-
-                    </div>
-
+                    {permissao_html}
                 </td>
 
 
                 <td>
-
                     {acoes_html}
-
                 </td>
+
 
             </tr>
 
             """
+
 
         # ====================================================
         # DEVOLVE CONEXÃO
@@ -860,23 +918,25 @@ def usuarios():
 
         devolver_conexao(conn)
 
+
         # ====================================================
-        # HTML FINAL
+        # HTML
         # ====================================================
 
         return container(f"""
 
 <style>
 
+
 /* ==========================================================
-   CONTAINER
+   PÁGINA
    ========================================================== */
 
 .usuarios-page {{
 
     width:100%;
 
-    max-width:1400px;
+    max-width:1450px;
 
     margin:auto;
 
@@ -891,33 +951,28 @@ def usuarios():
 
 .usuarios-titulo {{
 
-    display:flex;
+    margin-bottom:18px;
 
-    align-items:center;
-
-    gap:10px;
-
-    margin-bottom:20px;
 }}
-
 
 .usuarios-titulo h2 {{
 
     margin:0;
 
-    color:#ffffff;
+    color:#fff;
 
     font-size:25px;
-}}
 
+}}
 
 .usuarios-titulo p {{
 
-    margin:4px 0 0;
+    margin:5px 0 0;
 
     color:#64748b;
 
     font-size:13px;
+
 }}
 
 
@@ -931,7 +986,7 @@ def usuarios():
         linear-gradient(
             145deg,
             #090909,
-            #111111
+            #111
         );
 
     border:1px solid #292929;
@@ -944,17 +999,18 @@ def usuarios():
 
     box-shadow:
         0 10px 30px
-        rgba(0,0,0,0.20);
-}}
+        rgba(0,0,0,.2);
 
+}}
 
 .usuarios-box h3 {{
 
     margin:0 0 18px;
 
-    color:#ffffff;
+    color:#fff;
 
     font-size:16px;
+
 }}
 
 
@@ -973,31 +1029,38 @@ def usuarios():
     font-size:13px;
 
     font-weight:600;
-}}
 
+}}
 
 .mensagem.sucesso {{
 
     color:#86efac;
 
-    background:rgba(34,197,94,0.08);
+    background:
+        rgba(34,197,94,.08);
 
-    border:1px solid rgba(34,197,94,0.20);
+    border:
+        1px solid
+        rgba(34,197,94,.20);
+
 }}
-
 
 .mensagem.erro {{
 
     color:#fca5a5;
 
-    background:rgba(239,68,68,0.08);
+    background:
+        rgba(239,68,68,.08);
 
-    border:1px solid rgba(239,68,68,0.20);
+    border:
+        1px solid
+        rgba(239,68,68,.20);
+
 }}
 
 
 /* ==========================================================
-   FORMULÁRIO DE CRIAÇÃO
+   FORMULÁRIO
    ========================================================== */
 
 .criar-grid {{
@@ -1005,11 +1068,11 @@ def usuarios():
     display:grid;
 
     grid-template-columns:
-        repeat(2, 1fr);
+        repeat(2,1fr);
 
     gap:12px;
-}}
 
+}}
 
 .campo {{
 
@@ -1018,8 +1081,8 @@ def usuarios():
     flex-direction:column;
 
     gap:6px;
-}}
 
+}}
 
 .campo label {{
 
@@ -1028,8 +1091,8 @@ def usuarios():
     font-size:11px;
 
     font-weight:600;
-}}
 
+}}
 
 .campo input,
 .campo select {{
@@ -1046,16 +1109,17 @@ def usuarios():
 
     background:#0b0b0b;
 
-    color:#ffffff;
+    color:#fff;
 
     outline:none;
-}}
 
+}}
 
 .campo input:focus,
 .campo select:focus {{
 
     border-color:#3b82f6;
+
 }}
 
 
@@ -1065,9 +1129,8 @@ def usuarios():
 
 .permissoes-box {{
 
-    grid-column:span 2;
-
-    margin-top:5px;
+    grid-column:
+        span 2;
 
     padding:15px;
 
@@ -1076,31 +1139,31 @@ def usuarios():
     background:#080808;
 
     border:1px solid #252525;
-}}
 
+}}
 
 .permissoes-titulo {{
 
-    color:#ffffff;
+    color:#fff;
 
     font-size:13px;
 
     font-weight:700;
 
     margin-bottom:12px;
-}}
 
+}}
 
 .permissoes-grid {{
 
     display:grid;
 
     grid-template-columns:
-        repeat(4, 1fr);
+        repeat(4,1fr);
 
     gap:8px;
-}}
 
+}}
 
 .permissao-item {{
 
@@ -1114,7 +1177,7 @@ def usuarios():
 
     border-radius:7px;
 
-    background:#111111;
+    background:#111;
 
     border:1px solid #242424;
 
@@ -1123,8 +1186,8 @@ def usuarios():
     font-size:12px;
 
     cursor:pointer;
-}}
 
+}}
 
 .permissao-item:hover {{
 
@@ -1132,8 +1195,8 @@ def usuarios():
 
 }}
 
-
-.permissao-item input {{
+.permissao-item input,
+.permissoes-edicao input {{
 
     accent-color:#3b82f6;
 
@@ -1146,7 +1209,8 @@ def usuarios():
 
 .botao-criar {{
 
-    grid-column:span 2;
+    grid-column:
+        span 2;
 
     padding:12px;
 
@@ -1156,21 +1220,18 @@ def usuarios():
 
     background:#2563eb;
 
-    color:white;
+    color:#fff;
 
     font-weight:700;
 
     cursor:pointer;
 
-    transition:0.2s;
 }}
-
 
 .botao-criar:hover {{
 
     background:#3b82f6;
 
-    transform:translateY(-1px);
 }}
 
 
@@ -1180,10 +1241,11 @@ def usuarios():
 
 .tabela-container {{
 
+    width:100%;
+
     overflow-x:auto;
 
 }}
-
 
 .tabela-usuarios {{
 
@@ -1191,9 +1253,9 @@ def usuarios():
 
     border-collapse:collapse;
 
-    min-width:1100px;
-}}
+    min-width:1200px;
 
+}}
 
 .tabela-usuarios th {{
 
@@ -1201,7 +1263,7 @@ def usuarios():
 
     text-align:left;
 
-    background:#111111;
+    background:#111;
 
     color:#94a3b8;
 
@@ -1209,11 +1271,12 @@ def usuarios():
 
     text-transform:uppercase;
 
-    letter-spacing:0.5px;
+    letter-spacing:.5px;
 
-    border-bottom:1px solid #292929;
+    border-bottom:
+        1px solid #292929;
+
 }}
-
 
 .tabela-usuarios td {{
 
@@ -1221,17 +1284,19 @@ def usuarios():
 
     color:#cbd5e1;
 
-    border-bottom:1px solid #202020;
+    border-bottom:
+        1px solid #202020;
 
     vertical-align:middle;
 
     font-size:12px;
-}}
 
+}}
 
 .tabela-usuarios tr:hover td {{
 
-    background:rgba(255,255,255,0.015);
+    background:
+        rgba(255,255,255,.015);
 
 }}
 
@@ -1247,19 +1312,20 @@ def usuarios():
     flex-direction:column;
 
     gap:5px;
-}}
 
+}}
 
 .usuario-nome strong {{
 
-    color:#ffffff;
+    color:#fff;
 
     font-size:13px;
+
 }}
 
 
 /* ==========================================================
-   STATUS
+   BADGES
    ========================================================== */
 
 .status,
@@ -1280,56 +1346,60 @@ def usuarios():
     font-weight:700;
 
     white-space:nowrap;
-}}
 
+}}
 
 .status.online {{
 
     background:#16a34a;
 
-    color:#ffffff;
-}}
+    color:#fff;
 
+}}
 
 .status.offline {{
 
     background:#ef4444;
 
-    color:#ffffff;
-}}
+    color:#fff;
 
+}}
 
 .conta.ativa {{
 
     color:#86efac;
 
-    background:rgba(34,197,94,0.08);
-}}
+    background:
+        rgba(34,197,94,.08);
 
+}}
 
 .conta.inativa {{
 
     color:#fca5a5;
 
-    background:rgba(239,68,68,0.08);
-}}
+    background:
+        rgba(239,68,68,.08);
 
+}}
 
 .cargo.admin {{
 
     color:#facc15;
 
-    background:rgba(250,204,21,0.08);
-}}
+    background:
+        rgba(250,204,21,.08);
 
+}}
 
 .cargo.operador {{
 
     color:#93c5fd;
 
-    background:rgba(59,130,246,0.08);
-}}
+    background:
+        rgba(59,130,246,.08);
 
+}}
 
 .plano.basico {{
 
@@ -1337,13 +1407,11 @@ def usuarios():
 
 }}
 
-
 .plano.profissional {{
 
     color:#60a5fa;
 
 }}
-
 
 .plano.premium {{
 
@@ -1364,7 +1432,6 @@ def usuarios():
 
 }}
 
-
 .permissao-resumo {{
 
     font-size:16px;
@@ -1372,7 +1439,6 @@ def usuarios():
     letter-spacing:2px;
 
 }}
-
 
 .sem-permissao {{
 
@@ -1385,19 +1451,19 @@ def usuarios():
    AÇÕES
    ========================================================== */
 
-.acoes-principais {{
+.acoes {{
 
     display:flex;
 
     flex-direction:column;
 
-    gap:6px;
+    gap:7px;
 
     min-width:190px;
+
 }}
 
-
-.menu-acoes summary {{
+.menu summary {{
 
     list-style:none;
 
@@ -1419,24 +1485,21 @@ def usuarios():
 
 }}
 
-
-.menu-acoes summary:hover {{
+.menu summary:hover {{
 
     border-color:#3b82f6;
 
-    color:#ffffff;
+    color:#fff;
 
 }}
 
-
-.menu-acoes summary::-webkit-details-marker {{
+.menu summary::-webkit-details-marker {{
 
     display:none;
 
 }}
 
-
-.painel-acoes,
+.menu-conteudo,
 .permissoes-edicao {{
 
     margin-top:7px;
@@ -1453,42 +1516,50 @@ def usuarios():
 
     flex-direction:column;
 
-    gap:7px;
+    gap:8px;
+
 }}
 
-
-.acao-form {{
+.menu-conteudo form {{
 
     display:flex;
 
-    gap:6px;
+    flex-direction:column;
+
+    gap:5px;
+
 }}
 
+.menu-conteudo label {{
 
-.acao-form input,
-.acao-form select {{
+    color:#94a3b8;
 
-    flex:1;
+    font-size:10px;
 
-    min-width:0;
+    font-weight:600;
+
+}}
+
+.menu-conteudo input,
+.menu-conteudo select {{
+
+    width:100%;
+
+    box-sizing:border-box;
 
     padding:8px;
 
-    background:#111111;
+    background:#111;
 
-    color:#ffffff;
+    color:#fff;
 
     border:1px solid #303030;
 
     border-radius:6px;
 
     font-size:11px;
+
 }}
-
-
-/* ==========================================================
-   PERMISSÕES EDIÇÃO
-   ========================================================== */
 
 .permissoes-edicao label {{
 
@@ -1498,26 +1569,19 @@ def usuarios():
 
     gap:7px;
 
-    padding:6px;
+    padding:5px;
 
     color:#cbd5e1;
 
     font-size:11px;
 
     border-radius:5px;
-}}
 
+}}
 
 .permissoes-edicao label:hover {{
 
-    background:#111111;
-
-}}
-
-
-.permissoes-edicao input {{
-
-    accent-color:#3b82f6;
+    background:#111;
 
 }}
 
@@ -1528,51 +1592,43 @@ def usuarios():
 
 .btn {{
 
+    width:100%;
+
     padding:8px 10px;
 
     border:none;
 
     border-radius:6px;
 
-    color:#ffffff;
+    color:#fff;
 
     font-size:10px;
 
     font-weight:700;
 
     cursor:pointer;
+
 }}
 
-
-.btn.salvar {{
+.btn.azul {{
 
     background:#2563eb;
 
 }}
 
-
-.btn.salvar:hover {{
+.btn.azul:hover {{
 
     background:#3b82f6;
 
 }}
 
-
-.btn.ativar {{
+.btn.verde {{
 
     background:#16a34a;
 
 }}
 
-
-.btn.desativar {{
-
-    background:#b91c1c;
-
-}}
-
-
-.btn.excluir {{
+.btn.vermelho {{
 
     background:#dc2626;
 
@@ -1590,6 +1646,7 @@ def usuarios():
     font-size:11px;
 
     white-space:nowrap;
+
 }}
 
 
@@ -1597,7 +1654,7 @@ def usuarios():
    RESPONSIVO
    ========================================================== */
 
-@media(max-width:800px) {{
+@media(max-width:900px) {{
 
     .criar-grid {{
 
@@ -1608,14 +1665,27 @@ def usuarios():
     .permissoes-box,
     .botao-criar {{
 
-        grid-column:span 1;
+        grid-column:
+            span 1;
 
     }}
 
     .permissoes-grid {{
 
         grid-template-columns:
-            repeat(2, 1fr);
+            repeat(2,1fr);
+
+    }}
+
+}}
+
+
+@media(max-width:600px) {{
+
+    .permissoes-grid {{
+
+        grid-template-columns:
+            1fr;
 
     }}
 
@@ -1627,30 +1697,26 @@ def usuarios():
 <div class="usuarios-page">
 
 
-    <!-- =====================================================
+    <!-- ====================================================
          TÍTULO
-         ===================================================== -->
+         ==================================================== -->
 
     <div class="usuarios-titulo">
 
-        <div>
+        <h2>
+            👤 Usuários
+        </h2>
 
-            <h2>
-                👤 Usuários
-            </h2>
-
-            <p>
-                Crie contas, controle acessos e gerencie permissões.
-            </p>
-
-        </div>
+        <p>
+            Crie contas, defina permissões e controle o acesso ao sistema.
+        </p>
 
     </div>
 
 
-    <!-- =====================================================
+    <!-- ====================================================
          CRIAR USUÁRIO
-         ===================================================== -->
+         ==================================================== -->
 
     <div class="usuarios-box">
 
@@ -1745,11 +1811,7 @@ def usuarios():
                     Cargo
                 </label>
 
-                <select
-                    name="cargo"
-                    id="cargoUsuario"
-                    onchange="ajustarPermissoesCargo()"
-                >
+                <select name="cargo">
 
                     <option value="operador">
                         👤 Operador
@@ -1799,17 +1861,15 @@ def usuarios():
 
                 <div class="permissoes-titulo">
 
-                    🔐 Permissões do usuário
+                    🔐 Permissões do operador
 
                     <span
-                        id="avisoPermissoes"
                         style="
                             color:#64748b;
                             font-weight:normal;
-                            margin-left:8px;
                         "
                     >
-                        Selecione o que o operador poderá acessar.
+                        — Administrador recebe acesso total automaticamente.
                     </span>
 
                 </div>
@@ -1823,7 +1883,6 @@ def usuarios():
                         <input
                             type="checkbox"
                             name="pode_estoque"
-                            class="permissao-nova"
                         >
 
                         📦 Estoque
@@ -1836,7 +1895,6 @@ def usuarios():
                         <input
                             type="checkbox"
                             name="pode_transferencia"
-                            class="permissao-nova"
                         >
 
                         🔄 Transferências
@@ -1849,7 +1907,6 @@ def usuarios():
                         <input
                             type="checkbox"
                             name="pode_historico"
-                            class="permissao-nova"
                         >
 
                         📋 Histórico
@@ -1862,7 +1919,6 @@ def usuarios():
                         <input
                             type="checkbox"
                             name="pode_usuarios"
-                            class="permissao-nova"
                         >
 
                         👥 Usuários
@@ -1875,7 +1931,6 @@ def usuarios():
                         <input
                             type="checkbox"
                             name="pode_logs"
-                            class="permissao-nova"
                         >
 
                         📝 Logs
@@ -1888,7 +1943,6 @@ def usuarios():
                         <input
                             type="checkbox"
                             name="pode_editar_estoque"
-                            class="permissao-nova"
                         >
 
                         ✏️ Editar estoque
@@ -1901,7 +1955,6 @@ def usuarios():
                         <input
                             type="checkbox"
                             name="pode_excluir_estoque"
-                            class="permissao-nova"
                         >
 
                         🗑️ Excluir estoque
@@ -1928,7 +1981,7 @@ def usuarios():
 
 
         {
-            f'<div class="mensagem {tipo_mensagem}">{mensagem}</div>'
+            f'<div class="mensagem {tipo_mensagem}">{escape(mensagem)}</div>'
             if mensagem
             else ''
         }
@@ -1937,9 +1990,9 @@ def usuarios():
     </div>
 
 
-    <!-- =====================================================
+    <!-- ====================================================
          LISTA
-         ===================================================== -->
+         ==================================================== -->
 
     <div class="usuarios-box">
 
@@ -2008,107 +2061,21 @@ def usuarios():
 
 </div>
 
-
-<script>
-
-
-// ==========================================================
-// CONTROLE DE PERMISSÕES DO NOVO USUÁRIO
-// ==========================================================
-
-function ajustarPermissoesCargo() {
-
-    const cargo =
-        document.getElementById(
-            "cargoUsuario"
-        );
-
-
-    const checkboxes =
-        document.querySelectorAll(
-            ".permissao-nova"
-        );
-
-
-    const aviso =
-        document.getElementById(
-            "avisoPermissoes"
-        );
-
-
-    if (!cargo) {
-        return;
-    }
-
-
-    if (cargo.value === "admin") {
-
-        checkboxes.forEach(
-            function(checkbox) {
-
-                checkbox.checked = true;
-
-                checkbox.disabled = true;
-
-            }
-        );
-
-
-        if (aviso) {
-
-            aviso.textContent =
-                "Administrador possui acesso total.";
-
-            aviso.style.color =
-                "#22c55e";
-
-        }
-
-    } else {
-
-        checkboxes.forEach(
-            function(checkbox) {
-
-                checkbox.disabled = false;
-
-            }
-        );
-
-
-        if (aviso) {
-
-            aviso.textContent =
-                "Selecione o que o operador poderá acessar.";
-
-            aviso.style.color =
-                "#64748b";
-
-        }
-
-    }
-
-}
-
-
-// ==========================================================
-// INICIALIZA
-// ==========================================================
-
-ajustarPermissoesCargo();
-
-
-</script>
-
 """)
+
 
     except Exception as e:
 
         try:
+
             devolver_conexao(conn)
+
         except Exception:
             pass
 
-        return f"Erro ao carregar usuários: {e}"
+        return (
+            f"Erro ao carregar usuários: {e}"
+        )
 
 
 # ============================================================
@@ -2135,26 +2102,36 @@ def alterar_senha(usuario):
             "/usuarios"
         )
 
+    if usuario == "admin":
+
+        return redirect(
+            "/usuarios"
+        )
+
     conn = conectar()
 
     if conn is None:
-        return redirect("/usuarios")
+
+        return redirect(
+            "/usuarios"
+        )
 
     cursor = conn.cursor()
 
     try:
 
-        if usuario == "admin":
-            return redirect("/usuarios")
-
         cursor.execute(
             """
             UPDATE usuarios
+
             SET senha = %s
+
             WHERE usuario = %s
             """,
             (
-                generate_password_hash(senha),
+                generate_password_hash(
+                    senha
+                ),
                 usuario
             )
         )
@@ -2182,7 +2159,9 @@ def alterar_senha(usuario):
 
         devolver_conexao(conn)
 
-    return redirect("/usuarios")
+    return redirect(
+        "/usuarios"
+    )
 
 
 # ============================================================
@@ -2197,6 +2176,12 @@ def mudar_plano(usuario):
 
     if not usuario_eh_admin():
         return acesso_negado()
+
+    if usuario == "admin":
+
+        return redirect(
+            "/usuarios"
+        )
 
     plano = request.form.get(
         "plano",
@@ -2214,19 +2199,21 @@ def mudar_plano(usuario):
     conn = conectar()
 
     if conn is None:
-        return redirect("/usuarios")
+
+        return redirect(
+            "/usuarios"
+        )
 
     cursor = conn.cursor()
 
     try:
 
-        if usuario == "admin":
-            return redirect("/usuarios")
-
         cursor.execute(
             """
             UPDATE usuarios
+
             SET plano = %s
+
             WHERE usuario = %s
             """,
             (
@@ -2245,7 +2232,9 @@ def mudar_plano(usuario):
 
         devolver_conexao(conn)
 
-    return redirect("/usuarios")
+    return redirect(
+        "/usuarios"
+    )
 
 
 # ============================================================
@@ -2259,15 +2248,22 @@ def mudar_plano(usuario):
 def alternar_usuario(usuario):
 
     if not usuario_eh_admin():
+
         return acesso_negado()
 
     if usuario == "admin":
-        return redirect("/usuarios")
+
+        return redirect(
+            "/usuarios"
+        )
 
     conn = conectar()
 
     if conn is None:
-        return redirect("/usuarios")
+
+        return redirect(
+            "/usuarios"
+        )
 
     cursor = conn.cursor()
 
@@ -2276,7 +2272,9 @@ def alternar_usuario(usuario):
         cursor.execute(
             """
             SELECT ativo
+
             FROM usuarios
+
             WHERE usuario = %s
             """,
             (usuario,)
@@ -2289,13 +2287,18 @@ def alternar_usuario(usuario):
             ativo_atual = resultado[0]
 
             novo_status = (
-                0 if ativo_atual else 1
+                0
+                if ativo_atual
+                else
+                1
             )
 
             cursor.execute(
                 """
                 UPDATE usuarios
+
                 SET ativo = %s
+
                 WHERE usuario = %s
                 """,
                 (
@@ -2314,7 +2317,9 @@ def alternar_usuario(usuario):
 
         devolver_conexao(conn)
 
-    return redirect("/usuarios")
+    return redirect(
+        "/usuarios"
+    )
 
 
 # ============================================================
@@ -2328,10 +2333,14 @@ def alternar_usuario(usuario):
 def alterar_permissoes(usuario):
 
     if not usuario_eh_admin():
+
         return acesso_negado()
 
     if usuario == "admin":
-        return redirect("/usuarios")
+
+        return redirect(
+            "/usuarios"
+        )
 
     permissoes = (
         pegar_permissoes_formulario()
@@ -2340,7 +2349,10 @@ def alterar_permissoes(usuario):
     conn = conectar()
 
     if conn is None:
-        return redirect("/usuarios")
+
+        return redirect(
+            "/usuarios"
+        )
 
     cursor = conn.cursor()
 
@@ -2349,6 +2361,7 @@ def alterar_permissoes(usuario):
         cursor.execute(
             """
             UPDATE usuarios
+
             SET
 
                 pode_estoque = %s,
@@ -2398,6 +2411,7 @@ def alterar_permissoes(usuario):
                 ],
 
                 usuario
+
             )
         )
 
@@ -2424,7 +2438,9 @@ def alterar_permissoes(usuario):
 
         devolver_conexao(conn)
 
-    return redirect("/usuarios")
+    return redirect(
+        "/usuarios"
+    )
 
 
 # ============================================================
@@ -2438,15 +2454,22 @@ def alterar_permissoes(usuario):
 def excluir_usuario(usuario):
 
     if not usuario_eh_admin():
+
         return acesso_negado()
 
     if usuario == "admin":
-        return redirect("/usuarios")
+
+        return redirect(
+            "/usuarios"
+        )
 
     conn = conectar()
 
     if conn is None:
-        return redirect("/usuarios")
+
+        return redirect(
+            "/usuarios"
+        )
 
     cursor = conn.cursor()
 
@@ -2455,6 +2478,7 @@ def excluir_usuario(usuario):
         cursor.execute(
             """
             DELETE FROM usuarios
+
             WHERE usuario = %s
             """,
             (usuario,)
@@ -2483,4 +2507,6 @@ def excluir_usuario(usuario):
 
         devolver_conexao(conn)
 
-    return redirect("/usuarios")
+    return redirect(
+        "/usuarios"
+    )
