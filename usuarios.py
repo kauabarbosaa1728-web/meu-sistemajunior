@@ -36,7 +36,7 @@ def usuario_eh_admin():
 
 
 # ============================================================
-# PEGAR PERMISSÕES
+# PEGAR PERMISSÕES DO FORMULÁRIO
 # ============================================================
 
 def pegar_permissoes_formulario():
@@ -154,21 +154,21 @@ def usuarios():
                         "A senha deve ter pelo menos 4 caracteres."
                     )
 
-                if cargo not in [
+                if cargo not in (
                     "admin",
                     "operador"
-                ]:
+                ):
                     cargo = "operador"
 
-                if plano not in [
+                if plano not in (
                     "basico",
                     "profissional",
                     "premium"
-                ]:
+                ):
                     plano = "basico"
 
                 # --------------------------------------------
-                # VERIFICAR USUÁRIO
+                # VERIFICAR SE USUÁRIO JÁ EXISTE
                 # --------------------------------------------
 
                 cursor.execute(
@@ -202,7 +202,7 @@ def usuarios():
                     )
 
                 # --------------------------------------------
-                # INSERIR
+                # CRIAR USUÁRIO
                 # --------------------------------------------
 
                 cursor.execute(
@@ -224,8 +224,20 @@ def usuarios():
                         pode_excluir_estoque
                     )
                     VALUES (
-                        %s,%s,%s,1,%s,%s,%s,
-                        %s,%s,%s,%s,%s,%s,%s
+                        %s,
+                        %s,
+                        %s,
+                        1,
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s
                     )
                     """,
                     (
@@ -452,7 +464,7 @@ def usuarios():
             else:
 
                 # =================================================
-                # URLS GERADAS PELO FLASK
+                # ROTAS
                 # =================================================
 
                 url_senha = url_for(
@@ -503,8 +515,6 @@ def usuarios():
                 acoes_html = f"""
 
                 <div class="acoes">
-
-                    <!-- GERENCIAR -->
 
                     <details class="menu">
 
@@ -620,8 +630,6 @@ def usuarios():
                     </details>
 
 
-                    <!-- PERMISSÕES -->
-
                     <details class="menu">
 
                         <summary>
@@ -635,93 +643,72 @@ def usuarios():
                         >
 
                             <label>
-
                                 <input
                                     type="checkbox"
                                     name="pode_estoque"
                                     {"checked" if pode_estoque else ""}
                                 >
-
                                 📦 Estoque
-
                             </label>
 
 
                             <label>
-
                                 <input
                                     type="checkbox"
                                     name="pode_transferencia"
                                     {"checked" if pode_transferencia else ""}
                                 >
-
                                 🔄 Transferências
-
                             </label>
 
 
                             <label>
-
                                 <input
                                     type="checkbox"
                                     name="pode_historico"
                                     {"checked" if pode_historico else ""}
                                 >
-
                                 📋 Histórico
-
                             </label>
 
 
                             <label>
-
                                 <input
                                     type="checkbox"
                                     name="pode_usuarios"
                                     {"checked" if pode_usuarios else ""}
                                 >
-
                                 👥 Usuários
-
                             </label>
 
 
                             <label>
-
                                 <input
                                     type="checkbox"
                                     name="pode_logs"
                                     {"checked" if pode_logs else ""}
                                 >
-
                                 📝 Logs
-
                             </label>
 
 
                             <label>
-
                                 <input
                                     type="checkbox"
                                     name="pode_editar_estoque"
                                     {"checked" if pode_editar_estoque else ""}
                                 >
-
                                 ✏️ Editar estoque
-
                             </label>
 
 
                             <label>
-
                                 <input
                                     type="checkbox"
                                     name="pode_excluir_estoque"
                                     {"checked" if pode_excluir_estoque else ""}
                                 >
-
                                 🗑️ Excluir estoque
-
                             </label>
 
 
@@ -761,21 +748,17 @@ def usuarios():
 
                 </td>
 
-
                 <td>
                     {cargo_badge}
                 </td>
-
 
                 <td>
                     {email_html}
                 </td>
 
-
                 <td>
                     {empresa_html}
                 </td>
-
 
                 <td>
 
@@ -785,16 +768,13 @@ def usuarios():
 
                 </td>
 
-
                 <td>
                     {status_online}
                 </td>
 
-
                 <td>
                     {permissao_html}
                 </td>
-
 
                 <td>
                     {acoes_html}
@@ -813,12 +793,10 @@ def usuarios():
 <style>
 
 .usuarios-page {{
-
     width:100%;
     max-width:1450px;
     margin:auto;
     padding:5px 0 30px;
-
 }}
 
 .usuarios-titulo {{
@@ -838,576 +816,357 @@ def usuarios():
 }}
 
 .usuarios-box {{
-
-    background:
-        linear-gradient(
-            145deg,
-            #090909,
-            #111
-        );
-
+    background:linear-gradient(145deg,#090909,#111);
     border:1px solid #292929;
     border-radius:14px;
     padding:20px;
     margin-bottom:20px;
-
-    box-shadow:
-        0 10px 30px
-        rgba(0,0,0,.2);
-
+    box-shadow:0 10px 30px rgba(0,0,0,.2);
 }}
 
 .usuarios-box h3 {{
-
     margin:0 0 18px;
     color:#fff;
     font-size:16px;
-
 }}
 
 .mensagem {{
-
     margin-top:15px;
     padding:11px 14px;
     border-radius:8px;
     font-size:13px;
     font-weight:600;
-
 }}
 
 .mensagem.sucesso {{
-
     color:#86efac;
     background:rgba(34,197,94,.08);
     border:1px solid rgba(34,197,94,.20);
-
 }}
 
 .mensagem.erro {{
-
     color:#fca5a5;
     background:rgba(239,68,68,.08);
     border:1px solid rgba(239,68,68,.20);
-
 }}
 
-
-/* CRIAÇÃO */
-
 .criar-grid {{
-
     display:grid;
     grid-template-columns:repeat(2,1fr);
     gap:12px;
-
 }}
 
 .campo {{
-
     display:flex;
     flex-direction:column;
     gap:6px;
-
 }}
 
 .campo label {{
-
     color:#94a3b8;
     font-size:11px;
     font-weight:600;
-
 }}
 
 .campo input,
 .campo select {{
-
     width:100%;
     box-sizing:border-box;
-
     padding:11px 12px;
-
     border-radius:8px;
     border:1px solid #303030;
-
     background:#0b0b0b;
     color:#fff;
-
     outline:none;
-
 }}
 
 .campo input:focus,
 .campo select:focus {{
-
     border-color:#3b82f6;
-
 }}
 
-
-/* PERMISSÕES */
-
 .permissoes-box {{
-
     grid-column:span 2;
-
     padding:15px;
-
     border-radius:10px;
-
     background:#080808;
     border:1px solid #252525;
-
 }}
 
 .permissoes-titulo {{
-
     color:#fff;
     font-size:13px;
     font-weight:700;
     margin-bottom:12px;
-
 }}
 
 .permissoes-grid {{
-
     display:grid;
     grid-template-columns:repeat(4,1fr);
     gap:8px;
-
 }}
 
 .permissao-item {{
-
     display:flex;
     align-items:center;
-
     gap:7px;
-
     padding:9px;
-
     border-radius:7px;
-
     background:#111;
     border:1px solid #242424;
-
     color:#cbd5e1;
-
     font-size:12px;
     cursor:pointer;
-
 }}
 
 .permissao-item:hover {{
-
     border-color:#3b82f6;
-
 }}
 
 .permissao-item input,
 .permissoes-edicao input {{
-
     accent-color:#3b82f6;
-
 }}
 
-
-/* BOTÃO CRIAR */
-
 .botao-criar {{
-
     grid-column:span 2;
-
     padding:12px;
-
     border:none;
     border-radius:8px;
-
     background:#2563eb;
     color:#fff;
-
     font-weight:700;
     cursor:pointer;
-
 }}
 
 .botao-criar:hover {{
-
     background:#3b82f6;
-
 }}
 
-
-/* TABELA */
-
 .tabela-container {{
-
     width:100%;
     overflow-x:auto;
-
 }}
 
 .tabela-usuarios {{
-
     width:100%;
     border-collapse:collapse;
-
     min-width:1200px;
-
 }}
 
 .tabela-usuarios th {{
-
     padding:12px;
     text-align:left;
-
     background:#111;
-
     color:#94a3b8;
-
     font-size:11px;
-
     text-transform:uppercase;
-
     letter-spacing:.5px;
-
     border-bottom:1px solid #292929;
-
 }}
 
 .tabela-usuarios td {{
-
     padding:12px;
-
     color:#cbd5e1;
-
     border-bottom:1px solid #202020;
-
     vertical-align:middle;
-
     font-size:12px;
-
 }}
 
 .tabela-usuarios tr:hover td {{
-
     background:rgba(255,255,255,.015);
-
 }}
 
-
-/* USUÁRIO */
-
 .usuario-nome {{
-
     display:flex;
     flex-direction:column;
     gap:5px;
-
 }}
 
 .usuario-nome strong {{
-
     color:#fff;
     font-size:13px;
-
 }}
-
-
-/* BADGES */
 
 .status,
 .conta,
 .cargo,
 .plano {{
-
     display:inline-flex;
-
     align-items:center;
-
     padding:4px 8px;
-
     border-radius:6px;
-
     font-size:10px;
     font-weight:700;
-
     white-space:nowrap;
-
 }}
 
 .status.online {{
-
     background:#16a34a;
     color:#fff;
-
 }}
 
 .status.offline {{
-
     background:#ef4444;
     color:#fff;
-
 }}
 
 .conta.ativa {{
-
     color:#86efac;
     background:rgba(34,197,94,.08);
-
 }}
 
 .conta.inativa {{
-
     color:#fca5a5;
     background:rgba(239,68,68,.08);
-
 }}
 
 .cargo.admin {{
-
     color:#facc15;
     background:rgba(250,204,21,.08);
-
 }}
 
 .cargo.operador {{
-
     color:#93c5fd;
     background:rgba(59,130,246,.08);
-
 }}
 
 .plano.basico {{
-
     color:#94a3b8;
-
 }}
 
 .plano.profissional {{
-
     color:#60a5fa;
-
 }}
 
 .plano.premium {{
-
     color:#c084fc;
-
 }}
 
-
-/* PERMISSÕES */
-
 .permissao-total {{
-
     color:#22c55e;
     font-weight:700;
-
 }}
 
 .permissao-resumo {{
-
     font-size:16px;
     letter-spacing:2px;
-
 }}
 
 .sem-permissao {{
-
     color:#64748b;
-
 }}
 
-
-/* AÇÕES */
-
 .acoes {{
-
     display:flex;
     flex-direction:column;
-
     gap:7px;
-
     min-width:190px;
-
 }}
 
 .menu summary {{
-
     list-style:none;
-
     cursor:pointer;
-
     padding:8px 10px;
-
     border-radius:7px;
-
     background:#171717;
-
     border:1px solid #303030;
-
     color:#cbd5e1;
-
     font-size:11px;
     font-weight:700;
-
 }}
 
 .menu summary:hover {{
-
     border-color:#3b82f6;
     color:#fff;
-
 }}
 
 .menu summary::-webkit-details-marker {{
-
     display:none;
-
 }}
 
 .menu-conteudo,
 .permissoes-edicao {{
-
     margin-top:7px;
-
     padding:10px;
-
     background:#080808;
-
     border:1px solid #252525;
-
     border-radius:8px;
-
     display:flex;
-
     flex-direction:column;
-
     gap:8px;
-
 }}
 
 .menu-conteudo form {{
-
     display:flex;
-
     flex-direction:column;
-
     gap:5px;
-
 }}
 
 .menu-conteudo label {{
-
     color:#94a3b8;
-
     font-size:10px;
     font-weight:600;
-
 }}
 
 .menu-conteudo input,
 .menu-conteudo select {{
-
     width:100%;
-
     box-sizing:border-box;
-
     padding:8px;
-
     background:#111;
-
     color:#fff;
-
     border:1px solid #303030;
-
     border-radius:6px;
-
     font-size:11px;
-
 }}
 
 .permissoes-edicao label {{
-
     display:flex;
-
     align-items:center;
-
     gap:7px;
-
     padding:5px;
-
     color:#cbd5e1;
-
     font-size:11px;
-
     border-radius:5px;
-
 }}
 
 .permissoes-edicao label:hover {{
-
     background:#111;
-
 }}
 
-
-/* BOTÕES */
-
 .btn {{
-
     width:100%;
-
     padding:8px 10px;
-
     border:none;
-
     border-radius:6px;
-
     color:#fff;
-
     font-size:10px;
-
     font-weight:700;
-
     cursor:pointer;
-
 }}
 
 .btn.azul {{
-
     background:#2563eb;
-
 }}
 
 .btn.azul:hover {{
-
     background:#3b82f6;
-
 }}
 
 .btn.verde {{
-
     background:#16a34a;
-
 }}
 
 .btn.vermelho {{
-
     background:#dc2626;
-
 }}
 
 .protegido {{
-
     color:#64748b;
     font-size:11px;
     white-space:nowrap;
-
 }}
-
-
-/* RESPONSIVO */
 
 @media(max-width:900px) {{
 
@@ -1451,10 +1210,6 @@ def usuarios():
 
     </div>
 
-
-    <!-- ====================================================
-         CRIAR USUÁRIO
-         ==================================================== -->
 
     <div class="usuarios-box">
 
@@ -1598,86 +1353,38 @@ def usuarios():
                 <div class="permissoes-grid">
 
                     <label class="permissao-item">
-
-                        <input
-                            type="checkbox"
-                            name="pode_estoque"
-                        >
-
+                        <input type="checkbox" name="pode_estoque">
                         📦 Estoque
-
                     </label>
 
-
                     <label class="permissao-item">
-
-                        <input
-                            type="checkbox"
-                            name="pode_transferencia"
-                        >
-
+                        <input type="checkbox" name="pode_transferencia">
                         🔄 Transferências
-
                     </label>
 
-
                     <label class="permissao-item">
-
-                        <input
-                            type="checkbox"
-                            name="pode_historico"
-                        >
-
+                        <input type="checkbox" name="pode_historico">
                         📋 Histórico
-
                     </label>
 
-
                     <label class="permissao-item">
-
-                        <input
-                            type="checkbox"
-                            name="pode_usuarios"
-                        >
-
+                        <input type="checkbox" name="pode_usuarios">
                         👥 Usuários
-
                     </label>
 
-
                     <label class="permissao-item">
-
-                        <input
-                            type="checkbox"
-                            name="pode_logs"
-                        >
-
+                        <input type="checkbox" name="pode_logs">
                         📝 Logs
-
                     </label>
 
-
                     <label class="permissao-item">
-
-                        <input
-                            type="checkbox"
-                            name="pode_editar_estoque"
-                        >
-
+                        <input type="checkbox" name="pode_editar_estoque">
                         ✏️ Editar estoque
-
                     </label>
 
-
                     <label class="permissao-item">
-
-                        <input
-                            type="checkbox"
-                            name="pode_excluir_estoque"
-                        >
-
+                        <input type="checkbox" name="pode_excluir_estoque">
                         🗑️ Excluir estoque
-
                     </label>
 
                 </div>
@@ -1704,10 +1411,6 @@ def usuarios():
     </div>
 
 
-    <!-- ====================================================
-         LISTA
-         ==================================================== -->
-
     <div class="usuarios-box">
 
         <h3>
@@ -1723,42 +1426,18 @@ def usuarios():
 
                     <tr>
 
-                        <th>
-                            Usuário
-                        </th>
-
-                        <th>
-                            Cargo
-                        </th>
-
-                        <th>
-                            E-mail
-                        </th>
-
-                        <th>
-                            Empresa
-                        </th>
-
-                        <th>
-                            Plano
-                        </th>
-
-                        <th>
-                            Login
-                        </th>
-
-                        <th>
-                            Permissões
-                        </th>
-
-                        <th>
-                            Ações
-                        </th>
+                        <th>Usuário</th>
+                        <th>Cargo</th>
+                        <th>E-mail</th>
+                        <th>Empresa</th>
+                        <th>Plano</th>
+                        <th>Login</th>
+                        <th>Permissões</th>
+                        <th>Ações</th>
 
                     </tr>
 
                 </thead>
-
 
                 <tbody>
 
@@ -1778,15 +1457,6 @@ def usuarios():
 
         return container(html)
 
-    except Exception as e:
-
-        try:
-            devolver_conexao(conn)
-        except Exception:
-            pass
-
-        return f"Erro ao carregar usuários: {e}"
-
     finally:
 
         try:
@@ -1801,7 +1471,8 @@ def usuarios():
 
 @usuarios_bp.route(
     "/usuarios/alterar_senha/<usuario>",
-    methods=["POST"]
+    methods=["POST"],
+    endpoint="alterar_senha"
 )
 def alterar_senha(usuario):
 
@@ -1875,7 +1546,8 @@ def alterar_senha(usuario):
 
 @usuarios_bp.route(
     "/usuarios/mudar_plano/<usuario>",
-    methods=["POST"]
+    methods=["POST"],
+    endpoint="mudar_plano"
 )
 def mudar_plano(usuario):
 
@@ -1892,11 +1564,11 @@ def mudar_plano(usuario):
         "basico"
     ).strip().lower()
 
-    if plano not in [
+    if plano not in (
         "basico",
         "profissional",
         "premium"
-    ]:
+    ):
         plano = "basico"
 
     conn = conectar()
@@ -1938,12 +1610,13 @@ def mudar_plano(usuario):
 
 
 # ============================================================
-# ATIVAR / DESATIVAR
+# ATIVAR / DESATIVAR USUÁRIO
 # ============================================================
 
 @usuarios_bp.route(
     "/usuarios/alternar/<usuario>",
-    methods=["POST"]
+    methods=["POST"],
+    endpoint="alternar_usuario"
 )
 def alternar_usuario(usuario):
 
@@ -2028,7 +1701,8 @@ def alternar_usuario(usuario):
 
 @usuarios_bp.route(
     "/usuarios/permissoes/<usuario>",
-    methods=["POST"]
+    methods=["POST"],
+    endpoint="alterar_permissoes"
 )
 def alterar_permissoes(usuario):
 
@@ -2107,7 +1781,8 @@ def alterar_permissoes(usuario):
 
 @usuarios_bp.route(
     "/usuarios/excluir_usuario/<usuario>",
-    methods=["POST"]
+    methods=["POST"],
+    endpoint="excluir_usuario"
 )
 def excluir_usuario(usuario):
 
