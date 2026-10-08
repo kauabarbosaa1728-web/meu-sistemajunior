@@ -13,13 +13,174 @@ usuarios_bp = Blueprint("usuarios_bp", __name__)
 # ============================================================
 
 PERMISSOES = [
+
+    # ========================================================
+    # ESTOQUE
+    # ========================================================
+
     ("pode_estoque", "📦 Estoque"),
     ("pode_transferencia", "🔄 Transferências"),
     ("pode_historico", "📋 Histórico"),
-    ("pode_usuarios", "👥 Usuários"),
-    ("pode_logs", "📝 Logs"),
     ("pode_editar_estoque", "✏️ Editar estoque"),
     ("pode_excluir_estoque", "🗑️ Excluir estoque"),
+    ("pode_entrada_estoque", "📥 Entrada de estoque"),
+    ("pode_categorias", "📂 Categorias"),
+    ("pode_fornecedores", "🏭 Fornecedores"),
+    ("pode_ncm", "🔢 NCM"),
+    ("pode_exportar_estoque", "📊 Exportar estoque"),
+    ("pode_pdf_estoque", "📄 PDF do estoque"),
+
+    # ========================================================
+    # SISTEMA
+    # ========================================================
+
+    ("pode_usuarios", "👥 Usuários"),
+    ("pode_logs", "📝 Logs"),
+
+    # ========================================================
+    # FINANCEIRO
+    # ========================================================
+
+    ("pode_financeiro", "💰 Financeiro"),
+    ("pode_entrada_financeiro", "➕ Entrada financeira"),
+    ("pode_saida_financeiro", "➖ Saída financeira"),
+    ("pode_resumo_financeiro", "📊 Resumo financeiro"),
+    ("pode_relatorio_financeiro", "📑 Relatório financeiro"),
+
+    # ========================================================
+    # VENDAS
+    # ========================================================
+
+    ("pode_vendas", "🛒 Vendas"),
+    ("pode_historico_vendas", "📜 Histórico de vendas"),
+
+    # ========================================================
+    # RELATÓRIOS
+    # ========================================================
+
+    ("pode_relatorios", "📊 Relatórios"),
+    ("pode_relatorio_geral", "📈 Relatório geral"),
+    ("pode_relatorio_estoque", "📦 Relatório estoque"),
+    ("pode_relatorio_veiculos", "🚗 Relatório veículos"),
+    ("pode_relatorio_problemas", "⚠️ Relatório problemas"),
+
+    # ========================================================
+    # VEÍCULOS
+    # ========================================================
+
+    ("pode_veiculos", "🚙 Veículos"),
+    ("pode_manutencoes", "🔧 Manutenções"),
+    ("pode_dashboard", "📊 Dashboard veículos"),
+    ("pode_rotas", "🗺️ Rotas"),
+
+    # ========================================================
+    # PROBLEMAS
+    # ========================================================
+
+    ("pode_problemas", "⚠️ Problemas"),
+    ("pode_ocorrencias", "📋 Ocorrências"),
+    ("pode_resolver_problemas", "✅ Resolver problemas"),
+    ("pode_excluir_problemas", "🗑️ Excluir problemas"),
+    ("pode_pdf_problemas", "📄 PDF problemas"),
+
+    # ========================================================
+    # OUTROS
+    # ========================================================
+
+    ("pode_ia", "🤖 Inteligência Artificial"),
+    ("pode_configuracoes", "⚙️ Configurações"),
+]
+
+
+# ============================================================
+# GRUPOS DE PERMISSÕES
+# ============================================================
+
+GRUPOS_PERMISSOES = [
+
+    (
+        "📦 ESTOQUE",
+        [
+            ("pode_estoque", "📦 Estoque"),
+            ("pode_transferencia", "🔄 Transferências"),
+            ("pode_historico", "📋 Histórico"),
+            ("pode_editar_estoque", "✏️ Editar estoque"),
+            ("pode_excluir_estoque", "🗑️ Excluir estoque"),
+            ("pode_entrada_estoque", "📥 Entrada de estoque"),
+            ("pode_categorias", "📂 Categorias"),
+            ("pode_fornecedores", "🏭 Fornecedores"),
+            ("pode_ncm", "🔢 NCM"),
+            ("pode_exportar_estoque", "📊 Exportar estoque"),
+            ("pode_pdf_estoque", "📄 PDF do estoque"),
+        ]
+    ),
+
+    (
+        "🖥️ SISTEMA",
+        [
+            ("pode_usuarios", "👥 Usuários"),
+            ("pode_logs", "📝 Logs"),
+        ]
+    ),
+
+    (
+        "💰 FINANCEIRO",
+        [
+            ("pode_financeiro", "💰 Financeiro"),
+            ("pode_entrada_financeiro", "➕ Entrada financeira"),
+            ("pode_saida_financeiro", "➖ Saída financeira"),
+            ("pode_resumo_financeiro", "📊 Resumo financeiro"),
+            ("pode_relatorio_financeiro", "📑 Relatório financeiro"),
+        ]
+    ),
+
+    (
+        "🛒 VENDAS",
+        [
+            ("pode_vendas", "🛒 Vendas"),
+            ("pode_historico_vendas", "📜 Histórico de vendas"),
+        ]
+    ),
+
+    (
+        "📊 RELATÓRIOS",
+        [
+            ("pode_relatorios", "📊 Relatórios"),
+            ("pode_relatorio_geral", "📈 Relatório geral"),
+            ("pode_relatorio_estoque", "📦 Relatório estoque"),
+            ("pode_relatorio_veiculos", "🚗 Relatório veículos"),
+            ("pode_relatorio_problemas", "⚠️ Relatório problemas"),
+        ]
+    ),
+
+    (
+        "🚙 VEÍCULOS",
+        [
+            ("pode_veiculos", "🚙 Veículos"),
+            ("pode_manutencoes", "🔧 Manutenções"),
+            ("pode_dashboard", "📊 Dashboard veículos"),
+            ("pode_rotas", "🗺️ Rotas"),
+        ]
+    ),
+
+    (
+        "⚠️ PROBLEMAS",
+        [
+            ("pode_problemas", "⚠️ Problemas"),
+            ("pode_ocorrencias", "📋 Ocorrências"),
+            ("pode_resolver_problemas", "✅ Resolver problemas"),
+            ("pode_excluir_problemas", "🗑️ Excluir problemas"),
+            ("pode_pdf_problemas", "📄 PDF problemas"),
+        ]
+    ),
+
+    (
+        "🤖 OUTROS",
+        [
+            ("pode_ia", "🤖 Inteligência Artificial"),
+            ("pode_configuracoes", "⚙️ Configurações"),
+        ]
+    ),
 ]
 
 
@@ -59,14 +220,109 @@ def pegar_permissoes_formulario():
 def permissoes_admin():
 
     return {
-        "pode_estoque": 1,
-        "pode_transferencia": 1,
-        "pode_historico": 1,
-        "pode_usuarios": 1,
-        "pode_logs": 1,
-        "pode_editar_estoque": 1,
-        "pode_excluir_estoque": 1
+        campo: 1
+        for campo, _nome in PERMISSOES
     }
+
+
+# ============================================================
+# GERAR HTML DAS PERMISSÕES
+# ============================================================
+
+def gerar_permissoes_criacao():
+
+    html = ""
+
+    for titulo, permissoes in GRUPOS_PERMISSOES:
+
+        html += f"""
+
+        <div class="grupo-permissoes">
+
+            <div class="grupo-titulo">
+                {titulo}
+            </div>
+
+            <div class="grupo-grid">
+        """
+
+        for campo, nome in permissoes:
+
+            html += f"""
+
+                <label class="permissao-item">
+
+                    <input
+                        type="checkbox"
+                        name="{campo}"
+                    >
+
+                    {nome}
+
+                </label>
+
+            """
+
+        html += """
+
+            </div>
+
+        </div>
+
+        """
+
+    return html
+
+
+# ============================================================
+# GERAR HTML DAS PERMISSÕES DE EDIÇÃO
+# ============================================================
+
+def gerar_permissoes_edicao(usuario_dados):
+
+    html = ""
+
+    for titulo, permissoes in GRUPOS_PERMISSOES:
+
+        html += f"""
+
+        <div class="grupo-edicao">
+
+            <div class="grupo-edicao-titulo">
+                {titulo}
+            </div>
+
+        """
+
+        for campo, nome in permissoes:
+
+            valor = usuario_dados.get(campo, 0)
+
+            checked = "checked" if valor else ""
+
+            html += f"""
+
+                <label class="permissao-edicao-item">
+
+                    <input
+                        type="checkbox"
+                        name="{campo}"
+                        {checked}
+                    >
+
+                    {nome}
+
+                </label>
+
+            """
+
+        html += """
+
+        </div>
+
+        """
+
+    return html
 
 
 # ============================================================
@@ -202,11 +458,38 @@ def usuarios():
                     )
 
                 # --------------------------------------------
+                # COLUNAS DAS PERMISSÕES
+                # --------------------------------------------
+
+                campos_permissoes = ", ".join(
+                    campo
+                    for campo, _nome in PERMISSOES
+                )
+
+                valores_permissoes = ", ".join(
+                    ["%s"] * len(PERMISSOES)
+                )
+
+                valores = [
+                    user,
+                    generate_password_hash(senha),
+                    cargo,
+                    email,
+                    plano,
+                    nome_empresa
+                ]
+
+                valores.extend(
+                    permissoes[campo]
+                    for campo, _nome in PERMISSOES
+                )
+
+                # --------------------------------------------
                 # CRIAR USUÁRIO
                 # --------------------------------------------
 
                 cursor.execute(
-                    """
+                    f"""
                     INSERT INTO usuarios (
                         usuario,
                         senha,
@@ -215,13 +498,7 @@ def usuarios():
                         email,
                         plano,
                         nome_empresa,
-                        pode_estoque,
-                        pode_transferencia,
-                        pode_historico,
-                        pode_usuarios,
-                        pode_logs,
-                        pode_editar_estoque,
-                        pode_excluir_estoque
+                        {campos_permissoes}
                     )
                     VALUES (
                         %s,
@@ -231,43 +508,31 @@ def usuarios():
                         %s,
                         %s,
                         %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s,
-                        %s
+                        {valores_permissoes}
                     )
                     """,
-                    (
-                        user,
-                        generate_password_hash(senha),
-                        cargo,
-                        email,
-                        plano,
-                        nome_empresa,
-                        permissoes["pode_estoque"],
-                        permissoes["pode_transferencia"],
-                        permissoes["pode_historico"],
-                        permissoes["pode_usuarios"],
-                        permissoes["pode_logs"],
-                        permissoes["pode_editar_estoque"],
-                        permissoes["pode_excluir_estoque"]
-                    )
+                    tuple(valores)
                 )
 
                 conn.commit()
 
                 try:
+
                     registrar_log(
-                        session.get("user", "admin"),
+                        session.get(
+                            "user",
+                            "admin"
+                        ),
                         f"Criou o usuário {user}"
                     )
+
                 except Exception:
                     pass
 
-                mensagem = "Usuário criado com sucesso!"
+                mensagem = (
+                    "Usuário criado com sucesso!"
+                )
+
                 tipo_mensagem = "sucesso"
 
             except Exception as e:
@@ -281,8 +546,13 @@ def usuarios():
         # LISTAR USUÁRIOS
         # ====================================================
 
+        campos_select = ", ".join(
+            campo
+            for campo, _nome in PERMISSOES
+        )
+
         cursor.execute(
-            """
+            f"""
             SELECT
                 usuario,
                 cargo,
@@ -291,13 +561,7 @@ def usuarios():
                 email,
                 plano,
                 nome_empresa,
-                pode_estoque,
-                pode_transferencia,
-                pode_historico,
-                pode_usuarios,
-                pode_logs,
-                pode_editar_estoque,
-                pode_excluir_estoque
+                {campos_select}
             FROM usuarios
             ORDER BY
                 CASE
@@ -313,28 +577,54 @@ def usuarios():
 
         tabela = ""
 
-        for (
-            usuario,
-            cargo,
-            online,
-            ativo,
-            email,
-            plano,
-            nome_empresa,
-            pode_estoque,
-            pode_transferencia,
-            pode_historico,
-            pode_usuarios,
-            pode_logs,
-            pode_editar_estoque,
-            pode_excluir_estoque
-        ) in dados:
+        for linha in dados:
 
-            usuario_html = escape(str(usuario))
-            cargo_html = escape(str(cargo or "-"))
-            email_html = escape(str(email or "-"))
-            empresa_html = escape(str(nome_empresa or "-"))
-            plano_html = escape(str(plano or "basico"))
+            # --------------------------------------------
+            # DADOS BÁSICOS
+            # --------------------------------------------
+
+            usuario = linha[0]
+            cargo = linha[1]
+            online = linha[2]
+            ativo = linha[3]
+            email = linha[4]
+            plano = linha[5]
+            nome_empresa = linha[6]
+
+            # --------------------------------------------
+            # MONTAR DICIONÁRIO DE PERMISSÕES
+            # --------------------------------------------
+
+            usuario_dados = {}
+
+            for indice, (campo, _nome) in enumerate(
+                PERMISSOES,
+                start=7
+            ):
+
+                usuario_dados[campo] = (
+                    linha[indice]
+                )
+
+            usuario_html = escape(
+                str(usuario)
+            )
+
+            cargo_html = escape(
+                str(cargo or "-")
+            )
+
+            email_html = escape(
+                str(email or "-")
+            )
+
+            empresa_html = escape(
+                str(nome_empresa or "-")
+            )
+
+            plano_html = escape(
+                str(plano or "basico")
+            )
 
             # =================================================
             # STATUS ONLINE
@@ -410,36 +700,19 @@ def usuarios():
 
             else:
 
-                icones = []
+                quantidade = sum(
+                    1
+                    for campo, _nome in PERMISSOES
+                    if usuario_dados.get(campo)
+                )
 
-                if pode_estoque:
-                    icones.append("📦")
+                if quantidade:
 
-                if pode_transferencia:
-                    icones.append("🔄")
-
-                if pode_historico:
-                    icones.append("📋")
-
-                if pode_usuarios:
-                    icones.append("👥")
-
-                if pode_logs:
-                    icones.append("📝")
-
-                if pode_editar_estoque:
-                    icones.append("✏️")
-
-                if pode_excluir_estoque:
-                    icones.append("🗑️")
-
-                if icones:
-
-                    permissao_html = (
-                        '<span class="permissao-resumo">'
-                        + " ".join(icones)
-                        + "</span>"
-                    )
+                    permissao_html = f"""
+                    <span class="permissao-resumo">
+                        🔐 {quantidade}/{len(PERMISSOES)}
+                    </span>
+                    """
 
                 else:
 
@@ -507,6 +780,12 @@ def usuarios():
                     texto_status = (
                         "🟢 Ativar usuário"
                     )
+
+                permissoes_edicao = (
+                    gerar_permissoes_edicao(
+                        usuario_dados
+                    )
+                )
 
                 # =================================================
                 # AÇÕES
@@ -633,7 +912,7 @@ def usuarios():
                     <details class="menu">
 
                         <summary>
-                            🔐 Permissões
+                            🔐 Permissões ({quantidade if cargo != "admin" else "TOTAL"})
                         </summary>
 
                         <form
@@ -642,81 +921,13 @@ def usuarios():
                             class="permissoes-edicao"
                         >
 
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    name="pode_estoque"
-                                    {"checked" if pode_estoque else ""}
-                                >
-                                📦 Estoque
-                            </label>
-
-
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    name="pode_transferencia"
-                                    {"checked" if pode_transferencia else ""}
-                                >
-                                🔄 Transferências
-                            </label>
-
-
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    name="pode_historico"
-                                    {"checked" if pode_historico else ""}
-                                >
-                                📋 Histórico
-                            </label>
-
-
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    name="pode_usuarios"
-                                    {"checked" if pode_usuarios else ""}
-                                >
-                                👥 Usuários
-                            </label>
-
-
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    name="pode_logs"
-                                    {"checked" if pode_logs else ""}
-                                >
-                                📝 Logs
-                            </label>
-
-
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    name="pode_editar_estoque"
-                                    {"checked" if pode_editar_estoque else ""}
-                                >
-                                ✏️ Editar estoque
-                            </label>
-
-
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    name="pode_excluir_estoque"
-                                    {"checked" if pode_excluir_estoque else ""}
-                                >
-                                🗑️ Excluir estoque
-                            </label>
-
+                            {permissoes_edicao}
 
                             <button
                                 class="btn azul"
                                 type="submit"
                             >
-                                💾 Salvar permissões
+                                💾 Salvar todas as permissões
                             </button>
 
                         </form>
@@ -724,6 +935,7 @@ def usuarios():
                     </details>
 
                 </div>
+
                 """
 
             # =================================================
@@ -783,6 +995,14 @@ def usuarios():
             </tr>
 
             """
+
+        # ====================================================
+        # HTML DAS PERMISSÕES DE CRIAÇÃO
+        # ====================================================
+
+        permissoes_criacao = (
+            gerar_permissoes_criacao()
+        )
 
         # ====================================================
         # HTML
@@ -897,13 +1117,32 @@ def usuarios():
     color:#fff;
     font-size:13px;
     font-weight:700;
-    margin-bottom:12px;
+    margin-bottom:15px;
 }}
 
-.permissoes-grid {{
+.grupo-permissoes {{
+    margin-bottom:15px;
+}}
+
+.grupo-titulo {{
+    color:#60a5fa;
+    font-size:11px;
+    font-weight:800;
+    padding:8px 10px;
+    background:#101010;
+    border:1px solid #252525;
+    border-radius:7px 7px 0 0;
+}}
+
+.grupo-grid {{
     display:grid;
     grid-template-columns:repeat(4,1fr);
-    gap:8px;
+    gap:7px;
+    padding:8px;
+    background:#090909;
+    border:1px solid #252525;
+    border-top:none;
+    border-radius:0 0 7px 7px;
 }}
 
 .permissao-item {{
@@ -915,16 +1154,17 @@ def usuarios():
     background:#111;
     border:1px solid #242424;
     color:#cbd5e1;
-    font-size:12px;
+    font-size:11px;
     cursor:pointer;
 }}
 
 .permissao-item:hover {{
     border-color:#3b82f6;
+    color:#fff;
 }}
 
 .permissao-item input,
-.permissoes-edicao input {{
+.permissao-edicao-item input {{
     accent-color:#3b82f6;
 }}
 
@@ -1049,8 +1289,9 @@ def usuarios():
 }}
 
 .permissao-resumo {{
-    font-size:16px;
-    letter-spacing:2px;
+    color:#60a5fa;
+    font-size:12px;
+    font-weight:700;
 }}
 
 .sem-permissao {{
@@ -1121,18 +1362,34 @@ def usuarios():
     font-size:11px;
 }}
 
-.permissoes-edicao label {{
-    display:flex;
-    align-items:center;
-    gap:7px;
-    padding:5px;
-    color:#cbd5e1;
-    font-size:11px;
-    border-radius:5px;
+.grupo-edicao {{
+    padding:7px;
+    border:1px solid #202020;
+    border-radius:7px;
+    background:#0c0c0c;
 }}
 
-.permissoes-edicao label:hover {{
+.grupo-edicao-titulo {{
+    color:#60a5fa;
+    font-size:10px;
+    font-weight:800;
+    margin-bottom:5px;
+}}
+
+.permissao-edicao-item {{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:5px;
+    color:#cbd5e1;
+    font-size:10px;
+    border-radius:5px;
+    cursor:pointer;
+}}
+
+.permissao-edicao-item:hover {{
     background:#111;
+    color:#fff;
 }}
 
 .btn {{
@@ -1168,6 +1425,14 @@ def usuarios():
     white-space:nowrap;
 }}
 
+@media(max-width:1100px) {{
+
+    .grupo-grid {{
+        grid-template-columns:repeat(3,1fr);
+    }}
+
+}}
+
 @media(max-width:900px) {{
 
     .criar-grid {{
@@ -1179,7 +1444,7 @@ def usuarios():
         grid-column:span 1;
     }}
 
-    .permissoes-grid {{
+    .grupo-grid {{
         grid-template-columns:repeat(2,1fr);
     }}
 
@@ -1187,7 +1452,7 @@ def usuarios():
 
 @media(max-width:600px) {{
 
-    .permissoes-grid {{
+    .grupo-grid {{
         grid-template-columns:1fr;
     }}
 
@@ -1349,45 +1614,7 @@ def usuarios():
 
                 </div>
 
-
-                <div class="permissoes-grid">
-
-                    <label class="permissao-item">
-                        <input type="checkbox" name="pode_estoque">
-                        📦 Estoque
-                    </label>
-
-                    <label class="permissao-item">
-                        <input type="checkbox" name="pode_transferencia">
-                        🔄 Transferências
-                    </label>
-
-                    <label class="permissao-item">
-                        <input type="checkbox" name="pode_historico">
-                        📋 Histórico
-                    </label>
-
-                    <label class="permissao-item">
-                        <input type="checkbox" name="pode_usuarios">
-                        👥 Usuários
-                    </label>
-
-                    <label class="permissao-item">
-                        <input type="checkbox" name="pode_logs">
-                        📝 Logs
-                    </label>
-
-                    <label class="permissao-item">
-                        <input type="checkbox" name="pode_editar_estoque">
-                        ✏️ Editar estoque
-                    </label>
-
-                    <label class="permissao-item">
-                        <input type="checkbox" name="pode_excluir_estoque">
-                        🗑️ Excluir estoque
-                    </label>
-
-                </div>
+                {permissoes_criacao}
 
             </div>
 
@@ -1461,6 +1688,7 @@ def usuarios():
 
         try:
             devolver_conexao(conn)
+
         except Exception:
             pass
 
@@ -1520,10 +1748,15 @@ def alterar_senha(usuario):
         conn.commit()
 
         try:
+
             registrar_log(
-                session.get("user", "admin"),
+                session.get(
+                    "user",
+                    "admin"
+                ),
                 f"Alterou a senha do usuário {usuario}"
             )
+
         except Exception:
             pass
 
@@ -1675,10 +1908,15 @@ def alternar_usuario(usuario):
             conn.commit()
 
             try:
+
                 registrar_log(
-                    session.get("user", "admin"),
+                    session.get(
+                        "user",
+                        "admin"
+                    ),
                     f"Alterou status do usuário {usuario}"
                 )
+
             except Exception:
                 pass
 
@@ -1714,7 +1952,9 @@ def alterar_permissoes(usuario):
             url_for("usuarios_bp.usuarios")
         )
 
-    permissoes = pegar_permissoes_formulario()
+    permissoes = (
+        pegar_permissoes_formulario()
+    )
 
     conn = conectar()
 
@@ -1727,38 +1967,40 @@ def alterar_permissoes(usuario):
 
     try:
 
+        campos_update = ", ".join(
+            f"{campo} = %s"
+            for campo, _nome in PERMISSOES
+        )
+
+        valores = [
+            permissoes[campo]
+            for campo, _nome in PERMISSOES
+        ]
+
+        valores.append(usuario)
+
         cursor.execute(
-            """
+            f"""
             UPDATE usuarios
             SET
-                pode_estoque = %s,
-                pode_transferencia = %s,
-                pode_historico = %s,
-                pode_usuarios = %s,
-                pode_logs = %s,
-                pode_editar_estoque = %s,
-                pode_excluir_estoque = %s
+                {campos_update}
             WHERE usuario = %s
             """,
-            (
-                permissoes["pode_estoque"],
-                permissoes["pode_transferencia"],
-                permissoes["pode_historico"],
-                permissoes["pode_usuarios"],
-                permissoes["pode_logs"],
-                permissoes["pode_editar_estoque"],
-                permissoes["pode_excluir_estoque"],
-                usuario
-            )
+            tuple(valores)
         )
 
         conn.commit()
 
         try:
+
             registrar_log(
-                session.get("user", "admin"),
+                session.get(
+                    "user",
+                    "admin"
+                ),
                 f"Alterou permissões do usuário {usuario}"
             )
+
         except Exception:
             pass
 
@@ -1816,10 +2058,15 @@ def excluir_usuario(usuario):
         conn.commit()
 
         try:
+
             registrar_log(
-                session.get("user", "admin"),
+                session.get(
+                    "user",
+                    "admin"
+                ),
                 f"Excluiu o usuário {usuario}"
             )
+
         except Exception:
             pass
 
